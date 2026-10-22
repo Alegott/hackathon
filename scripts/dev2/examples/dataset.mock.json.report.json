@@ -1,0 +1,11 @@
+{
+  "caseSeed": "dati dimostrativi",
+  "sorgenteInfrastrutture": "procedurale",
+  "comuniProcedurali": [
+    "mock-1",
+    "mock-2",
+    "mock-3",
+    "mock-4",
+    "mock-5"
+  ]
+}

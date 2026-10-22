@@ -1,0 +1,24 @@
+{
+  "provider": "ARPAV",
+  "license": "CC BY 4.0",
+  "retrievedAt": "2026-10-22T13:20:55.302110+00:00",
+  "year": 2025,
+  "periodStart": "2025-01-01",
+  "periodEnd": "2025-12-31",
+  "temporalResolution": "annual_mean",
+  "unit": "µg/m³",
+  "stationCount": 5,
+  "sources": [
+    {
+      "path": "data\\raw\\arpav-pm10.csv",
+      "url": "https://www.arpa.veneto.it/dati-ambientali/open-data/file-e-allegati/qualita-aria/polveri-pm10_trend.csv/@@download/file",
+      "sha256": "d040af6cf23a122790306333bc3f1ae70ee2ed827ed2cddbbdea0c7d886732fb"
+    },
+    {
+      "path": "data\\raw\\arpav-stations.json",
+      "url": "https://gaia.arpa.veneto.it/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:v_rete_aria&outputFormat=application/json&srsName=EPSG:4326",
+      "sha256": "305794ecf8eb8b1badf636b3b8b643455ca533fd41004887f48054fdce52f8b0"
+    }
+  ],
+  "note": "Official published annual means, not daily observations. data is the reporting period end. Coordinates from current official station registry, matched by EOI code."
+}

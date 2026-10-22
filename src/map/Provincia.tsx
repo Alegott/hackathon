@@ -12,6 +12,7 @@ import { coloreFascia } from "./fasce"
 import { creaProiezione, type Proiezione } from "./scena"
 
 const DIMENSIONE = 24
+const DISTANZA_PROVINCIA = DIMENSIONE * 1.3
 const DIREZIONE_CAMERA = new THREE.Vector3(0, 0.8, 0.6).normalize()
 
 type Hover = { istat: string; x: number; y: number } | null
@@ -84,7 +85,7 @@ function RigCamera({ proiezione }: { proiezione: Proiezione }) {
   const controlli = useThree((s) => s.controls) as { target: THREE.Vector3; update(): void } | null
   const camera = useThree((s) => s.camera)
   const fine = useRef(0)
-  const mira = useRef({ target: new THREE.Vector3(), distanza: DIMENSIONE * 1.1 })
+  const mira = useRef({ target: new THREE.Vector3(), distanza: DISTANZA_PROVINCIA })
 
   useEffect(() => {
     const c = dataset.comuni.find((x) => x.istat === selezionato)
@@ -93,7 +94,7 @@ function RigCamera({ proiezione }: { proiezione: Proiezione }) {
       const dim = misuraComune(c, proiezione).dimensione
       mira.current = { target: new THREE.Vector3(x, 0, z), distanza: Math.max(dim * 1.7, 2.5) }
     } else {
-      mira.current = { target: new THREE.Vector3(0, 0, 0), distanza: DIMENSIONE * 1.1 }
+      mira.current = { target: new THREE.Vector3(0, 0, 0), distanza: DISTANZA_PROVINCIA }
     }
     fine.current = performance.now() + 1400
   }, [vista, selezionato, proiezione])
@@ -120,7 +121,7 @@ export function Provincia() {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <Canvas
-        camera={{ position: DIREZIONE_CAMERA.clone().multiplyScalar(DIMENSIONE * 1.1).toArray(), fov: 45, near: 0.1, far: 500 }}
+        camera={{ position: DIREZIONE_CAMERA.clone().multiplyScalar(DISTANZA_PROVINCIA).toArray(), fov: 45, near: 0.1, far: 500 }}
         style={{ background: "#dfeaf2" }}
         onPointerMissed={() => setHover(null)}
       >
