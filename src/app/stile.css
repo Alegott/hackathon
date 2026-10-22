@@ -19,3 +19,7 @@ main { flex: 1; min-height: 0; position: relative; }
 .pannello-comune p { margin: 4px 0; }
 .pallino { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
 .segnaposto { padding: 40px; color: #55646f; }
+.barra-strumenti { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 60%; }
+.barra-strumenti .gruppo { display: flex; gap: 4px; background: rgba(255,255,255,0.94); padding: 4px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+.barra-strumenti button { border: 0; background: transparent; padding: 6px 10px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; }
+.barra-strumenti button.attivo { background: #1c2733; color: #fff; }

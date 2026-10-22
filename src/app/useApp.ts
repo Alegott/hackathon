@@ -15,6 +15,9 @@ const archivio = (() => {
 
 export const store = creaStore({ storage: archivio })
 
+// Solo in sviluppo: permette di pilotare lo store dalla console e dagli script di verifica.
+if (import.meta.env.DEV) (window as unknown as { __store: typeof store }).__store = store
+
 export const useApp = <T,>(selettore: (s: Stato & Azioni) => T): T => useStore(store, selettore)
 
 // Gli indici si ricalcolano dallo stato a ogni cambio rilevante, non vengono mai salvati.

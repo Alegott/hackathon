@@ -2,6 +2,7 @@ import type { Comune } from "../types"
 
 export type Proiezione = {
   aScena(p: [number, number]): [number, number]
+  daScena(p: [number, number]): [number, number]
   dimensione: number
 }
 
@@ -15,12 +16,13 @@ export function creaProiezione(comuni: Comune[], dimensione: number): Proiezione
         minX = Math.min(minX, x); maxX = Math.max(maxX, x)
         minY = Math.min(minY, y); maxY = Math.max(maxY, y)
       }
-  if (!isFinite(minX)) return { aScena: () => [0, 0], dimensione }
+  if (!isFinite(minX)) return { aScena: () => [0, 0], daScena: () => [0, 0], dimensione }
   const cx = (minX + maxX) / 2
   const cy = (minY + maxY) / 2
   const scala = dimensione / Math.max(maxX - minX, maxY - minY, 1)
   return {
     aScena: ([x, y]) => [(x - cx) * scala + 0, -(y - cy) * scala + 0],
+    daScena: ([x, z]) => [x / scala + cx, -z / scala + cy],
     dimensione,
   }
 }

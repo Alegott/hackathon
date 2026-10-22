@@ -31,4 +31,12 @@ describe("creaProiezione", () => {
   it("senza comuni non esplode", () => {
     expect(creaProiezione([], 20).aScena([10, 10])).toEqual([0, 0])
   })
+  it("daScena è l'inversa di aScena", () => {
+    const p = creaProiezione(comuni, 20)
+    for (const punto of [[1000, 5000], [3000, 6000], [4321, 6789]] as [number, number][]) {
+      const [x, y] = p.daScena(p.aScena(punto))
+      expect(x).toBeCloseTo(punto[0], 6)
+      expect(y).toBeCloseTo(punto[1], 6)
+    }
+  })
 })

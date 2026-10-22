@@ -5,12 +5,13 @@ import * as THREE from "three"
 import { store, useApp, useIndici } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import type { Comune, StatoComune } from "../types"
+import { Diorama } from "../diorama/Diorama"
+import { misuraComune } from "../diorama/misura"
+import { altezzaComune } from "./altezza"
 import { coloreFascia } from "./fasce"
 import { creaProiezione, type Proiezione } from "./scena"
 
 const DIMENSIONE = 24
-const ALTEZZA_MIN = 0.15
-const ALTEZZA_MAX = 0.9
 const DIREZIONE_CAMERA = new THREE.Vector3(0, 0.8, 0.6).normalize()
 
 type Hover = { istat: string; x: number; y: number } | null
@@ -36,7 +37,7 @@ function ComuneMesh({
   attenuato: boolean
   onHover: (h: Hover) => void
 }) {
-  const altezza = ALTEZZA_MIN + (stato.totale / 100) * (ALTEZZA_MAX - ALTEZZA_MIN)
+  const altezza = altezzaComune(stato.totale)
   const geometrie = useMemo(() => creaGeometria(comune, proiezione, altezza), [comune, proiezione, altezza])
   useEffect(() => () => geometrie.forEach((g) => g.dispose()), [geometrie])
   const colore = coloreFascia(stato.fascia)
@@ -48,12 +49,17 @@ function ComuneMesh({
           geometry={g}
           onPointerMove={(e) => {
             e.stopPropagation()
+            // Sul comune già aperto il tooltip coprirebbe il diorama.
+            if (selezionato && store.getState().vista === "comune") return onHover(null)
             onHover({ istat: comune.istat, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY })
           }}
           onPointerOut={() => onHover(null)}
           onClick={(e) => {
             e.stopPropagation()
-            store.getState().selezionaComune(comune.istat)
+            const st = store.getState()
+            // Con uno strumento di build attivo i clic servono al diorama, non a cambiare comune.
+            if (st.vista === "comune" && st.modalita === "scenario" && st.strumento !== null) return
+            st.selezionaComune(comune.istat)
           }}
         >
           <meshStandardMaterial
@@ -84,7 +90,8 @@ function RigCamera({ proiezione }: { proiezione: Proiezione }) {
     const c = dataset.comuni.find((x) => x.istat === selezionato)
     if (vista === "comune" && c) {
       const [x, z] = proiezione.aScena(c.centroide)
-      mira.current = { target: new THREE.Vector3(x, 0, z), distanza: DIMENSIONE * 0.28 }
+      const dim = misuraComune(c, proiezione).dimensione
+      mira.current = { target: new THREE.Vector3(x, 0, z), distanza: Math.max(dim * 1.7, 2.5) }
     } else {
       mira.current = { target: new THREE.Vector3(0, 0, 0), distanza: DIMENSIONE * 1.1 }
     }
@@ -121,6 +128,7 @@ export function Provincia() {
         <directionalLight position={[10, 20, 8]} intensity={1.4} />
         <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2.2} minDistance={2} maxDistance={60} />
         <RigCamera proiezione={proiezione} />
+        <Diorama proiezione={proiezione} />
         {dataset.comuni.map((c) => {
           const stato = indici[c.istat]
           if (!stato) return null

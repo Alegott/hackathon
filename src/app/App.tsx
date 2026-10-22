@@ -1,4 +1,5 @@
 import { dataset, èMock } from "../data/dataset"
+import { BarraStrumenti } from "../diorama/BarraStrumenti"
 import { Legenda } from "../map/Legenda"
 import { Provincia } from "../map/Provincia"
 import type { Sezione } from "../store/store"
@@ -65,6 +66,7 @@ export function App() {
               ← Torna alla provincia
             </button>
           )}
+          {vista === "comune" && <BarraStrumenti />}
           <PannelloComune />
         </div>
         {sezione === "casa" && <section className="segnaposto">Sezione Casa (Dev 6): form, dashboard e classifica.</section>}
