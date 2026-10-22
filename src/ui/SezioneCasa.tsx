@@ -1,10 +1,15 @@
-import React, { useState, useId, useMemo } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { store, useApp } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import { COMUNI_VICENZA_114 } from "../data/comuni114"
-import { DashboardCasa } from "./DashboardCasa"
+import { applicaOggetto, togliOggetto, type Oggetto } from "../casa/oggetti"
+import { Palco } from "../casa/Palco"
+import { Palette, TIPO_DRAG } from "../casa/Palette"
+import { Icona } from "../casa/icone"
+import { punteggioCasa } from "../engine"
 import { ClassificaComunale } from "./ClassificaComunale"
-import type { Casa, Dotazioni } from "../types"
+import type { Casa } from "../types"
+import "../casa/casa.css"
 
 export const CASA_DEMO_DEFAULT: Casa = {
   id: "casa-utente-demo",
@@ -36,310 +41,136 @@ export function salvaCasaConTryCatch(casa: Casa): boolean {
   return false
 }
 
+// Per ogni dotazione mancante, l'oggetto migliore da proporre.
+const MIGLIORE: Record<string, { oggetto: Oggetto; etichetta: string }> = {
+  fotovoltaico: { oggetto: "fotovoltaico", etichetta: "Fotovoltaico" },
+  solareTermico: { oggetto: "solareTermico", etichetta: "Solare termico" },
+  riscaldamento: { oggetto: "pompa_calore", etichetta: "Pompa di calore" },
+  cottura: { oggetto: "induzione", etichetta: "Piano a induzione" },
+  isolamento: { oggetto: "isolamento_buono", etichetta: "Isolamento a cappotto" },
+  infissi: { oggetto: "infissi", etichetta: "Doppi vetri" },
+  colonninaEV: { oggetto: "colonninaEV", etichetta: "Colonnina EV" },
+}
+
 export const SezioneCasa: React.FC = () => {
   const casaStore = useApp((s) => s.casaUtente)
-  const casaAttiva: Casa = casaStore ?? CASA_DEMO_DEFAULT
+  const casa: Casa = casaStore ?? CASA_DEMO_DEFAULT
+  const [trascinando, setTrascinando] = useState(false)
+  const [salvato, setSalvato] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
 
-  const [filtroComune, setFiltroComune] = useState("")
-  const [statoSalvataggio, setStatoSalvataggio] = useState<string>(
-    casaStore ? "Salvato in localStorage" : "Profilo demo pronto (clicca Salva o modifica un campo)",
-  )
-
-  const idPubblico = useId()
-  const idFv = useId()
-  const idSolare = useId()
-  const idInfissi = useId()
-  const idEv = useId()
-
-  // Elenco completo dei 114 comuni della provincia di Vicenza (+ eventuali comuni mock del dataset)
-  const elenco114 = useMemo(() => {
+  const elencoComuni = useMemo(() => {
     const mappa = new Map<string, string>()
     for (const c of dataset.comuni) mappa.set(c.istat, c.nome)
-    for (const c of COMUNI_VICENZA_114) {
-      if (!mappa.has(c.istat)) mappa.set(c.istat, c.nome)
-    }
-    return Array.from(mappa.entries()).map(([istat, nome]) => ({ istat, nome }))
+    for (const c of COMUNI_VICENZA_114) if (!mappa.has(c.istat)) mappa.set(c.istat, c.nome)
+    return Array.from(mappa, ([istat, nome]) => ({ istat, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "it"))
   }, [])
 
-  const comuniFiltrati = useMemo(() => {
-    const q = filtroComune.trim().toLowerCase()
-    if (!q) return elenco114
-    return elenco114.filter(
-      (c) => c.nome.toLowerCase().includes(q) || c.istat.toLowerCase().includes(q),
-    )
-  }, [elenco114, filtroComune])
-
-  const applicaModifica = (nuovaCasa: Casa) => {
-    const salvatoSuDisco = salvaCasaConTryCatch(nuovaCasa)
-    const ora = new Date().toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-    setStatoSalvataggio(
-      salvatoSuDisco
-        ? `Salvato in localStorage alle ${ora}`
-        : `Salvato in memoria (fallback) alle ${ora}`,
-    )
+  // Salvataggio automatico a ogni modifica. Parte sempre dalla casa attuale nello store, non da
+  // quella dell'ultimo rendering: due modifiche ravvicinate non si sovrascrivono.
+  const aggiorna = (fn: (c: Casa) => Casa) => {
+    const nuova = fn(store.getState().casaUtente ?? CASA_DEMO_DEFAULT)
+    salvaCasaConTryCatch(nuova)
+    setSalvato(true)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setSalvato(false), 1800)
   }
+  const modifica = (nuova: Casa) => aggiorna(() => nuova)
 
-  const aggiornaDotazione = <K extends keyof Dotazioni>(chiave: K, valore: Dotazioni[K]) => {
-    applicaModifica({
-      ...casaAttiva,
-      dotazioni: {
-        ...casaAttiva.dotazioni,
-        [chiave]: valore,
-      },
-    })
-  }
+  const { mancanti } = punteggioCasa(casa.dotazioni)
 
   return (
-    <div className="pagina-sezione">
-      <div className="intestazione-sezione">
+    <div className="casa-v2">
+      <div className="casa-testa">
         <div>
-          <span className="eyebrow-tag">Modulo 2 · Utente Demo (già autenticato)</span>
-          <h2>La mia Casa, Dashboard &amp; Classifica Comunale</h2>
-          <p className="sottotitolo-sezione">
-            Indica il comune (tra i 114 della provincia di Vicenza) e le dotazioni della tua
-            abitazione per calcolare il punteggio 0–100, la classe A–G e confrontarti nella
-            classifica comunale.
-          </p>
+          <h2>La mia casa</h2>
+          <p>Aggiungi le dotazioni e guarda il punteggio cambiare.</p>
         </div>
-
-        <div className="pill-persistenza" role="status" aria-live="polite">
-          <span>💾 {statoSalvataggio}</span>
-        </div>
+        <span className={`casa-salvato${salvato ? " casa-salvato--si" : ""}`} role="status">✓ Salvato</span>
       </div>
 
-      <div className="griglia-casa">
-        {/* Form dotazioni, comune (114), interruttore Pubblico/Privato e nickname */}
-        <form
-          className="card-pannello form-casa"
-          onSubmit={(e) => {
-            e.preventDefault()
-            applicaModifica(casaAttiva)
-          }}
-          aria-label="Form dotazioni e profilo della casa"
-        >
-          <h3>1. Comune e Privacy del Profilo</h3>
-
-          <div className="campo-form">
-            <label htmlFor="select-comune-casa">
-              Comune dell&apos;abitazione (elenco dei {elenco114.length} comuni)
-            </label>
-            <div className="selettore-comune-114">
-              <input
-                type="search"
-                className="input-testo"
-                placeholder="Cerca tra i 114 comuni..."
-                value={filtroComune}
-                onChange={(e) => setFiltroComune(e.target.value)}
-                aria-label="Filtra elenco dei 114 comuni"
-              />
-              <select
-                id="select-comune-casa"
-                className="input-select"
-                value={casaAttiva.comune}
-                onChange={(e) =>
-                  applicaModifica({ ...casaAttiva, comune: e.target.value })
-                }
-              >
-                {comuniFiltrati.map((c) => (
-                  <option key={c.istat} value={c.istat}>
-                    {c.nome} ({c.istat})
-                  </option>
-                ))}
-                {!comuniFiltrati.some((c) => c.istat === casaAttiva.comune) && (
-                  <option value={casaAttiva.comune}>
-                    {elenco114.find((c) => c.istat === casaAttiva.comune)?.nome ??
-                      casaAttiva.comune}
-                  </option>
-                )}
-              </select>
-            </div>
-            <small className="nota-campo">
-              🔒 Senza indirizzo civico: il comune serve solo per l&apos;aggregato territoriale.
-            </small>
-          </div>
-
-          <div className="box-privacy-form">
-            <label htmlFor={idPubblico} className="riga-switch">
-              <div>
-                <strong>
-                  Profilo: {casaAttiva.pubblico ? "🌐 Pubblico" : "🔒 Privato"}
-                </strong>
-                <small>
-                  {casaAttiva.pubblico
-                    ? "Compare in classifica comunale con nickname, punteggio e dotazioni."
-                    : "Compare in classifica comunale in forma anonima con le sole dotazioni (senza nome né punteggio)."}
-                </small>
-              </div>
-              <input
-                id={idPubblico}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={casaAttiva.pubblico}
-                onChange={(e) =>
-                  applicaModifica({ ...casaAttiva, pubblico: e.target.checked })
-                }
-              />
-            </label>
-
-            <div className="campo-form" style={{ marginTop: "10px", marginBottom: 0 }}>
-              <label htmlFor="input-nickname">
-                Nickname della casa{" "}
-                {!casaAttiva.pubblico && <small>(non esposto se il profilo è privato)</small>}
-              </label>
-              <input
-                id="input-nickname"
-                type="text"
-                className="input-testo"
-                placeholder="Es. Casa Verde Rossi"
-                value={casaAttiva.nickname ?? ""}
-                disabled={!casaAttiva.pubblico}
-                onChange={(e) =>
-                  applicaModifica({ ...casaAttiva, nickname: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <h3 style={{ marginTop: "18px" }}>2. Dotazioni della tua casa</h3>
-
-          <div className="griglia-switches">
-            <label htmlFor={idFv} className="card-switch">
-              <div>
-                <strong>☀️ Fotovoltaico</strong>
-                <small>Pannelli fotovoltaici (+20 pt grezzi)</small>
-              </div>
-              <input
-                id={idFv}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={casaAttiva.dotazioni.fotovoltaico}
-                onChange={(e) => aggiornaDotazione("fotovoltaico", e.target.checked)}
-              />
-            </label>
-
-            <label htmlFor={idSolare} className="card-switch">
-              <div>
-                <strong>🌡️ Solare termico</strong>
-                <small>Acqua calda sanitaria (+10 pt grezzi)</small>
-              </div>
-              <input
-                id={idSolare}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={casaAttiva.dotazioni.solareTermico}
-                onChange={(e) => aggiornaDotazione("solareTermico", e.target.checked)}
-              />
-            </label>
-
-            <label htmlFor={idInfissi} className="card-switch">
-              <div>
-                <strong>🪟 Infissi doppio/triplo vetro</strong>
-                <small>Isolamento finestre (+9 pt grezzi)</small>
-              </div>
-              <input
-                id={idInfissi}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={casaAttiva.dotazioni.infissi}
-                onChange={(e) => aggiornaDotazione("infissi", e.target.checked)}
-              />
-            </label>
-
-            <label htmlFor={idEv} className="card-switch">
-              <div>
-                <strong>🔌 Colonnina ricarica EV</strong>
-                <small>Ricarica auto elettrica (+10 pt grezzi)</small>
-              </div>
-              <input
-                id={idEv}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={casaAttiva.dotazioni.colonninaEV}
-                onChange={(e) => aggiornaDotazione("colonninaEV", e.target.checked)}
-              />
-            </label>
-          </div>
-
-          <div className="campo-form">
-            <label htmlFor="select-riscaldamento">♨️ Tipo di riscaldamento</label>
-            <select
-              id="select-riscaldamento"
-              className="input-select"
-              value={casaAttiva.dotazioni.riscaldamento}
-              onChange={(e) =>
-                aggiornaDotazione(
-                  "riscaldamento",
-                  e.target.value as Dotazioni["riscaldamento"],
-                )
-              }
-            >
-              <option value="pompa_calore">Pompa di calore (+20 pt)</option>
-              <option value="condensazione">Caldaia a condensazione (+8 pt)</option>
-              <option value="tradizionale">Caldaia tradizionale / gasolio (0 pt)</option>
-            </select>
-          </div>
-
-          <div className="campo-form">
-            <label htmlFor="select-cottura">🍳 Piano cottura</label>
-            <select
-              id="select-cottura"
-              className="input-select"
-              value={casaAttiva.dotazioni.cottura}
-              onChange={(e) =>
-                aggiornaDotazione("cottura", e.target.value as Dotazioni["cottura"])
-              }
-            >
-              <option value="induzione">Piano a induzione (+8 pt)</option>
-              <option value="gas">Piano a gas (0 pt)</option>
-            </select>
-          </div>
-
-          <div className="campo-form">
-            <label htmlFor="select-isolamento">🧱 Livello di isolamento</label>
-            <select
-              id="select-isolamento"
-              className="input-select"
-              value={casaAttiva.dotazioni.isolamento}
-              onChange={(e) =>
-                aggiornaDotazione("isolamento", e.target.value as Dotazioni["isolamento"])
-              }
-            >
-              <option value="buono">Buono (+15 pt)</option>
-              <option value="medio">Medio (+7 pt)</option>
-              <option value="scarso">Scarso (0 pt)</option>
-            </select>
-          </div>
-
-          <div className="azioni-form">
-            <button type="submit" className="btn-primario">
-              💾 Salva in localStorage
-            </button>
-            <button
-              type="button"
-              className="btn-sec"
-              onClick={() => applicaModifica(CASA_DEMO_DEFAULT)}
-            >
-              ↺ Ripristina casa demo
-            </button>
-          </div>
-        </form>
-
-        {/* Dashboard Punteggio, Classe A-G e "Cosa ti manca per salire" */}
-        <DashboardCasa
-          dotazioni={casaAttiva.dotazioni}
-          onApriSimulatore={() => store.getState().setSezione("simulazione")}
+      <div className="casa-corpo">
+        <Palco
+          dotazioni={casa.dotazioni}
+          trascinando={trascinando}
+          onDrop={(o) => { setTrascinando(false); aggiorna((c) => ({ ...c, dotazioni: applicaOggetto(c.dotazioni, o) })) }}
         />
+
+        <aside className="casa-lato">
+          <section className="scheda">
+            <h3>Dotazioni</h3>
+            <Palette
+              dotazioni={casa.dotazioni}
+              onScegli={(o, attiva) =>
+                aggiorna((c) => ({ ...c, dotazioni: attiva ? togliOggetto(c.dotazioni, o) : applicaOggetto(c.dotazioni, o) }))
+              }
+              onTrascinaInizio={() => setTrascinando(true)}
+              onTrascinaFine={() => setTrascinando(false)}
+            />
+          </section>
+
+          <section className="scheda">
+            <h3>Per salire di classe</h3>
+            {mancanti.length === 0 ? (
+              <p className="vuoto">Hai tutto. Casa al massimo ✨</p>
+            ) : (
+              <ul className="suggerimenti">
+                {mancanti.slice(0, 4).map((m) => {
+                  const s = MIGLIORE[m.dotazione]
+                  if (!s) return null
+                  return (
+                    <li key={m.dotazione}>
+                      <button
+                        type="button"
+                        draggable
+                        onClick={() => aggiorna((c) => ({ ...c, dotazioni: applicaOggetto(c.dotazioni, s.oggetto) }))}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData(TIPO_DRAG, s.oggetto)
+                          e.dataTransfer.setData("text/plain", s.oggetto)
+                          e.dataTransfer.effectAllowed = "copy"
+                          setTrascinando(true)
+                        }}
+                        onDragEnd={() => setTrascinando(false)}
+                      >
+                        <Icona oggetto={s.oggetto} size={20} />
+                        <span>{s.etichetta}</span>
+                        <strong>+{m.punti}</strong>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+
+          <section className="scheda scheda--profilo">
+            <h3>Profilo</h3>
+            <label className="campo">
+              <span>Comune</span>
+              <select value={casa.comune} onChange={(e) => aggiorna((c) => ({ ...c, comune: e.target.value }))}>
+                {elencoComuni.map((c) => <option key={c.istat} value={c.istat}>{c.nome}</option>)}
+              </select>
+            </label>
+            <div className="campo">
+              <span>Visibilità in classifica</span>
+              <div className="segmenti" role="group" aria-label="Visibilità del profilo">
+                <button type="button" className={casa.pubblico ? "on" : ""} onClick={() => aggiorna((c) => ({ ...c, pubblico: true }))}>Pubblico</button>
+                <button type="button" className={!casa.pubblico ? "on" : ""} onClick={() => aggiorna((c) => ({ ...c, pubblico: false }))}>Privato</button>
+              </div>
+            </div>
+            {casa.pubblico && (
+              <label className="campo">
+                <span>Nickname</span>
+                <input type="text" value={casa.nickname ?? ""} maxLength={32} placeholder="Come ti vedono gli altri" onChange={(e) => aggiorna((c) => ({ ...c, nickname: e.target.value }))} />
+              </label>
+            )}
+            <button type="button" className="link" onClick={() => modifica(CASA_DEMO_DEFAULT)}>Ripristina casa demo</button>
+          </section>
+        </aside>
       </div>
 
-      {/* Classifica comunale con regole privacy e case seed "dati dimostrativi" */}
-      <ClassificaComunale
-        comuneIstat={casaAttiva.comune}
-        onChangeComune={(istat) => applicaModifica({ ...casaAttiva, comune: istat })}
-      />
+      <ClassificaComunale comuneIstat={casa.comune} onChangeComune={(istat) => aggiorna((c) => ({ ...c, comune: istat }))} />
     </div>
   )
 }
