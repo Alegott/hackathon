@@ -126,14 +126,14 @@ Gli indici si derivano sempre con `statoTerritorio(dataset, scenario, casaUtente
 
 ## Dev 6 — UI: Casa, classifica, pannelli di simulazione
 **Obiettivo:** tutte le schermate 2D sopra la mappa.
-- [ ] **Casa:**
+- [x] **Casa:**
   - form dotazioni e comune (elenco dei 114);
   - interruttore Pubblico/Privato e nickname;
   - salvataggio in `localStorage` con try/catch.
-- [ ] **Dashboard:** punteggio, classe A–G, "cosa ti manca per salire".
-- [ ] **Classifica comunale** con le regole privacy, case seed etichettate "dati dimostrativi".
-- [ ] **Pannello comune:** "Aria reale X · Infrastrutture ±Y · (Scenario ±W) · Totale Z", "stima da N centraline", periodo, indice case medio.
-- [ ] **Simulazione:**
+- [x] **Dashboard:** punteggio, classe A–G, "cosa ti manca per salire".
+- [x] **Classifica comunale** con le regole privacy, case seed etichettate "dati dimostrativi".
+- [x] **Pannello comune:** "Aria reale X · Infrastrutture ±Y · (Scenario ±W) · Totale Z", "stima da N centraline", periodo, indice case medio.
+- [x] **Simulazione:**
   - interruttore Realtà/Scenario e palette strumenti (con "rimuovi");
   - pulsante Reset;
   - simulatore casa (dotazioni ipotetiche, punteggio prima → dopo, senza toccare la casa reale);
