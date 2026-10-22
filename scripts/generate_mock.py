@@ -9,16 +9,19 @@ def main():
     for i, (pm10, aria_norm) in enumerate([(15, 100), (22, 80), (29, 60), (43, 20), (50, 0)]):
         x, y = 690000 + i * 1000, 5040000
         comuni.append({
-            "id": f"mock-{i + 1:03d}", "nome": f"Comune fittizio {i + 1}",
+            "id": f"mock-{i + 1:03d}", "istat": f"mock-{i + 1:03d}", "nome": f"Comune fittizio {i + 1}",
             "centroide": [x + 500, y + 500],
             "geometry": {"type": "Polygon", "coordinates": [[[x, y], [x+1000, y],
                 [x+1000, y+1000], [x, y+1000], [x, y]]]},
             "confinanti": [f"mock-{j + 1:03d}" for j in [i-1, i+1] if 0 <= j < 5],
-            "pm10": pm10, "ariaNorm": aria_norm,
+            "geometria": [[[x, y], [x+1000, y], [x+1000, y+1000], [x, y+1000], [x, y]]],
+            "pm10": pm10, "ariaNorm": aria_norm, "nCentraline": 2,
         })
-    data = {"meta": {"schemaVersion": "provisional-1", "mock": True,
+    data = {"meta": {"schemaVersion": "1", "mock": True,
+        "periodoAria": "2025-01-01 / 2025-12-31 (fittizio)",
+        "inquinante": "PM10", "generatoIl": datetime.now(timezone.utc).isoformat(),
         "generatedAt": datetime.now(timezone.utc).isoformat(), "crs": "EPSG:32632",
-        "pm10Unit": "µg/m³", "note": "Dati interamente fittizi; contratto A da confermare."},
+        "pm10Unit": "µg/m³", "note": "Dati interamente fittizi; parte Dev 1 del contratto A."},
         "comuni": comuni}
     Path("dataset.mock.json").write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

@@ -7,6 +7,7 @@ import statistics
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 from pyproj import Transformer
@@ -33,13 +34,28 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def station_means(path: Path, station_col: str, value_col: str,
-                  pollutant_col: str | None = None) -> tuple[dict[str, float], dict[str, int]]:
+                  pollutant_col: str | None = None, date_col: str = "data",
+                  date_format: str = "%Y-%m-%d") -> tuple[dict[str, float], dict]:
     values: dict[str, list[float]] = {}
-    counts = {"rows": 0, "otherPollutants": 0, "missing": 0, "valid": 0}
-    for row in read_csv(path):
+    rows = read_csv(path)
+    if not rows or date_col not in rows[0]:
+        raise ValueError(f"Colonna temporale {date_col!r} mancante: impossibile selezionare l'ultimo anno")
+    pm_rows = [row for row in rows if not pollutant_col or row[pollutant_col].upper().replace(" ", "") == "PM10"]
+    if not pm_rows:
+        raise ValueError("Nessuna misura PM10")
+    dates = [datetime.strptime(row[date_col], date_format).date() for row in pm_rows]
+    year = max(dates).year
+    counts: dict[str, Any] = {"rows": 0, "otherPollutants": 0, "missing": 0, "valid": 0,
+              "outsidePeriod": 0, "year": year, "periodStart": f"{year}-01-01",
+              "periodEnd": f"{year}-12-31", "observedStart": min(d for d in dates if d.year == year).isoformat(),
+              "observedEnd": max(dates).isoformat()}
+    for row in rows:
         counts["rows"] += 1
         if pollutant_col and row[pollutant_col].upper().replace(" ", "") != "PM10":
             counts["otherPollutants"] += 1
+            continue
+        if datetime.strptime(row[date_col], date_format).year != year:
+            counts["outsidePeriod"] += 1
             continue
         raw = row[value_col]
         if raw.upper() in {"", "NA", "N/A", "ND", "N.D.", "NULL", "-"}:
@@ -116,7 +132,9 @@ def prepare_boundaries(path: Path, expected_count: int = 114, tolerance: float =
         geometry = row.geometry.simplify(tolerance, preserve_topology=True)
         if geometry.is_empty or not geometry.is_valid:
             raise ValueError(f"Semplificazione non valida: {row['id']}")
-        comuni.append({"id": row["id"], "nome": row["COMUNE"],
+        polygons = [geometry] if geometry.geom_type == "Polygon" else list(geometry.geoms)
+        comuni.append({"id": row["id"], "istat": row["id"], "nome": row["COMUNE"],
+            "geometria": [list(polygon.exterior.coords) for polygon in polygons],
             "centroide": [centroid.x, centroid.y], "geometry": mapping(geometry),
             "confinanti": sorted(neighbors[row["id"]])})
     return comuni, {"source": str(path), "count": len(comuni), "crs": CRS,
@@ -124,7 +142,22 @@ def prepare_boundaries(path: Path, expected_count: int = 114, tolerance: float =
 
 
 def build(args: argparse.Namespace) -> dict:
-    means, counts = station_means(args.measurements, args.station_col, args.value_col, args.pollutant_col)
+    input_rows = read_csv(args.measurements)
+    if args.temporal_resolution == "auto":
+        resolutions = {row.get("risoluzione", "observations") for row in input_rows}
+        if not resolutions <= {"observations", "annual_mean"} or len(resolutions) != 1:
+            raise ValueError("Risoluzioni temporali miste o sconosciute")
+        args.temporal_resolution = resolutions.pop()
+    means, counts = station_means(args.measurements, args.station_col, args.value_col,
+                                  args.pollutant_col, args.date_col, args.date_format)
+    if args.temporal_resolution == "annual_mean":
+        selected = [row for row in read_csv(args.measurements)
+                    if (not args.pollutant_col or row[args.pollutant_col].upper().replace(" ", "") == "PM10")
+                    and datetime.strptime(row[args.date_col], args.date_format).year == counts["year"]]
+        keys = [row[args.station_col] for row in selected]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Attesa una sola media annuale per centralina e anno")
+    counts["temporalResolution"] = args.temporal_resolution
     transformer = Transformer.from_crs(args.station_crs, CRS, always_xy=True)
     stations: dict[str, tuple[float, float, float]] = {}
     for row in read_csv(args.stations):
@@ -147,15 +180,27 @@ def build(args: argparse.Namespace) -> dict:
         boundaries_meta["provenance"] = json.loads(provenance.read_text(encoding="utf-8"))
     for comune in comuni:
         interpolated = idw(tuple(comune["centroide"]), list(stations.values()), args.power)
-        comune.update(pm10=round(interpolated, 6), ariaNorm=round(normalize_air(interpolated), 6))
-    return {"meta": {"schemaVersion": "provisional-1", "mock": False,
+        coincident = sum(math.hypot(comune["centroide"][0]-x, comune["centroide"][1]-y) <= 1e-6
+                         for x, y, _ in stations.values())
+        comune.update(nCentraline=coincident or len(stations),
+                      pm10=round(interpolated, 6), ariaNorm=round(normalize_air(interpolated), 6))
+    generated = datetime.now(timezone.utc).isoformat()
+    air_provenance = {}
+    for label, path in (("measurements", args.measurements), ("stations", args.stations)):
+        sidecar = path.with_suffix(".source.json")
+        if sidecar.exists():
+            air_provenance[label] = json.loads(sidecar.read_text(encoding="utf-8"))
+    return {"meta": {"schemaVersion": "1", "mock": args.synthetic,
+        "periodoAria": f"{counts['periodStart']} / {counts['periodEnd']}",
+        "inquinante": "PM10", "generatoIl": generated,
         "generatedAt": datetime.now(timezone.utc).isoformat(), "crs": CRS,
         "pm10Unit": "µg/m³", "measurementsSource": str(args.measurements),
+        "airProvenance": air_provenance,
         "stationsSource": str(args.stations), "measurements": counts,
         "stationMeans": [{"id": key, "pm10": value} for key, value in sorted(means.items())],
         "boundaries": boundaries_meta, "interpolation": {"method": "IDW", "power": args.power},
         "normalization": {"pm10At100": 15, "pm10At0": 50, "clamp": [0, 100]},
-        "note": "Solo meta + comuni; schema provvisorio, contratto A da confermare."}, "comuni": comuni}
+        "note": "Parte Dev 1: meta + comuni del contratto A; geometria contiene gli anelli esterni, geometry conserva anche i fori."}, "comuni": comuni}
 
 
 def main():
@@ -168,6 +213,10 @@ def main():
     parser.add_argument("--coordinate-station-col")
     parser.add_argument("--value-col", default="pm10")
     parser.add_argument("--pollutant-col")
+    parser.add_argument("--date-col", default="data")
+    parser.add_argument("--date-format", default="%Y-%m-%d")
+    parser.add_argument("--temporal-resolution", choices=["auto", "observations", "annual_mean"], default="auto")
+    parser.add_argument("--synthetic", action="store_true", help="Marca esplicitamente input e output dimostrativi")
     parser.add_argument("--x-col", default="lon")
     parser.add_argument("--y-col", default="lat")
     parser.add_argument("--station-crs", default="EPSG:4326")
