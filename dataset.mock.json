@@ -1,0 +1,215 @@
+{
+  "meta": {
+    "schemaVersion": "provisional-1",
+    "mock": true,
+    "generatedAt": "2026-10-22T12:51:36.390700+00:00",
+    "crs": "EPSG:32632",
+    "pm10Unit": "µg/m³",
+    "note": "Dati interamente fittizi; contratto A da confermare."
+  },
+  "comuni": [
+    {
+      "id": "mock-001",
+      "nome": "Comune fittizio 1",
+      "centroide": [
+        690500,
+        5040500
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              690000,
+              5040000
+            ],
+            [
+              691000,
+              5040000
+            ],
+            [
+              691000,
+              5041000
+            ],
+            [
+              690000,
+              5041000
+            ],
+            [
+              690000,
+              5040000
+            ]
+          ]
+        ]
+      },
+      "confinanti": [
+        "mock-002"
+      ],
+      "pm10": 15,
+      "ariaNorm": 100
+    },
+    {
+      "id": "mock-002",
+      "nome": "Comune fittizio 2",
+      "centroide": [
+        691500,
+        5040500
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              691000,
+              5040000
+            ],
+            [
+              692000,
+              5040000
+            ],
+            [
+              692000,
+              5041000
+            ],
+            [
+              691000,
+              5041000
+            ],
+            [
+              691000,
+              5040000
+            ]
+          ]
+        ]
+      },
+      "confinanti": [
+        "mock-001",
+        "mock-003"
+      ],
+      "pm10": 22,
+      "ariaNorm": 80.0
+    },
+    {
+      "id": "mock-003",
+      "nome": "Comune fittizio 3",
+      "centroide": [
+        692500,
+        5040500
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              692000,
+              5040000
+            ],
+            [
+              693000,
+              5040000
+            ],
+            [
+              693000,
+              5041000
+            ],
+            [
+              692000,
+              5041000
+            ],
+            [
+              692000,
+              5040000
+            ]
+          ]
+        ]
+      },
+      "confinanti": [
+        "mock-002",
+        "mock-004"
+      ],
+      "pm10": 29,
+      "ariaNorm": 60.0
+    },
+    {
+      "id": "mock-004",
+      "nome": "Comune fittizio 4",
+      "centroide": [
+        693500,
+        5040500
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              693000,
+              5040000
+            ],
+            [
+              694000,
+              5040000
+            ],
+            [
+              694000,
+              5041000
+            ],
+            [
+              693000,
+              5041000
+            ],
+            [
+              693000,
+              5040000
+            ]
+          ]
+        ]
+      },
+      "confinanti": [
+        "mock-003",
+        "mock-005"
+      ],
+      "pm10": 43,
+      "ariaNorm": 20.0
+    },
+    {
+      "id": "mock-005",
+      "nome": "Comune fittizio 5",
+      "centroide": [
+        694500,
+        5040500
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              694000,
+              5040000
+            ],
+            [
+              695000,
+              5040000
+            ],
+            [
+              695000,
+              5041000
+            ],
+            [
+              694000,
+              5041000
+            ],
+            [
+              694000,
+              5040000
+            ]
+          ]
+        ]
+      },
+      "confinanti": [
+        "mock-004"
+      ],
+      "pm10": 50,
+      "ariaNorm": 0
+    }
+  ]
+}
