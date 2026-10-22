@@ -6,7 +6,7 @@ from pathlib import Path
 
 def main():
     comuni = []
-    for i, pm10 in enumerate([15, 22, 29, 43, 50]):
+    for i, (pm10, aria_norm) in enumerate([(15, 100), (22, 80), (29, 60), (43, 20), (50, 0)]):
         x, y = 690000 + i * 1000, 5040000
         comuni.append({
             "id": f"mock-{i + 1:03d}", "nome": f"Comune fittizio {i + 1}",
@@ -14,7 +14,7 @@ def main():
             "geometry": {"type": "Polygon", "coordinates": [[[x, y], [x+1000, y],
                 [x+1000, y+1000], [x, y+1000], [x, y]]]},
             "confinanti": [f"mock-{j + 1:03d}" for j in [i-1, i+1] if 0 <= j < 5],
-            "pm10": pm10, "ariaNorm": round(max(0, min(100, (50-pm10)/35*100)), 4),
+            "pm10": pm10, "ariaNorm": aria_norm,
         })
     data = {"meta": {"schemaVersion": "provisional-1", "mock": True,
         "generatedAt": datetime.now(timezone.utc).isoformat(), "crs": "EPSG:32632",

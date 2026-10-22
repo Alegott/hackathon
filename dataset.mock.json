@@ -2,7 +2,7 @@
   "meta": {
     "schemaVersion": "provisional-1",
     "mock": true,
-    "generatedAt": "2026-10-22T12:51:36.390700+00:00",
+    "generatedAt": "2026-10-22T12:58:20.786355+00:00",
     "crs": "EPSG:32632",
     "pm10Unit": "µg/m³",
     "note": "Dati interamente fittizi; contratto A da confermare."
@@ -87,7 +87,7 @@
         "mock-003"
       ],
       "pm10": 22,
-      "ariaNorm": 80.0
+      "ariaNorm": 80
     },
     {
       "id": "mock-003",
@@ -128,7 +128,7 @@
         "mock-004"
       ],
       "pm10": 29,
-      "ariaNorm": 60.0
+      "ariaNorm": 60
     },
     {
       "id": "mock-004",
@@ -169,7 +169,7 @@
         "mock-005"
       ],
       "pm10": 43,
-      "ariaNorm": 20.0
+      "ariaNorm": 20
     },
     {
       "id": "mock-005",
