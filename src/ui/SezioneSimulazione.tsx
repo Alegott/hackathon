@@ -7,22 +7,167 @@ import { DELTA_INFRA } from "../engine/costanti"
 import { META_CLASSI } from "./DashboardCasa"
 import { CASA_DEMO_DEFAULT } from "./SezioneCasa"
 import { formatSegno } from "./PannelloComune"
-import { etichettaFascia } from "../map/fasce"
-import type { Dotazioni, TipoInfra } from "../types"
+import { coloreFascia, etichettaFascia } from "../map/fasce"
+import type { Dotazioni, Fascia, TipoInfra } from "../types"
 
-const PALETTE: {
-  id: TipoInfra | "rimuovi"
-  etichetta: string
-  icona: string
-  delta: string
-}[] = [
-  { id: "parco", etichetta: "Parco", icona: "🌳", delta: "+5" },
-  { id: "ciclabile", etichetta: "Pista ciclabile", icona: "🚲", delta: "+3" },
-  { id: "colonnine", etichetta: "Colonnine", icona: "🔌", delta: "+2" },
-  { id: "industria", etichetta: "Industria", icona: "🏭", delta: "−12" },
-  { id: "strada", etichetta: "Strada principale", icona: "🛣️", delta: "−8" },
-  { id: "rimuovi", etichetta: "Rimuovi", icona: "🧹", delta: "annulla" },
+const INFRA: { id: TipoInfra; etichetta: string; icona: string }[] = [
+  { id: "parco", etichetta: "Parco", icona: "🌳" },
+  { id: "ciclabile", etichetta: "Pista ciclabile", icona: "🚲" },
+  { id: "colonnine", etichetta: "Colonnine", icona: "🔌" },
+  { id: "industria", etichetta: "Industria", icona: "🏭" },
+  { id: "strada", etichetta: "Strada principale", icona: "🛣️" },
 ]
+const META_INFRA = Object.fromEntries(INFRA.map((i) => [i.id, i])) as Record<
+  TipoInfra,
+  (typeof INFRA)[number]
+>
+
+const STRUMENTI_MAPPA: { id: TipoInfra | "rimuovi"; etichetta: string; icona: string }[] = [
+  ...INFRA,
+  { id: "rimuovi", etichetta: "Rimuovi", icona: "✕" },
+]
+
+/** Confronto prima → dopo con barra 0–100: il cuore visivo di ogni blocco. */
+const Confronto: React.FC<{
+  prima: number
+  dopo: number
+  etichettaPrima: string
+  etichettaDopo: string
+  coloreDopo: string
+  dettaglioPrima?: React.ReactNode
+  dettaglioDopo?: React.ReactNode
+}> = ({ prima, dopo, etichettaPrima, etichettaDopo, coloreDopo, dettaglioPrima, dettaglioDopo }) => {
+  const delta = Math.round(dopo) - Math.round(prima)
+  const segno = delta > 0 ? "su" : delta < 0 ? "giu" : "pari"
+  return (
+    <div className="sim-confronto" aria-live="polite">
+      <div className="sim-confronto__valori">
+        <div>
+          <span className="sim-confronto__etichetta">{etichettaPrima}</span>
+          <span className="sim-confronto__numero sim-confronto__numero--prima">
+            {Math.round(prima)}
+          </span>
+          {dettaglioPrima}
+        </div>
+        <span className={`sim-delta sim-delta--${segno}`}>
+          {segno === "pari" ? "invariato" : `${formatSegno(delta)} punti`}
+        </span>
+        <div className="sim-confronto__dopo">
+          <span className="sim-confronto__etichetta">{etichettaDopo}</span>
+          <span className="sim-confronto__numero">{Math.round(dopo)}</span>
+          {dettaglioDopo}
+        </div>
+      </div>
+      <div
+        className="sim-barra"
+        role="img"
+        aria-label={`Da ${Math.round(prima)} a ${Math.round(dopo)} su 100`}
+      >
+        <span className="sim-barra__prima" style={{ width: `${prima}%` }} />
+        <span
+          className="sim-barra__dopo"
+          style={{ width: `${dopo}%`, backgroundColor: coloreDopo }}
+        />
+      </div>
+    </div>
+  )
+}
+
+const PillFascia: React.FC<{ fascia: Fascia }> = ({ fascia }) => (
+  <span className="sim-pill">
+    <span className="sim-pill__punto" style={{ backgroundColor: coloreFascia(fascia) }} />
+    {etichettaFascia(fascia)}
+  </span>
+)
+
+const PillClasse: React.FC<{ classe: keyof typeof META_CLASSI }> = ({ classe }) => (
+  <span
+    className="sim-pill"
+    style={{ backgroundColor: META_CLASSI[classe].bg, color: META_CLASSI[classe].colore }}
+  >
+    Classe {classe}
+  </span>
+)
+
+/** Gruppo di scelte a pulsanti (radio nativi): più leggibile di un menu a tendina. */
+function Scelta<T extends string>(props: {
+  legenda: string
+  valore: T
+  opzioni: { valore: T; etichetta: string }[]
+  onChange: (v: T) => void
+}) {
+  const nome = useId()
+  return (
+    <fieldset className="sim-scelta">
+      <legend>{props.legenda}</legend>
+      <div className="sim-scelta__opzioni">
+        {props.opzioni.map((o) => (
+          <label key={o.valore}>
+            <input
+              type="radio"
+              name={nome}
+              value={o.valore}
+              checked={props.valore === o.valore}
+              onChange={() => props.onChange(o.valore)}
+            />
+            <span>{o.etichetta}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+const Interruttore: React.FC<{
+  icona: string
+  etichetta: string
+  attivo: boolean
+  onChange: (v: boolean) => void
+}> = ({ icona, etichetta, attivo, onChange }) => (
+  <label className="sim-interruttore">
+    <span aria-hidden="true" className="sim-interruttore__icona">
+      {icona}
+    </span>
+    <span className="sim-interruttore__testo">{etichetta}</span>
+    <input
+      type="checkbox"
+      role="switch"
+      checked={attivo}
+      onChange={(e) => onChange(e.target.checked)}
+    />
+    <span className="sim-interruttore__traccia" aria-hidden="true" />
+  </label>
+)
+
+const Cursore: React.FC<{
+  icona: string
+  etichetta: string
+  valore: number
+  onChange: (v: number) => void
+}> = ({ icona, etichetta, valore, onChange }) => {
+  const id = useId()
+  return (
+    <div className="sim-cursore">
+      <div className="sim-cursore__testata">
+        <label htmlFor={id}>
+          <span aria-hidden="true">{icona}</span> {etichetta}
+        </label>
+        <output htmlFor={id}>{valore}%</output>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={valore}
+        aria-valuetext={`${valore} per cento`}
+        style={{ "--riempimento": `${valore}%` } as React.CSSProperties}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </div>
+  )
+}
 
 export const SezioneSimulazione: React.FC = () => {
   const modalita = useApp((s) => s.modalita)
@@ -32,13 +177,13 @@ export const SezioneSimulazione: React.FC = () => {
   const casaUtente = useApp((s) => s.casaUtente)
   const indiciScenario = useIndici()
 
-  const switchModId = useId()
-  const simFvId = useId()
-  const simSolareId = useId()
-  const simInfissiId = useId()
-  const simEvId = useId()
+  const comuneSelectId = useId()
+  const ambitoSelectId = useId()
 
   const st = store.getState()
+  const inScenario = () => {
+    if (st.modalita !== "scenario") st.setModalita("scenario")
+  }
 
   // Elenco comuni del dataset + tutti i 114 comuni di Vicenza
   const elenco114 = useMemo(() => {
@@ -47,7 +192,9 @@ export const SezioneSimulazione: React.FC = () => {
     for (const c of COMUNI_VICENZA_114) {
       if (!mappa.has(c.istat)) mappa.set(c.istat, c.nome)
     }
-    return Array.from(mappa.entries()).map(([istat, nome]) => ({ istat, nome }))
+    return Array.from(mappa.entries())
+      .map(([istat, nome]) => ({ istat, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "it"))
   }, [])
 
   const istatTarget = comuneSelezionato ?? dataset.comuni[0]?.istat ?? "024001"
@@ -67,10 +214,10 @@ export const SezioneSimulazione: React.FC = () => {
     fotovoltaico: true,
     riscaldamento: "pompa_calore",
   }))
+  const cambiaCasa = (patch: Partial<Dotazioni>) => setDotazioniIpotesi((d) => ({ ...d, ...patch }))
 
   const primaCasa = punteggioCasa(dotazioniReali)
   const dopoCasa = punteggioCasa(dotazioniIpotesi)
-  const deltaCasa = dopoCasa.punteggio - primaCasa.punteggio
 
   // Macro-scenari (3 slider + ambito provincia/comune)
   const macro = scenario.macro ?? {
@@ -82,7 +229,7 @@ export const SezioneSimulazione: React.FC = () => {
 
   const aggiornaMacro = (patch: Partial<typeof macro>) => {
     const prossimo = { ...macro, ...patch }
-    if (st.modalita !== "scenario") st.setModalita("scenario")
+    inScenario()
     if (
       prossimo.pctFV === 0 &&
       prossimo.pctSenzaGas === 0 &&
@@ -102,504 +249,399 @@ export const SezioneSimulazione: React.FC = () => {
   const statoScenarioTarget = indiciScenario[istatTarget]
 
   return (
-    <div className="pagina-sezione">
-      {/* Barra superiore: Interruttore Realtà/Scenario e Pulsante Reset */}
-      <div className="intestazione-sezione">
+    <div className="pagina-sezione sim">
+      {/* Intestazione: cosa si fa qui + interruttore Realtà/Scenario */}
+      <header className="sim-testata">
         <div>
-          <span className="eyebrow-tag">Modulo 4 · Laboratorio di Simulazione</span>
-          <h2>Scenario Territoriale, Simulatore Casa &amp; Slider Macro</h2>
-          <p className="sottotitolo-sezione">
-            Attiva la modalità Scenario, scegli uno strumento dalla palette o muovi gli slider
-            macro per osservare in tempo reale l&apos;impatto su aria, infrastrutture e comuni
-            confinanti.
+          <span className="sim-kicker">🌱 Laboratorio</span>
+          <h2>Simula il cambiamento</h2>
+          <p>
+            Prova a cambiare il tuo comune, la tua casa o l&apos;intera provincia e guarda subito
+            come cambia l&apos;ambiente. Niente di ciò che fai qui modifica i dati reali.
           </p>
         </div>
 
-        <div className="controlli-testata-sim">
-          <label htmlFor={switchModId} className="switch-modalita-pill">
-            <span>
-              Modalità: <strong>{modalita === "scenario" ? "🧪 Scenario" : "📍 Realtà"}</strong>
-            </span>
-            <input
-              id={switchModId}
-              type="checkbox"
-              {...({ switch: "" } as any)}
-              checked={modalita === "scenario"}
-              onChange={(e) => st.setModalita(e.target.checked ? "scenario" : "realta")}
-            />
-          </label>
-
-          <div className="gruppo-bottoni-mod" role="group" aria-label="Modalità Realtà o Scenario">
+        <div className="sim-testata__azioni">
+          <div className="sim-segmenti" role="group" aria-label="Cosa vuoi vedere sulla mappa">
             <button
               type="button"
-              className={modalita === "realta" ? "attivo" : ""}
+              aria-pressed={modalita === "realta"}
               onClick={() => st.setModalita("realta")}
             >
               Realtà
             </button>
             <button
               type="button"
-              className={modalita === "scenario" ? "attivo" : ""}
+              aria-pressed={modalita === "scenario"}
               onClick={() => st.setModalita("scenario")}
             >
               Scenario
             </button>
           </div>
-
-          <button
-            type="button"
-            className="btn-reset"
-            onClick={() => st.resetScenario()}
-          >
-            ↺ Reset Scenario
+          <button type="button" className="sim-btn sim-btn--testo" onClick={() => st.resetScenario()}>
+            ↺ Ricomincia
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Nota obbligatoria: "modello semplificato e indicativo" */}
-      <div className="banner-nota-modello" role="note">
-        ℹ️ <strong>Modello semplificato e indicativo:</strong> i contributi sono calcolati con
-        delta fissi (Parco +5, Pista ciclabile +3, Colonnine +2, Strada −8, Industria −12; tetto
-        ±20 sulle infrastrutture esistenti; spillover a metà sui comuni confinanti per lo
-        scenario; tetto +10 per i macro-scenari).
-      </div>
-
-      <div className="griglia-simulazione">
-        {/* 1. Palette strumenti (con "rimuovi") e azioni sul comune */}
-        <section className="card-pannello" aria-label="Palette strumenti scenario">
-          <div className="card-pannello__top">
+      <div className="sim-griglia">
+        {/* 1. Comune: aggiungi o togli infrastrutture */}
+        <section className="sim-card" aria-labelledby="sim-titolo-comune">
+          <div className="sim-card__testata">
+            <span className="sim-numero" aria-hidden="true">1</span>
             <div>
-              <span className="eyebrow-tag">1 · Build Mode &amp; Palette Strumenti</span>
-              <h3>Aggiungi o rimuovi infrastrutture</h3>
+              <h3 id="sim-titolo-comune">Il tuo comune</h3>
+              <p>Aggiungi un parco o togli un&apos;industria: cosa succede all&apos;indice?</p>
             </div>
-
-            <select
-              aria-label="Comune selezionato per lo scenario"
-              className="input-select"
-              value={istatTarget}
-              onChange={(e) => st.selezionaComune(e.target.value)}
-            >
-              {dataset.comuni.map((c) => (
-                <option key={c.istat} value={c.istat}>
-                  {c.nome} ({Math.round(indiciScenario[c.istat]?.totale ?? c.ariaNorm)}/100)
-                </option>
-              ))}
-            </select>
           </div>
 
-          <p className="nota-campo">
-            Scegli uno strumento per cliccare sul terreno 3D del diorama (nella sezione Mappa),
-            oppure applica subito la modifica a <strong>{comuneTarget?.nome}</strong>:
-          </p>
+          <label htmlFor={comuneSelectId} className="sim-etichetta">
+            Comune
+          </label>
+          <select
+            id={comuneSelectId}
+            className="sim-select"
+            value={istatTarget}
+            onChange={(e) => st.selezionaComune(e.target.value)}
+          >
+            {dataset.comuni.map((c) => (
+              <option key={c.istat} value={c.istat}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
 
-          <div className="griglia-palette">
-            {PALETTE.map((item) => {
-              const attivo = modalita === "scenario" && strumento === item.id
-              return (
-                <div
-                  key={item.id}
-                  className={`cella-palette ${attivo ? "cella-palette--attiva" : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="btn-selezione-strumento"
-                    onClick={() => {
-                      if (modalita !== "scenario") st.setModalita("scenario")
-                      st.setStrumento(attivo ? null : item.id)
-                    }}
-                  >
-                    <span>
-                      {item.icona} <strong>{item.etichetta}</strong>
-                    </span>
-                    <span className="badge-delta">{item.delta}</span>
-                  </button>
+          {statoRealeTarget && statoScenarioTarget && (
+            <Confronto
+              prima={statoRealeTarget.totale}
+              dopo={statoScenarioTarget.totale}
+              etichettaPrima="Oggi"
+              etichettaDopo="Con le tue modifiche"
+              coloreDopo={coloreFascia(statoScenarioTarget.fascia)}
+              dettaglioPrima={<PillFascia fascia={statoRealeTarget.fascia} />}
+              dettaglioDopo={<PillFascia fascia={statoScenarioTarget.fascia} />}
+            />
+          )}
 
-                  {item.id !== "rimuovi" && comuneTarget && (
-                    <button
-                      type="button"
-                      className="btn-sec btn-xs"
-                      onClick={() => {
-                        if (modalita !== "scenario") st.setModalita("scenario")
-                        st.aggiungiInfrastruttura(
-                          comuneTarget.istat,
-                          item.id as TipoInfra,
-                          comuneTarget.centroide,
-                        )
-                      }}
-                    >
-                      + Aggiungi a {comuneTarget.nome}
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Infrastrutture attuali del comune per rimozione rapida */}
-          {comuneTarget && statoRealeTarget && statoScenarioTarget && (
-            <div className="box-riepilogo-comune-sim">
-              <div className="riga-prima-dopo-comune">
-                <span>
-                  <strong>{comuneTarget.nome}:</strong> Realtà{" "}
-                  <strong>{Math.round(statoRealeTarget.totale)}</strong> (
-                  {etichettaFascia(statoRealeTarget.fascia)}) → Scenario{" "}
-                  <strong>{Math.round(statoScenarioTarget.totale)}</strong> (
-                  {etichettaFascia(statoScenarioTarget.fascia)})
-                </span>
-                <strong className={statoScenarioTarget.scenario >= 0 ? "val-pos" : "val-neg"}>
-                  Scenario {formatSegno(statoScenarioTarget.scenario)}
-                </strong>
-              </div>
-
-              <div className="lista-infra-rimovibili">
-                {infraRealiComune.map((inf) => {
-                  const rimossa = rimosseSet.has(inf.id)
+          {comuneTarget && (
+            <>
+              <h4 className="sim-sottotitolo">Aggiungi a {comuneTarget.nome}</h4>
+              <div className="sim-tessere">
+                {INFRA.map((item) => {
+                  const d = DELTA_INFRA[item.id]
                   return (
                     <button
-                      key={inf.id}
+                      key={item.id}
                       type="button"
-                      className={`chip-interattiva ${rimossa ? "chip-interattiva--rimossa" : ""}`}
-                      disabled={rimossa}
+                      className={`sim-tessera ${d >= 0 ? "sim-tessera--buona" : "sim-tessera--cattiva"}`}
+                      aria-label={`Aggiungi ${item.etichetta}, ${formatSegno(d)} punti`}
                       onClick={() => {
-                        if (modalita !== "scenario") st.setModalita("scenario")
-                        st.rimuoviInfrastruttura(inf.id)
+                        inScenario()
+                        st.aggiungiInfrastruttura(comuneTarget.istat, item.id, comuneTarget.centroide)
                       }}
                     >
-                      {inf.tipo} ({formatSegno(DELTA_INFRA[inf.tipo])}){" "}
-                      {rimossa ? "✓ Rimossa" : "✕ Rimuovi"}
+                      <span className="sim-tessera__icona" aria-hidden="true">
+                        {item.icona}
+                      </span>
+                      <span className="sim-tessera__nome">{item.etichetta}</span>
+                      <span className="sim-tessera__delta">{formatSegno(d)}</span>
                     </button>
                   )
                 })}
+              </div>
+            </>
+          )}
+
+          {(infraRealiComune.length > 0 || infraAggiunteComune.length > 0) && (
+            <>
+              <h4 className="sim-sottotitolo">Già presenti · tocca per togliere</h4>
+              <ul className="sim-chips">
                 {infraAggiunteComune.map((agg) => (
+                  <li key={agg.id}>
+                    <button
+                      type="button"
+                      className="sim-chip sim-chip--nuova"
+                      aria-label={`Togli ${META_INFRA[agg.tipo].etichetta} aggiunta`}
+                      onClick={() => {
+                        inScenario()
+                        st.rimuoviInfrastruttura(agg.id)
+                      }}
+                    >
+                      <span aria-hidden="true">{META_INFRA[agg.tipo].icona}</span>
+                      {META_INFRA[agg.tipo].etichetta}
+                      <small>nuova</small>
+                      <span aria-hidden="true" className="sim-chip__x">✕</span>
+                    </button>
+                  </li>
+                ))}
+                {infraRealiComune.map((inf) => {
+                  const rimossa = rimosseSet.has(inf.id)
+                  return (
+                    <li key={inf.id}>
+                      <button
+                        type="button"
+                        className={`sim-chip ${rimossa ? "sim-chip--rimossa" : ""}`}
+                        disabled={rimossa}
+                        aria-label={
+                          rimossa
+                            ? `${META_INFRA[inf.tipo].etichetta} già tolta`
+                            : `Togli ${META_INFRA[inf.tipo].etichetta}, ${formatSegno(-DELTA_INFRA[inf.tipo])} punti`
+                        }
+                        onClick={() => {
+                          inScenario()
+                          st.rimuoviInfrastruttura(inf.id)
+                        }}
+                      >
+                        <span aria-hidden="true">{META_INFRA[inf.tipo].icona}</span>
+                        {META_INFRA[inf.tipo].etichetta}
+                        <span aria-hidden="true" className="sim-chip__x">
+                          {rimossa ? "tolta" : "✕"}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
+
+          <details className="sim-dettagli">
+            <summary>Preferisci posizionarle a mano sulla mappa 3D?</summary>
+            <p>
+              Scegli uno strumento, poi apri la sezione Mappa e clicca sul diorama del comune.
+            </p>
+            <div className="sim-chips" role="group" aria-label="Strumento per la mappa">
+              {STRUMENTI_MAPPA.map((item) => {
+                const attivo = modalita === "scenario" && strumento === item.id
+                return (
                   <button
-                    key={agg.id}
+                    key={item.id}
                     type="button"
-                    className="chip-interattiva chip-interattiva--aggiunta"
+                    className="sim-chip"
+                    aria-pressed={attivo}
                     onClick={() => {
-                      if (modalita !== "scenario") st.setModalita("scenario")
-                      st.rimuoviInfrastruttura(agg.id)
+                      inScenario()
+                      st.setStrumento(attivo ? null : item.id)
                     }}
                   >
-                    ✨ {agg.tipo} ({formatSegno(DELTA_INFRA[agg.tipo])}) ✕ Rimuovi
+                    <span aria-hidden="true">{item.icona}</span>
+                    {item.etichetta}
                   </button>
-                ))}
-              </div>
+                )
+              })}
             </div>
-          )}
+          </details>
         </section>
 
-        {/* 2. Simulatore Casa (dotazioni ipotetiche, punteggio prima -> dopo, senza toccare la casa reale) */}
-        <section className="card-pannello" aria-label="Simulatore casa singola">
-          <div className="card-pannello__top">
+        {/* 2. Casa: dotazioni ipotetiche, senza toccare la casa reale */}
+        <section className="sim-card" aria-labelledby="sim-titolo-casa">
+          <div className="sim-card__testata">
+            <span className="sim-numero" aria-hidden="true">2</span>
             <div>
-              <span className="eyebrow-tag">2 · Simulatore Casa Singola</span>
-              <h3>Confronto Prima → Dopo (senza toccare la casa reale)</h3>
-            </div>
-            <div className="gruppo-preset">
-              <button
-                type="button"
-                className="btn-primario btn-xs"
-                onClick={() =>
-                  setDotazioniIpotesi({
-                    ...dotazioniReali,
-                    fotovoltaico: true,
-                    riscaldamento: "pompa_calore",
-                  })
-                }
-              >
-                ⚡ Demo: Pompa di calore + FV
-              </button>
-              <button
-                type="button"
-                className="btn-sec btn-xs"
-                onClick={() => setDotazioniIpotesi({ ...dotazioniReali })}
-              >
-                ↺ Allinea a casa reale
-              </button>
+              <h3 id="sim-titolo-casa">La tua casa</h3>
+              <p>E se cambiassi impianti? La tua casa salvata resta com&apos;è.</p>
             </div>
           </div>
 
-          <div className="confronto-casa-box">
-            <div className="lato-confronto">
-              <small>PRIMA (Casa reale)</small>
-              <div>
-                <strong>{primaCasa.punteggio} pt</strong>{" "}
-                <span
-                  className="pill-classe"
-                  style={{
-                    backgroundColor: META_CLASSI[primaCasa.classe].bg,
-                    color: META_CLASSI[primaCasa.classe].colore,
-                  }}
-                >
-                  Classe {primaCasa.classe}
-                </span>
-              </div>
-            </div>
+          <Confronto
+            prima={primaCasa.punteggio}
+            dopo={dopoCasa.punteggio}
+            etichettaPrima="Oggi"
+            etichettaDopo="Dopo i lavori"
+            coloreDopo={META_CLASSI[dopoCasa.classe].colore}
+            dettaglioPrima={<PillClasse classe={primaCasa.classe} />}
+            dettaglioDopo={<PillClasse classe={dopoCasa.classe} />}
+          />
 
-            <div className="freccia-confronto">
-              <span>→</span>
-              <strong className={deltaCasa >= 0 ? "val-pos" : "val-neg"}>
-                {formatSegno(deltaCasa)} pt
-              </strong>
-            </div>
-
-            <div className="lato-confronto lato-confronto--dopo">
-              <small>DOPO (Ipotesi simulata)</small>
-              <div>
-                <strong>{dopoCasa.punteggio} pt</strong>{" "}
-                <span
-                  className="pill-classe"
-                  style={{
-                    backgroundColor: META_CLASSI[dopoCasa.classe].bg,
-                    color: META_CLASSI[dopoCasa.classe].colore,
-                  }}
-                >
-                  Classe {dopoCasa.classe}
-                </span>
-              </div>
-            </div>
+          <div className="sim-interruttori">
+            <Interruttore
+              icona="☀️"
+              etichetta="Fotovoltaico"
+              attivo={dotazioniIpotesi.fotovoltaico}
+              onChange={(v) => cambiaCasa({ fotovoltaico: v })}
+            />
+            <Interruttore
+              icona="🌡️"
+              etichetta="Solare termico"
+              attivo={dotazioniIpotesi.solareTermico}
+              onChange={(v) => cambiaCasa({ solareTermico: v })}
+            />
+            <Interruttore
+              icona="🪟"
+              etichetta="Doppi vetri"
+              attivo={dotazioniIpotesi.infissi}
+              onChange={(v) => cambiaCasa({ infissi: v })}
+            />
+            <Interruttore
+              icona="🔌"
+              etichetta="Ricarica auto elettrica"
+              attivo={dotazioniIpotesi.colonninaEV}
+              onChange={(v) => cambiaCasa({ colonninaEV: v })}
+            />
           </div>
 
-          <div className="griglia-switches">
-            <label htmlFor={simFvId} className="card-switch">
-              <span>☀️ Fotovoltaico</span>
-              <input
-                id={simFvId}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={dotazioniIpotesi.fotovoltaico}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({ ...d, fotovoltaico: e.target.checked }))
-                }
-              />
-            </label>
+          <Scelta
+            legenda="Riscaldamento"
+            valore={dotazioniIpotesi.riscaldamento}
+            onChange={(v) => cambiaCasa({ riscaldamento: v })}
+            opzioni={[
+              { valore: "pompa_calore", etichetta: "Pompa di calore" },
+              { valore: "condensazione", etichetta: "Condensazione" },
+              { valore: "tradizionale", etichetta: "Tradizionale" },
+            ]}
+          />
+          <Scelta
+            legenda="Cucina"
+            valore={dotazioniIpotesi.cottura}
+            onChange={(v) => cambiaCasa({ cottura: v })}
+            opzioni={[
+              { valore: "induzione", etichetta: "Induzione" },
+              { valore: "gas", etichetta: "Gas" },
+            ]}
+          />
+          <Scelta
+            legenda="Isolamento"
+            valore={dotazioniIpotesi.isolamento}
+            onChange={(v) => cambiaCasa({ isolamento: v })}
+            opzioni={[
+              { valore: "buono", etichetta: "Buono" },
+              { valore: "medio", etichetta: "Medio" },
+              { valore: "scarso", etichetta: "Scarso" },
+            ]}
+          />
 
-            <label htmlFor={simSolareId} className="card-switch">
-              <span>🌡️ Solare termico</span>
-              <input
-                id={simSolareId}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={dotazioniIpotesi.solareTermico}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({ ...d, solareTermico: e.target.checked }))
-                }
-              />
-            </label>
-
-            <label htmlFor={simInfissiId} className="card-switch">
-              <span>🪟 Infissi doppio/triplo vetro</span>
-              <input
-                id={simInfissiId}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={dotazioniIpotesi.infissi}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({ ...d, infissi: e.target.checked }))
-                }
-              />
-            </label>
-
-            <label htmlFor={simEvId} className="card-switch">
-              <span>🔌 Colonnina EV</span>
-              <input
-                id={simEvId}
-                type="checkbox"
-                {...({ switch: "" } as any)}
-                checked={dotazioniIpotesi.colonninaEV}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({ ...d, colonninaEV: e.target.checked }))
-                }
-              />
-            </label>
-          </div>
-
-          <div className="riga-tre-select">
-            <label>
-              <span>Riscaldamento</span>
-              <select
-                className="input-select"
-                value={dotazioniIpotesi.riscaldamento}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({
-                    ...d,
-                    riscaldamento: e.target.value as Dotazioni["riscaldamento"],
-                  }))
-                }
-              >
-                <option value="pompa_calore">Pompa di calore</option>
-                <option value="condensazione">Condensazione</option>
-                <option value="tradizionale">Tradizionale</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Cottura</span>
-              <select
-                className="input-select"
-                value={dotazioniIpotesi.cottura}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({
-                    ...d,
-                    cottura: e.target.value as Dotazioni["cottura"],
-                  }))
-                }
-              >
-                <option value="induzione">Induzione</option>
-                <option value="gas">Gas</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Isolamento</span>
-              <select
-                className="input-select"
-                value={dotazioniIpotesi.isolamento}
-                onChange={(e) =>
-                  setDotazioniIpotesi((d) => ({
-                    ...d,
-                    isolamento: e.target.value as Dotazioni["isolamento"],
-                  }))
-                }
-              >
-                <option value="buono">Buono</option>
-                <option value="medio">Medio</option>
-                <option value="scarso">Scarso</option>
-              </select>
-            </label>
+          <div className="sim-azioni">
+            <button
+              type="button"
+              className="sim-btn sim-btn--primario"
+              onClick={() =>
+                setDotazioniIpotesi({
+                  ...dotazioniReali,
+                  fotovoltaico: true,
+                  riscaldamento: "pompa_calore",
+                })
+              }
+            >
+              ⚡ Prova: pompa di calore + fotovoltaico
+            </button>
+            <button
+              type="button"
+              className="sim-btn sim-btn--testo"
+              onClick={() => setDotazioniIpotesi({ ...dotazioniReali })}
+            >
+              Torna alla mia casa
+            </button>
           </div>
         </section>
       </div>
 
-      {/* 3. Tre slider macro con scelta dell'ambito provincia/comune */}
-      <section className="card-pannello" aria-label="Slider macro-scenari">
-        <div className="card-pannello__top">
+      {/* 3. Macro-scenari: percentuali di case su provincia o comune */}
+      <section className="sim-card" aria-labelledby="sim-titolo-macro">
+        <div className="sim-card__testata">
+          <span className="sim-numero" aria-hidden="true">3</span>
           <div>
-            <span className="eyebrow-tag">3 · Macro-Scenari su Scala Territoriale (Tetto aria +10)</span>
-            <h3>Slider percentuali sulle abitazioni (Provincia o Comune)</h3>
-          </div>
-
-          <div className="gruppo-preset">
-            <button
-              type="button"
-              className="btn-primario btn-xs"
-              onClick={() => {
-                st.setModalita("scenario")
-                st.setMacro({
-                  ambito: "provincia",
-                  pctFV: 100,
-                  pctSenzaGas: macro.pctSenzaGas,
-                  pctIsolamentoBuono: macro.pctIsolamentoBuono,
-                })
-              }}
-            >
-              ☀️ Demo: 100% FV sulla Provincia
-            </button>
-            <button
-              type="button"
-              className="btn-sec btn-xs"
-              onClick={() => st.setMacro(null)}
-            >
-              Azzera macro
-            </button>
+            <h3 id="sim-titolo-macro">Tutti insieme</h3>
+            <p>E se tante famiglie facessero la stessa scelta? Muovi i cursori.</p>
           </div>
         </div>
 
-        <div className="griglia-macro">
-          <div className="colonna-slider">
-            <div className="campo-form">
-              <label htmlFor="select-ambito-macro">Ambito di applicazione:</label>
-              <select
-                id="select-ambito-macro"
-                className="input-select"
-                value={macro.ambito}
-                onChange={(e) => aggiornaMacro({ ambito: e.target.value })}
+        <div className="sim-macro">
+          <div>
+            <label htmlFor={ambitoSelectId} className="sim-etichetta">
+              Dove
+            </label>
+            <select
+              id={ambitoSelectId}
+              className="sim-select"
+              value={macro.ambito}
+              onChange={(e) => aggiornaMacro({ ambito: e.target.value })}
+            >
+              <option value="provincia">Tutta la provincia di Vicenza</option>
+              <optgroup label="Un solo comune">
+                {elenco114.map((c) => (
+                  <option key={c.istat} value={c.istat}>
+                    {c.nome}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+
+            <Cursore
+              icona="☀️"
+              etichetta="Case con fotovoltaico"
+              valore={macro.pctFV}
+              onChange={(v) => aggiornaMacro({ pctFV: v })}
+            />
+            <Cursore
+              icona="🔥"
+              etichetta="Case senza gas"
+              valore={macro.pctSenzaGas}
+              onChange={(v) => aggiornaMacro({ pctSenzaGas: v })}
+            />
+            <Cursore
+              icona="🧱"
+              etichetta="Case ben isolate"
+              valore={macro.pctIsolamentoBuono}
+              onChange={(v) => aggiornaMacro({ pctIsolamentoBuono: v })}
+            />
+
+            <div className="sim-azioni">
+              <button
+                type="button"
+                className="sim-btn sim-btn--primario"
+                onClick={() => {
+                  st.setModalita("scenario")
+                  st.setMacro({
+                    ambito: "provincia",
+                    pctFV: 100,
+                    pctSenzaGas: macro.pctSenzaGas,
+                    pctIsolamentoBuono: macro.pctIsolamentoBuono,
+                  })
+                }}
               >
-                <option value="provincia">🌍 Intera Provincia di Vicenza</option>
-                <optgroup label="Singolo Comune (114 comuni)">
-                  {elenco114.map((c) => (
-                    <option key={c.istat} value={c.istat}>
-                      🏘️ {c.nome} ({c.istat})
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-
-            <div className="blocco-slider">
-              <div className="blocco-slider__testata">
-                <label htmlFor="slider-fv">☀️ % Case con fotovoltaico</label>
-                <strong>{macro.pctFV}%</strong>
-              </div>
-              <input
-                id="slider-fv"
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={macro.pctFV}
-                onChange={(e) => aggiornaMacro({ pctFV: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="blocco-slider">
-              <div className="blocco-slider__testata">
-                <label htmlFor="slider-nogas">♨️ % Case senza gas (pompa di calore + induzione)</label>
-                <strong>{macro.pctSenzaGas}%</strong>
-              </div>
-              <input
-                id="slider-nogas"
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={macro.pctSenzaGas}
-                onChange={(e) => aggiornaMacro({ pctSenzaGas: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="blocco-slider">
-              <div className="blocco-slider__testata">
-                <label htmlFor="slider-isolamento">🧱 % Case con isolamento buono</label>
-                <strong>{macro.pctIsolamentoBuono}%</strong>
-              </div>
-              <input
-                id="slider-isolamento"
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={macro.pctIsolamentoBuono}
-                onChange={(e) =>
-                  aggiornaMacro({ pctIsolamentoBuono: Number(e.target.value) })
-                }
-              />
+                ☀️ Prova: fotovoltaico su tutte le case
+              </button>
+              <button type="button" className="sim-btn sim-btn--testo" onClick={() => st.setMacro(null)}>
+                Azzera
+              </button>
             </div>
           </div>
 
-          <div className="colonna-impatto-macro">
-            <h4>Impatto sul territorio selezionato ({comuneTarget?.nome})</h4>
-            <div className="metriche-macro">
-              <div className="metrica-macro-card">
-                <span>Indice case medio</span>
-                <strong>
-                  {Math.round(statoRealeTarget?.indiceCaseMedio ?? 0)} →{" "}
-                  {Math.round(statoScenarioTarget?.indiceCaseMedio ?? 0)} / 100
-                </strong>
-                <small>dati dimostrativi</small>
-              </div>
-              <div className="metrica-macro-card">
-                <span>Indice ambientale comune</span>
-                <strong>
-                  {Math.round(statoRealeTarget?.totale ?? 0)} →{" "}
-                  {Math.round(statoScenarioTarget?.totale ?? 0)} / 100
-                </strong>
-                <small>Bonus aria macro con tetto max +10 pt</small>
-              </div>
-            </div>
+          <div className="sim-macro__esito">
+            <h4 className="sim-sottotitolo">Effetto su {comuneTarget?.nome}</h4>
+            {statoRealeTarget && statoScenarioTarget && (
+              <>
+                <Confronto
+                  prima={statoRealeTarget.totale}
+                  dopo={statoScenarioTarget.totale}
+                  etichettaPrima="Ambiente oggi"
+                  etichettaDopo="Ambiente dopo"
+                  coloreDopo={coloreFascia(statoScenarioTarget.fascia)}
+                />
+                <Confronto
+                  prima={statoRealeTarget.indiceCaseMedio}
+                  dopo={statoScenarioTarget.indiceCaseMedio}
+                  etichettaPrima="Case oggi"
+                  etichettaDopo="Case dopo"
+                  coloreDopo="var(--sim-verde)"
+                />
+                <p className="sim-nota">Indice delle case: dati dimostrativi.</p>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {/* Nota obbligatoria: "modello semplificato e indicativo" */}
+      <details className="sim-dettagli sim-dettagli--nota">
+        <summary>ℹ️ Modello semplificato e indicativo · come si calcola?</summary>
+        <ul>
+          <li>Ogni infrastruttura vale un punteggio fisso: parco +5, pista ciclabile +3, colonnine +2, strada principale −8, industria −12.</li>
+          <li>Le infrastrutture già esistenti contano al massimo ±20 punti.</li>
+          <li>I comuni confinanti ricevono metà dell&apos;effetto delle tue modifiche.</li>
+          <li>I cursori “Tutti insieme” migliorano l&apos;aria al massimo di +10 punti.</li>
+        </ul>
+      </details>
     </div>
   )
 }
