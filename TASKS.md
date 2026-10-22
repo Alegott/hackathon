@@ -66,14 +66,16 @@ Gli indici si derivano sempre con `statoTerritorio(dataset, scenario, casaUtente
 
 ## Dev 1 — Dati aria e comuni (script di preparazione)
 **Obiettivo:** produrre la parte `meta` + `comuni` di `dataset.json`.
-- [ ] Analizzare il CSV in `data/`: colonne, inquinanti, centraline, coordinate, periodo. Riportare subito al team se manca qualcosa rispetto a SPEC (assunzioni Q31–Q33).
-- [ ] Scaricare i confini ISTAT dei comuni della provincia di Vicenza, filtrarli (114), semplificarli e proiettarli in metri.
-- [ ] Calcolare centroidi e **confinanti** (adiacenza tra poligoni).
-- [ ] Media PM10 dell'ultimo anno per centralina, **IDW** sui centroidi, `nCentraline` usate.
-- [ ] Normalizzazione: 15 µg/m³ → 100, 50 → 0, lineare.
-- [ ] Consegnare entro le 14:45 un `dataset.mock.json` con 5 comuni finti per sbloccare gli altri, ed entro le 16:00 la versione reale.
+- [x] Analizzare il CSV in `data/`: colonne, inquinanti, centraline, coordinate, periodo. Riportare subito al team se manca qualcosa rispetto a SPEC (assunzioni Q31–Q33).
+- [x] Scaricare i confini ISTAT dei comuni della provincia di Vicenza, filtrarli (114), semplificarli e proiettarli in metri.
+- [x] Calcolare centroidi e **confinanti** (adiacenza tra poligoni).
+- [x] Media PM10 dell'ultimo anno per centralina, **IDW** sui centroidi, `nCentraline` usate.
+- [x] Normalizzazione: 15 µg/m³ → 100, 50 → 0, lineare.
+- [x] Consegnare entro le 14:45 un `dataset.mock.json` con 5 comuni finti per sbloccare gli altri, ed entro le 16:00 la versione reale.
 
 **Fatto quando:** 114 comuni con `ariaNorm` plausibili, nessun comune senza confinanti tranne casi reali.
+
+> Stato: consegna Dev 1 completata. Il CSV originale manca: usate medie annuali ufficiali ARPAV 2025 e coordinate ufficiali. Dettagli in [docs/dev1-dati.md](docs/dev1-dati.md). Le spunte indicano il completamento attuale, non attestano il rispetto degli orari originari.
 
 ## Dev 2 — Infrastrutture OSM e case seed
 **Obiettivo:** produrre `infrastrutture` + `caseSeed` di `dataset.json` (unendo il proprio output a quello di Dev 1).
@@ -126,14 +128,14 @@ Gli indici si derivano sempre con `statoTerritorio(dataset, scenario, casaUtente
 
 ## Dev 6 — UI: Casa, classifica, pannelli di simulazione
 **Obiettivo:** tutte le schermate 2D sopra la mappa.
-- [ ] **Casa:**
+- [x] **Casa:**
   - form dotazioni e comune (elenco dei 114);
   - interruttore Pubblico/Privato e nickname;
   - salvataggio in `localStorage` con try/catch.
-- [ ] **Dashboard:** punteggio, classe A–G, "cosa ti manca per salire".
-- [ ] **Classifica comunale** con le regole privacy, case seed etichettate "dati dimostrativi".
-- [ ] **Pannello comune:** "Aria reale X · Infrastrutture ±Y · (Scenario ±W) · Totale Z", "stima da N centraline", periodo, indice case medio.
-- [ ] **Simulazione:**
+- [x] **Dashboard:** punteggio, classe A–G, "cosa ti manca per salire".
+- [x] **Classifica comunale** con le regole privacy, case seed etichettate "dati dimostrativi".
+- [x] **Pannello comune:** "Aria reale X · Infrastrutture ±Y · (Scenario ±W) · Totale Z", "stima da N centraline", periodo, indice case medio.
+- [x] **Simulazione:**
   - interruttore Realtà/Scenario e palette strumenti (con "rimuovi");
   - pulsante Reset;
   - simulatore casa (dotazioni ipotetiche, punteggio prima → dopo, senza toccare la casa reale);
