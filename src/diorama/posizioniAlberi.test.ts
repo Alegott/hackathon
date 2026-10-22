@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { posizioniAlberi } from "./alberi"
+import { posizioniAlberi } from "./posizioniAlberi"
 
 // Poligono a L: il quadrato [0,10]² senza l'angolo [5,10]×[5,10]. Concavo, quindi il test
 // non passa per caso su un rettangolo.

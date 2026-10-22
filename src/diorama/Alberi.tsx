@@ -1,7 +1,7 @@
 import { useFrame } from "@react-three/fiber"
 import { useEffect, useMemo, useRef } from "react"
 import * as THREE from "three"
-import { posizioniAlberi, type Ostacolo } from "./alberi"
+import { posizioniAlberi, type Ostacolo } from "./posizioniAlberi"
 import type { Punto } from "./geometria"
 import type { PresetVisivo } from "./preset"
 

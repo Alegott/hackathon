@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vicenza Sostenibile</title>
+    <script>
+      // Applica il tema salvato prima del primo paint (vedi src/app/tema.ts).
+      try {
+        var t = localStorage.getItem("vicenza-tema")
+        if (t === "chiaro" || t === "scuro") document.documentElement.dataset.theme = t === "scuro" ? "dark" : "light"
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
