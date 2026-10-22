@@ -3,6 +3,7 @@ import { dataset } from "../data/dataset"
 import { store, useApp, useIndici } from "../app/useApp"
 import { coloreFascia, etichettaFascia } from "../map/fasce"
 import { DELTA_INFRA } from "../engine/costanti"
+import { calcolaSpawnSpecieRare } from "../diorama/Fauna"
 import type { TipoInfra } from "../types"
 
 const ETICHETTE_INFRA: Record<TipoInfra, { nome: string; icona: string }> = {
@@ -37,6 +38,8 @@ export const PannelloComune: React.FC = () => {
   const infraAggiunte = scenario.aggiunte.filter(
     (a) => a.comune === c.istat && !rimozioniSet.has(a.id),
   )
+
+  const { spawnRate, specieAttive } = calcolaSpawnSpecieRare(s)
 
   return (
     <aside className="pannello-comune" aria-label={`Pannello comune di ${c.nome}`}>
@@ -104,6 +107,17 @@ export const PannelloComune: React.FC = () => {
             {casaUtente?.comune === c.istat ? " (incl. tua casa)" : ""}
           </strong>
         </div>
+        <div className="pannello-comune__meta-row pannello-comune__meta-row--case">
+          <span>🦌 Spawn specie protette / a rischio:</span>
+          <strong className={spawnRate > 0 ? "val-pos" : ""}>
+            {Math.round(spawnRate * 100)}%
+          </strong>
+        </div>
+        {specieAttive.length > 0 && (
+          <div style={{ fontSize: "11.5px", color: "#15803d", marginTop: "2px" }}>
+            ✨ Avvistabili: {specieAttive.map((sp) => sp.nome).join(", ")}
+          </div>
+        )}
       </div>
 
       {/* Sintesi infrastrutture e confinanti */}
