@@ -329,7 +329,9 @@ input[type="checkbox"][switch]:focus-visible {
   border: 1.5px dashed var(--sim-verde-bordo);
 }
 .sim-insieme__etichetta { position: absolute; top: 0; left: 28px; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--sim-verde); color: #fff; font-size: 12.5px; font-weight: 700; letter-spacing: .02em; }
-.sim-griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; align-items: start; }
+/* Comune e casa alti uguali, così i due rami del connettore toccano entrambi i bordi inferiori */
+.sim-griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; align-items: stretch; }
+.sim-griglia > .sim-card > :last-child { margin-top: auto; }
 
 .sim-unione { position: relative; height: 72px; margin: 0 0 -4px; }
 .sim-unione svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
