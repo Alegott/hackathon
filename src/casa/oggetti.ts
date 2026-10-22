@@ -36,3 +36,10 @@ export function togliOggetto(d: Dotazioni, o: Oggetto): Dotazioni {
   const e = EFFETTI[o]
   return d[e.chiave] === e.valore ? { ...d, [e.chiave]: e.peggiore } : d
 }
+
+const NON_VIRTUOSI: Oggetto[] = ["tradizionale", "gas", "isolamento_scarso"]
+
+// Gli oggetti installati che contano come dotazioni (esclude le scelte peggiori), per le icone in classifica.
+export function oggettiAttivi(d: Dotazioni): Oggetto[] {
+  return OGGETTI.filter((o) => !NON_VIRTUOSI.includes(o) && EFFETTI[o].valore === d[EFFETTI[o].chiave])
+}

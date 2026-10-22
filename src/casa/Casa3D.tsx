@@ -1,19 +1,68 @@
 import { ContactShadows, OrbitControls } from "@react-three/drei"
-import { Canvas, useFrame } from "@react-three/fiber"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useMemo, useRef, type ReactNode } from "react"
 import * as THREE from "three"
 import type { Dotazioni } from "../types"
+import { meteoDaClasse, type Meteo } from "./meteo"
 import { descriviCasa, type VistaCasa } from "./vista"
+import { punteggioCasa } from "../engine"
 
-const LARGHEZZA = 4 // lungo X
-const PROFONDITA = 3 // lungo Z
-const ALTEZZA_MURI = 2.1
+// Volume principale, ala laterale (garage) e tetto.
+const W = 3.6, D = 3, H = 2.1
+const ALA = { w: 1.7, d: 2.4, h: 1.45, x: -2.65 }
 const ALTEZZA_TETTO = 1.25
-const SEMILUNGHEZZA_FALDA = Math.hypot(PROFONDITA / 2 + 0.2, ALTEZZA_TETTO)
-const ANGOLO_TETTO = Math.atan2(ALTEZZA_TETTO, PROFONDITA / 2 + 0.2)
+const MEZZA = D / 2 + 0.22
+const LUNGHEZZA_FALDA = Math.hypot(MEZZA, ALTEZZA_TETTO)
+const ANGOLO_TETTO = Math.atan2(ALTEZZA_TETTO, MEZZA)
 
-// Fa comparire (e sparire) i figli con una piccola molla invece di un taglio netto.
-function Apparizione({ visibile, children, posizione }: { visibile: boolean; children: ReactNode; posizione?: [number, number, number] }) {
+// ───────────────────────── texture procedurali (una sola volta) ─────────────────────────
+function canvasTexture(disegna: (x: CanvasRenderingContext2D) => void, ripeti: [number, number]) {
+  const c = document.createElement("canvas")
+  c.width = c.height = 256
+  disegna(c.getContext("2d")!)
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  t.repeat.set(...ripeti)
+  return t
+}
+const texMattoni = () => canvasTexture((x) => {
+  x.fillStyle = "#cdbfae"; x.fillRect(0, 0, 256, 256)
+  const col = ["#b4553c", "#a84a33", "#bd6247", "#a14430", "#b65a41"]
+  for (let r = 0; r < 12; r++) for (let k = 0; k < 7; k++) {
+    x.fillStyle = col[(r * 7 + k * 3) % col.length]!
+    x.fillRect(k * 37 - (r % 2) * 18 + 2, r * 21.3 + 2, 33, 17.5)
+  }
+}, [2, 1])
+const texIntonaco = () => canvasTexture((x) => {
+  x.fillStyle = "#ffffff"; x.fillRect(0, 0, 256, 256)
+  for (let i = 0; i < 2200; i++) {
+    const v = 232 + Math.random() * 23
+    x.fillStyle = `rgb(${v},${v},${v - 3})`
+    x.fillRect(Math.random() * 256, Math.random() * 256, 2, 2)
+  }
+}, [3, 2])
+const texTegole = () => canvasTexture((x) => {
+  x.fillStyle = "#6e2f20"; x.fillRect(0, 0, 256, 256)
+  for (let r = 0; r < 10; r++) for (let k = 0; k < 9; k++) {
+    const l = 38 + ((r * 5 + k * 3) % 4) * 5
+    x.fillStyle = `hsl(14,52%,${l}%)`
+    x.beginPath()
+    x.roundRect(k * 28.4 - (r % 2) * 14 + 1, r * 25.6 + 1, 26.4, 23.6, [3, 3, 11, 11])
+    x.fill()
+  }
+}, [2, 1.4])
+const texCelle = () => canvasTexture((x) => {
+  x.fillStyle = "#16346a"; x.fillRect(0, 0, 256, 256)
+  x.strokeStyle = "#5f86c4"; x.lineWidth = 2
+  for (let i = 0; i <= 256; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 256); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(256, i); x.stroke() }
+  x.strokeStyle = "#9fb8e0"; x.lineWidth = 1
+  for (let i = 16; i < 256; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 256); x.stroke() }
+}, [1, 1])
+
+// ───────────────────────── animazione di comparsa ─────────────────────────
+function Apparizione({ visibile, children }: { visibile: boolean; children: ReactNode }) {
   const g = useRef<THREE.Group>(null)
   const scala = useRef(visibile ? 1 : 0)
   const velocita = useRef(0)
@@ -23,95 +72,140 @@ function Apparizione({ visibile, children, posizione }: { visibile: boolean; chi
     velocita.current += ((obiettivo - scala.current) * 180 - velocita.current * 14) * passo
     scala.current += velocita.current * passo
     if (Math.abs(obiettivo - scala.current) < 0.001 && Math.abs(velocita.current) < 0.01) scala.current = obiettivo
-    const s = Math.max(scala.current, 0.0001)
-    g.current?.scale.setScalar(s)
+    g.current?.scale.setScalar(Math.max(scala.current, 0.0001))
     if (g.current) g.current.visible = scala.current > 0.002
   })
-  return <group ref={g} position={posizione} scale={visibile ? 1 : 0.0001}>{children}</group>
+  return <group ref={g} scale={visibile ? 1 : 0.0001}>{children}</group>
 }
 
-function texturaMattoni() {
-  const c = document.createElement("canvas")
-  c.width = c.height = 256
-  const x = c.getContext("2d")!
-  x.fillStyle = "#c9b8a6"; x.fillRect(0, 0, 256, 256)
-  const colori = ["#b4553c", "#a84a33", "#bd6247", "#a14430"]
-  for (let r = 0; r < 12; r++) for (let k = 0; k < 6; k++) {
-    x.fillStyle = colori[(r * 7 + k * 3) % colori.length]!
-    const dx = (r % 2) * 21
-    x.fillRect(k * 42.6 - dx + 2, r * 21.3 + 2, 38.6, 17.3)
-  }
-  const t = new THREE.CanvasTexture(c)
-  t.wrapS = t.wrapT = THREE.RepeatWrapping
-  t.colorSpace = THREE.SRGBColorSpace
-  t.repeat.set(2, 1)
-  return t
-}
+// ───────────────────────── struttura ─────────────────────────
+const COLORE_RIV = { mattone: "#ffffff", intonaco: "#ece2cc", cappotto: "#fbfbf8" } as const
+const SPESS_RIV = { mattone: -0.02, intonaco: 0.015, cappotto: 0.09 } as const
 
-const COLORE_RIVESTIMENTO = { mattone: "#ffffff", intonaco: "#eadfc8", cappotto: "#fbfbf8" } as const
-const SPESSORE_RIVESTIMENTO = { mattone: -0.02, intonaco: 0.015, cappotto: 0.09 } as const
-
-function Pareti({ rivestimento }: { rivestimento: VistaCasa["rivestimento"] }) {
-  const tex = useMemo(texturaMattoni, [])
+// Un volume di pareti: mattoni sotto, rivestimento sopra (sottile con intonaco, spesso col cappotto).
+function Volume({ w, h, d, x, z = 0, rivestimento }: { w: number; h: number; d: number; x: number; z?: number; rivestimento: VistaCasa["rivestimento"] }) {
+  const mattoni = useMemo(texMattoni, [])
+  const grana = useMemo(texIntonaco, [])
   const strato = useRef<THREE.Mesh>(null)
-  const matStrato = useRef<THREE.MeshStandardMaterial>(null)
-  const spessore = useRef(SPESSORE_RIVESTIMENTO[rivestimento])
-  const colore = useMemo(() => new THREE.Color(COLORE_RIVESTIMENTO[rivestimento]), [])
+  const mat = useRef<THREE.MeshStandardMaterial>(null)
+  const spessore = useRef(SPESS_RIV[rivestimento])
+  const colore = useMemo(() => new THREE.Color(COLORE_RIV[rivestimento]), [])
   useFrame((_, dt) => {
     const f = 1 - Math.exp(-6 * Math.min(dt, 0.05))
-    spessore.current += (SPESSORE_RIVESTIMENTO[rivestimento] - spessore.current) * f
-    colore.lerp(new THREE.Color(COLORE_RIVESTIMENTO[rivestimento]), f)
-    strato.current?.scale.set(
-      1 + (2 * spessore.current) / LARGHEZZA, 1 + (2 * spessore.current) / ALTEZZA_MURI, 1 + (2 * spessore.current) / PROFONDITA,
-    )
-    matStrato.current?.color.copy(colore)
+    spessore.current += (SPESS_RIV[rivestimento] - spessore.current) * f
+    colore.lerp(new THREE.Color(COLORE_RIV[rivestimento]), f)
+    strato.current?.scale.set(1 + (2 * spessore.current) / w, 1 + (2 * spessore.current) / h, 1 + (2 * spessore.current) / d)
+    mat.current?.color.copy(colore)
   })
   return (
-    <>
-      <mesh position={[0, ALTEZZA_MURI / 2, 0]} castShadow>
-        <boxGeometry args={[LARGHEZZA, ALTEZZA_MURI, PROFONDITA]} />
-        <meshStandardMaterial map={tex} roughness={0.9} />
-      </mesh>
-      <mesh ref={strato} position={[0, ALTEZZA_MURI / 2, 0]} castShadow>
-        <boxGeometry args={[LARGHEZZA, ALTEZZA_MURI, PROFONDITA]} />
-        <meshStandardMaterial ref={matStrato} color={COLORE_RIVESTIMENTO[rivestimento]} roughness={0.95} />
-      </mesh>
-    </>
+    <group position={[x, h / 2, z]}>
+      <mesh castShadow receiveShadow><boxGeometry args={[w, h, d]} /><meshStandardMaterial map={mattoni} roughness={0.9} /></mesh>
+      <mesh ref={strato} castShadow receiveShadow><boxGeometry args={[w, h, d]} /><meshStandardMaterial ref={mat} map={grana} color={COLORE_RIV[rivestimento]} roughness={0.95} /></mesh>
+      {/* zoccolo */}
+      <mesh position={[0, -h / 2 + 0.07, 0]}><boxGeometry args={[w + 0.08 + SPESS_RIV[rivestimento] * 2, 0.14, d + 0.08 + SPESS_RIV[rivestimento] * 2]} /><meshStandardMaterial color="#8d8a85" roughness={1} /></mesh>
+    </group>
   )
 }
 
 function Tetto() {
+  const tegole = useMemo(texTegole, [])
   const geo = useMemo(() => {
-    const mezza = PROFONDITA / 2 + 0.2
-    const forma = new THREE.Shape([new THREE.Vector2(-mezza, 0), new THREE.Vector2(mezza, 0), new THREE.Vector2(0, ALTEZZA_TETTO)])
-    const g = new THREE.ExtrudeGeometry(forma, { depth: LARGHEZZA + 0.5, bevelEnabled: false })
-    g.translate(0, 0, -(LARGHEZZA + 0.5) / 2)
-    g.rotateY(Math.PI / 2) // il colmo corre lungo X
+    const forma = new THREE.Shape([new THREE.Vector2(-MEZZA, 0), new THREE.Vector2(MEZZA, 0), new THREE.Vector2(0, ALTEZZA_TETTO)])
+    const g = new THREE.ExtrudeGeometry(forma, { depth: W + 0.6, bevelEnabled: false })
+    g.translate(0, 0, -(W + 0.6) / 2)
+    g.rotateY(Math.PI / 2)
     return g
   }, [])
   return (
-    <mesh geometry={geo} position={[0, ALTEZZA_MURI, 0]} castShadow>
-      <meshStandardMaterial color="#9c4a35" roughness={0.8} flatShading />
-    </mesh>
+    <group position={[0, H, 0]}>
+      <mesh geometry={geo} castShadow receiveShadow><meshStandardMaterial map={tegole} roughness={0.75} /></mesh>
+      <mesh position={[0, ALTEZZA_TETTO + 0.02, 0]} castShadow><boxGeometry args={[W + 0.66, 0.1, 0.22]} /><meshStandardMaterial color="#5a2418" roughness={0.7} /></mesh>
+      {/* gronde */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[0, 0.02, s * (MEZZA + 0.01)]}><boxGeometry args={[W + 0.62, 0.07, 0.07]} /><meshStandardMaterial color="#f1ece2" /></mesh>
+      ))}
+    </group>
   )
 }
 
-// Un punto sulla falda anteriore (verso +z): s = distanza dalla gronda lungo la falda, x = posizione sul colmo.
-function suFalda(x: number, s: number, fuori = 0.05): { posizione: [number, number, number] } {
-  const mezza = PROFONDITA / 2 + 0.2
-  const dirZ = -mezza / SEMILUNGHEZZA_FALDA, dirY = ALTEZZA_TETTO / SEMILUNGHEZZA_FALDA
-  const nz = dirY, ny = mezza / SEMILUNGHEZZA_FALDA // normale uscente
-  return { posizione: [x, ALTEZZA_MURI + dirY * s + ny * fuori, mezza + dirZ * s + nz * fuori] }
+function TettoAla() {
+  const tegole = useMemo(texTegole, [])
+  const inclin = 0.16
+  return (
+    <group position={[ALA.x, ALA.h + 0.06, 0]} rotation={[inclin, 0, 0]}>
+      <mesh castShadow receiveShadow><boxGeometry args={[ALA.w + 0.4, 0.14, ALA.d + 0.5]} /><meshStandardMaterial map={tegole} roughness={0.8} /></mesh>
+    </group>
+  )
 }
 
+// Punto sulla falda anteriore: x sul colmo, s = distanza dalla gronda lungo la falda.
+function suFalda(x: number, s: number, fuori = 0.05): [number, number, number] {
+  const dirZ = -MEZZA / LUNGHEZZA_FALDA, dirY = ALTEZZA_TETTO / LUNGHEZZA_FALDA
+  return [x, H + dirY * s + (MEZZA / LUNGHEZZA_FALDA) * fuori, MEZZA + dirZ * s + dirY * fuori]
+}
+
+// ───────────────────────── infissi, porta e dettagli ─────────────────────────
+function Finestra({ posizione, rotazione = 0, vetri, persiane = true }: { posizione: [number, number, number]; rotazione?: number; vetri: "semplici" | "doppi"; persiane?: boolean }) {
+  const doppi = vetri === "doppi"
+  const telaio = doppi ? "#2f3b45" : "#f1efe9"
+  const sp = doppi ? 0.075 : 0.04
+  return (
+    <group position={posizione} rotation={[0, rotazione, 0]}>
+      <mesh><boxGeometry args={[0.8, 0.74, sp]} /><meshStandardMaterial color={telaio} roughness={0.5} /></mesh>
+      <mesh position={[0, 0, sp / 2 + 0.002]}>
+        <planeGeometry args={[0.66, 0.6]} />
+        <meshStandardMaterial color={doppi ? "#7fc4ea" : "#cfe6f1"} metalness={doppi ? 0.85 : 0.1} roughness={doppi ? 0.08 : 0.3} transparent opacity={doppi ? 0.92 : 0.72} emissive={doppi ? "#2b86b8" : "#000"} emissiveIntensity={doppi ? 0.25 : 0} />
+      </mesh>
+      <mesh position={[0, 0, sp / 2 + 0.006]}><boxGeometry args={[0.03, 0.6, 0.012]} /><meshStandardMaterial color={telaio} /></mesh>
+      <mesh position={[0, 0, sp / 2 + 0.006]}><boxGeometry args={[0.66, 0.03, 0.012]} /><meshStandardMaterial color={telaio} /></mesh>
+      {doppi && <mesh position={[0, 0, sp / 2 + 0.03]}><planeGeometry args={[0.66, 0.6]} /><meshStandardMaterial color="#9fd6f3" metalness={0.8} roughness={0.1} transparent opacity={0.3} /></mesh>}
+      <mesh position={[0, -0.41, 0.07]}><boxGeometry args={[0.94, 0.05, 0.16]} /><meshStandardMaterial color="#d9d3c6" /></mesh>
+      {persiane && [-1, 1].map((s) => (
+        <mesh key={s} position={[s * 0.5, 0, 0.045]} rotation={[0, -s * 0.5, 0]}><boxGeometry args={[0.24, 0.72, 0.03]} /><meshStandardMaterial color="#4d7a64" roughness={0.8} /></mesh>
+      ))}
+    </group>
+  )
+}
+
+function Facciata({ rivestimento, vetri }: Pick<VistaCasa, "rivestimento" | "vetri">) {
+  const s = SPESS_RIV[rivestimento]
+  const z = D / 2 + s + 0.02
+  const tettoia = H * 0.78
+  return (
+    <>
+      <Finestra posizione={[-1.2, 1.3, z]} vetri={vetri} />
+      <Finestra posizione={[1.2, 1.3, z]} vetri={vetri} />
+      <Finestra posizione={[-0.7, 1.2, -z]} rotazione={Math.PI} vetri={vetri} />
+      <Finestra posizione={[0.7, 1.2, -z]} rotazione={Math.PI} vetri={vetri} />
+      <Finestra posizione={[W / 2 + s + 0.02, 1.3, -0.45]} rotazione={Math.PI / 2} vetri={vetri} />
+      {/* porta con tettoia e gradino */}
+      <group position={[0, 0, z]}>
+        <mesh position={[0, 0.78, 0]}><boxGeometry args={[0.7, 1.56, 0.07]} /><meshStandardMaterial color="#5a3e2b" roughness={0.65} /></mesh>
+        <mesh position={[0, 1.05, 0.04]}><boxGeometry args={[0.46, 0.5, 0.012]} /><meshStandardMaterial color="#6b4a35" /></mesh>
+        <mesh position={[0.24, 0.8, 0.06]}><sphereGeometry args={[0.035, 8, 8]} /><meshStandardMaterial color="#d6b25e" metalness={0.8} roughness={0.3} /></mesh>
+        <mesh position={[0, tettoia, 0.3]} rotation={[0.22, 0, 0]} castShadow><boxGeometry args={[1.25, 0.07, 0.75]} /><meshStandardMaterial color="#9c4a35" roughness={0.8} /></mesh>
+        {[-0.55, 0.55].map((x) => <mesh key={x} position={[x, tettoia / 2 + 0.05, 0.6]}><cylinderGeometry args={[0.03, 0.03, tettoia - 0.1, 8]} /><meshStandardMaterial color="#f1ece2" /></mesh>)}
+        <mesh position={[0, 0.05, 0.32]}><boxGeometry args={[1.0, 0.1, 0.45]} /><meshStandardMaterial color="#b9b3a8" roughness={1} /></mesh>
+        <mesh position={[0.62, 1.45, 0.07]}><sphereGeometry args={[0.05, 8, 8]} /><meshStandardMaterial color="#fff2b8" emissive="#ffe27a" emissiveIntensity={0.5} /></mesh>
+      </group>
+      {/* ala garage con portone */}
+      <group position={[ALA.x + 0.0, 0, ALA.d / 2 + (s > 0 ? s : 0) + 0.02]}>
+        <mesh position={[0, 0.55, 0]}><boxGeometry args={[1.15, 1.1, 0.06]} /><meshStandardMaterial color="#d8dcde" roughness={0.5} metalness={0.2} /></mesh>
+        {[0.2, 0.4, 0.6, 0.8, 1.0].map((y) => <mesh key={y} position={[0, y, 0.035]}><boxGeometry args={[1.12, 0.012, 0.01]} /><meshStandardMaterial color="#9aa2a8" /></mesh>)}
+      </group>
+    </>
+  )
+}
+
+// ───────────────────────── dotazioni ─────────────────────────
 function PannelliFV() {
-  const pezzi = [] as ReactNode[]
+  const celle = useMemo(texCelle, [])
+  const pezzi: ReactNode[] = []
   for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) {
-    const { posizione } = suFalda(0.35 + c * 0.82, 0.38 + r * 0.6)
     pezzi.push(
-      <group key={`${r}${c}`} position={posizione} rotation={[ANGOLO_TETTO, 0, 0]}>
-        <mesh castShadow><boxGeometry args={[0.76, 0.05, 0.54]} /><meshStandardMaterial color="#1b3a6b" metalness={0.6} roughness={0.25} /></mesh>
-        <mesh position={[0, 0.03, 0]}><boxGeometry args={[0.7, 0.005, 0.48]} /><meshStandardMaterial color="#274f8f" metalness={0.5} roughness={0.2} emissive="#16335f" emissiveIntensity={0.35} /></mesh>
+      <group key={`${r}${c}`} position={suFalda(0.4 + c * 0.84, 0.4 + r * 0.62)} rotation={[ANGOLO_TETTO, 0, 0]}>
+        <mesh castShadow><boxGeometry args={[0.8, 0.045, 0.58]} /><meshStandardMaterial color="#c9ced3" metalness={0.7} roughness={0.35} /></mesh>
+        <mesh position={[0, 0.024, 0]}><boxGeometry args={[0.74, 0.004, 0.52]} /><meshStandardMaterial map={celle} metalness={0.55} roughness={0.2} emissive="#102a55" emissiveIntensity={0.4} /></mesh>
       </group>,
     )
   }
@@ -119,18 +213,15 @@ function PannelliFV() {
 }
 
 function SolareTermico() {
-  const { posizione } = suFalda(-1.1, 0.55)
-  const serbatoio = suFalda(-1.1, 1.18, 0.14)
   return (
     <>
-      <group position={posizione} rotation={[ANGOLO_TETTO, 0, 0]}>
-        <mesh castShadow><boxGeometry args={[1.05, 0.06, 0.8]} /><meshStandardMaterial color="#23707a" metalness={0.4} roughness={0.3} /></mesh>
-        {[-0.35, -0.12, 0.12, 0.35].map((x) => (
-          <mesh key={x} position={[x, 0.04, 0]}><boxGeometry args={[0.05, 0.02, 0.72]} /><meshStandardMaterial color="#e0a23a" /></mesh>
-        ))}
+      <group position={suFalda(-1.15, 0.55)} rotation={[ANGOLO_TETTO, 0, 0]}>
+        <mesh castShadow><boxGeometry args={[1.05, 0.06, 0.8]} /><meshStandardMaterial color="#c9ced3" metalness={0.6} roughness={0.35} /></mesh>
+        <mesh position={[0, 0.034, 0]}><boxGeometry args={[0.96, 0.006, 0.7]} /><meshStandardMaterial color="#1f5e68" metalness={0.5} roughness={0.25} /></mesh>
+        {[-0.36, -0.12, 0.12, 0.36].map((x) => <mesh key={x} position={[x, 0.04, 0]}><boxGeometry args={[0.04, 0.01, 0.66]} /><meshStandardMaterial color="#e0a23a" /></mesh>)}
       </group>
-      <mesh position={serbatoio.posizione} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.15, 0.15, 0.8, 16]} /><meshStandardMaterial color="#e8ecef" metalness={0.3} roughness={0.4} />
+      <mesh position={suFalda(-1.15, 1.2, 0.16)} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.16, 0.16, 0.85, 18]} /><meshStandardMaterial color="#eef1f3" metalness={0.3} roughness={0.35} />
       </mesh>
     </>
   )
@@ -142,33 +233,24 @@ function Fumo({ colore, quanto, ritmo }: { colore: string; quanto: number; ritmo
   useFrame(({ clock }) => {
     sfere.current.forEach((m, i) => {
       if (!m) return
-      const t = ((clock.elapsedTime * ritmo + i / N) % 1)
+      const t = (clock.elapsedTime * ritmo + i / N) % 1
       m.position.set(Math.sin(t * 5 + i) * 0.09 * t, t * 1.1, 0)
       m.scale.setScalar((0.07 + t * 0.2) * quanto)
       ;(m.material as THREE.MeshStandardMaterial).opacity = (1 - t) * 0.65
     })
   })
-  return (
-    <>
-      {Array.from({ length: N }, (_, i) => (
-        <mesh key={i} ref={(m) => { sfere.current[i] = m }}>
-          <icosahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial color={colore} transparent opacity={0.5} flatShading depthWrite={false} />
-        </mesh>
-      ))}
-    </>
-  )
+  return <>{Array.from({ length: N }, (_, i) => (
+    <mesh key={i} ref={(m) => { sfere.current[i] = m }}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color={colore} transparent opacity={0.5} depthWrite={false} /></mesh>
+  ))}</>
 }
 
 function Camino({ tipo }: { tipo: "caldaia_condensazione" | "caldaia_tradizionale" }) {
   const scuro = tipo === "caldaia_tradizionale"
   return (
-    <group position={[1.3, ALTEZZA_MURI + 0.55, -0.35]}>
-      <mesh castShadow><boxGeometry args={[0.32, 1.0, 0.32]} /><meshStandardMaterial color={scuro ? "#6b4a3d" : "#b9bfc4"} roughness={0.8} /></mesh>
-      <mesh position={[0, 0.54, 0]}><boxGeometry args={[0.42, 0.08, 0.42]} /><meshStandardMaterial color="#4a4a4a" /></mesh>
-      <group position={[0, 0.6, 0]}>
-        <Fumo colore={scuro ? "#3a3a3d" : "#f4f7f9"} quanto={scuro ? 1.3 : 0.8} ritmo={scuro ? 0.45 : 0.3} />
-      </group>
+    <group position={[1.15, H + 0.62, -0.35]}>
+      <mesh castShadow><boxGeometry args={[0.34, 1.05, 0.34]} /><meshStandardMaterial color={scuro ? "#7a5646" : "#b9bfc4"} roughness={0.85} /></mesh>
+      <mesh position={[0, 0.56, 0]}><boxGeometry args={[0.46, 0.08, 0.46]} /><meshStandardMaterial color="#4a4a4a" /></mesh>
+      <group position={[0, 0.62, 0]}><Fumo colore={scuro ? "#3a3a3d" : "#f4f7f9"} quanto={scuro ? 1.3 : 0.8} ritmo={scuro ? 0.45 : 0.3} /></group>
     </group>
   )
 }
@@ -177,63 +259,29 @@ function PompaDiCalore() {
   const ventola = useRef<THREE.Group>(null)
   useFrame((_, dt) => { if (ventola.current) ventola.current.rotation.z += dt * 9 })
   return (
-    <group position={[LARGHEZZA / 2 + 0.55, 0.38, 0.35]}>
-      <mesh castShadow><boxGeometry args={[0.5, 0.76, 0.95]} /><meshStandardMaterial color="#e6eaed" roughness={0.5} metalness={0.2} /></mesh>
-      <group position={[0.26, 0.06, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <mesh><ringGeometry args={[0.2, 0.28, 24]} /><meshStandardMaterial color="#2d3a44" side={THREE.DoubleSide} /></mesh>
+    <group position={[W / 2 + 0.6, 0.4, 0.4]}>
+      <mesh castShadow><boxGeometry args={[0.52, 0.8, 0.98]} /><meshStandardMaterial color="#e6eaed" roughness={0.5} metalness={0.2} /></mesh>
+      <mesh position={[0.27, 0, 0]}><boxGeometry args={[0.02, 0.7, 0.88]} /><meshStandardMaterial color="#c9d0d5" /></mesh>
+      <group position={[0.285, 0.06, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh><ringGeometry args={[0.2, 0.3, 28]} /><meshStandardMaterial color="#2d3a44" side={THREE.DoubleSide} /></mesh>
+        <mesh position={[0, 0, -0.004]}><circleGeometry args={[0.2, 24]} /><meshStandardMaterial color="#1c252c" side={THREE.DoubleSide} /></mesh>
         <group ref={ventola}>
-          {[0, 1, 2, 3].map((i) => (
-            <mesh key={i} rotation={[0, 0, (i * Math.PI) / 2]} position={[0, 0, 0.005]}>
-              <boxGeometry args={[0.04, 0.4, 0.01]} /><meshStandardMaterial color="#546e7a" />
-            </mesh>
-          ))}
+          {[0, 1, 2, 3, 4].map((i) => <mesh key={i} rotation={[0, 0, (i * Math.PI * 2) / 5]} position={[0, 0, 0.006]}><boxGeometry args={[0.07, 0.38, 0.012]} /><meshStandardMaterial color="#6d8795" /></mesh>)}
         </group>
       </group>
-      <mesh position={[-0.25, 0.1, 0.5]}><cylinderGeometry args={[0.035, 0.035, 0.5, 8]} /><meshStandardMaterial color="#b0b6bb" /></mesh>
-      <mesh position={[0.26, 0.3, -0.32]}><sphereGeometry args={[0.03, 8, 8]} /><meshStandardMaterial color="#35c46a" emissive="#35c46a" emissiveIntensity={1} /></mesh>
+      <mesh position={[-0.28, 0.12, 0.55]}><cylinderGeometry args={[0.035, 0.035, 0.55, 8]} /><meshStandardMaterial color="#b0b6bb" /></mesh>
+      <mesh position={[0.27, 0.32, -0.38]}><sphereGeometry args={[0.03, 8, 8]} /><meshStandardMaterial color="#35c46a" emissive="#35c46a" emissiveIntensity={1} /></mesh>
     </group>
-  )
-}
-
-function Finestra({ posizione, rotazione = 0, vetri }: { posizione: [number, number, number]; rotazione?: number; vetri: "semplici" | "doppi" }) {
-  const doppi = vetri === "doppi"
-  const telaio = doppi ? "#2f3b45" : "#f1efe9"
-  const sp = doppi ? 0.07 : 0.035
-  return (
-    <group position={posizione} rotation={[0, rotazione, 0]}>
-      <mesh><boxGeometry args={[0.8, 0.72, sp]} /><meshStandardMaterial color={telaio} roughness={0.5} /></mesh>
-      <mesh position={[0, 0, sp / 2 + 0.002]}>
-        <planeGeometry args={[0.66, 0.58]} />
-        <meshStandardMaterial color={doppi ? "#7fc4ea" : "#cfe6f1"} metalness={doppi ? 0.85 : 0.1} roughness={doppi ? 0.08 : 0.3} transparent opacity={doppi ? 0.92 : 0.7} emissive={doppi ? "#2b86b8" : "#000000"} emissiveIntensity={doppi ? 0.25 : 0} />
-      </mesh>
-      <mesh position={[0, 0, sp / 2 + 0.004]}><boxGeometry args={[0.03, 0.58, 0.01]} /><meshStandardMaterial color={telaio} /></mesh>
-      {doppi && <mesh position={[0, 0, sp / 2 + 0.03]}><planeGeometry args={[0.66, 0.58]} /><meshStandardMaterial color="#9fd6f3" metalness={0.8} roughness={0.1} transparent opacity={0.35} /></mesh>}
-    </group>
-  )
-}
-
-function Facciata({ rivestimento, vetri }: Pick<VistaCasa, "rivestimento" | "vetri">) {
-  const z = PROFONDITA / 2 + SPESSORE_RIVESTIMENTO[rivestimento] + 0.02
-  return (
-    <>
-      <Finestra posizione={[-1.2, 1.25, z]} vetri={vetri} />
-      <Finestra posizione={[1.2, 1.25, z]} vetri={vetri} />
-      <Finestra posizione={[0, 1.2, -z]} rotazione={Math.PI} vetri={vetri} />
-      <Finestra posizione={[LARGHEZZA / 2 + SPESSORE_RIVESTIMENTO[rivestimento] + 0.02, 1.25, -0.5]} rotazione={Math.PI / 2} vetri={vetri} />
-      <group position={[0, 0.78, z]}>
-        <mesh><boxGeometry args={[0.62, 1.5, 0.06]} /><meshStandardMaterial color="#5a3e2b" roughness={0.7} /></mesh>
-        <mesh position={[0.2, 0, 0.04]}><sphereGeometry args={[0.035, 8, 8]} /><meshStandardMaterial color="#d6b25e" metalness={0.8} roughness={0.3} /></mesh>
-      </group>
-    </>
   )
 }
 
 function BombolaGas() {
   return (
-    <group position={[-LARGHEZZA / 2 - 0.4, 0, 0.7]}>
-      <mesh position={[0, 0.34, 0]} castShadow><cylinderGeometry args={[0.17, 0.17, 0.68, 14]} /><meshStandardMaterial color="#d9532e" roughness={0.45} metalness={0.2} /></mesh>
-      <mesh position={[0, 0.72, 0]}><sphereGeometry args={[0.1, 10, 10]} /><meshStandardMaterial color="#d9532e" /></mesh>
-      <mesh position={[0, 0.8, 0]}><cylinderGeometry args={[0.035, 0.035, 0.1, 8]} /><meshStandardMaterial color="#9aa1a6" metalness={0.7} /></mesh>
+    <group position={[-3.25, 0, 1.55]}>
+      <mesh position={[0, 0.36, 0]} castShadow><cylinderGeometry args={[0.17, 0.17, 0.72, 16]} /><meshStandardMaterial color="#d9532e" roughness={0.4} metalness={0.25} /></mesh>
+      <mesh position={[0, 0.76, 0]}><sphereGeometry args={[0.1, 12, 12]} /><meshStandardMaterial color="#d9532e" metalness={0.25} roughness={0.4} /></mesh>
+      <mesh position={[0, 0.85, 0]}><cylinderGeometry args={[0.035, 0.035, 0.1, 8]} /><meshStandardMaterial color="#9aa1a6" metalness={0.7} /></mesh>
+      <mesh position={[0.1, 0.5, 0.15]}><cylinderGeometry args={[0.012, 0.012, 0.5, 6]} /><meshStandardMaterial color="#222" /></mesh>
     </group>
   )
 }
@@ -242,19 +290,16 @@ function PianoInduzione() {
   const anelli = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     anelli.current?.children.forEach((m, i) => {
-      const mat = (m as THREE.Mesh).material as THREE.MeshStandardMaterial
-      mat.emissiveIntensity = 0.7 + 0.5 * Math.sin(clock.elapsedTime * 2 + i * 1.5)
+      ;((m as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = 0.7 + 0.5 * Math.sin(clock.elapsedTime * 2 + i * 1.5)
     })
   })
   return (
-    <group position={[-LARGHEZZA / 2 - 0.45, 0, 0.7]}>
+    <group position={[-3.25, 0, 1.55]}>
       <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.7, 0.6, 0.5]} /><meshStandardMaterial color="#d8dde1" roughness={0.6} /></mesh>
       <mesh position={[0, 0.62, 0]}><boxGeometry args={[0.72, 0.04, 0.52]} /><meshStandardMaterial color="#14181c" metalness={0.5} roughness={0.15} /></mesh>
-      <group ref={anelli} position={[0, 0.65, 0]}>
+      <group ref={anelli} position={[0, 0.645, 0]}>
         {[-0.17, 0.17].map((x) => (
-          <mesh key={x} position={[x, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.07, 0.11, 24]} /><meshStandardMaterial color="#4fc3f7" emissive="#29b6f6" emissiveIntensity={1} side={THREE.DoubleSide} />
-          </mesh>
+          <mesh key={x} position={[x, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.07, 0.11, 28]} /><meshStandardMaterial color="#4fc3f7" emissive="#29b6f6" emissiveIntensity={1} side={THREE.DoubleSide} /></mesh>
         ))}
       </group>
     </group>
@@ -262,13 +307,17 @@ function PianoInduzione() {
 }
 
 function Auto() {
-  const ruote = [[-0.42, 0.55], [0.42, 0.55], [-0.42, -0.55], [0.42, -0.55]] as const
+  const ruote = [[-0.43, 0.55], [0.43, 0.55], [-0.43, -0.55], [0.43, -0.55]] as const
   return (
     <group>
-      <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.8, 0.28, 1.5]} /><meshStandardMaterial color="#2f7bd6" metalness={0.5} roughness={0.3} /></mesh>
-      <mesh position={[0, 0.54, -0.05]}><boxGeometry args={[0.68, 0.24, 0.8]} /><meshStandardMaterial color="#8ec5f2" metalness={0.7} roughness={0.15} /></mesh>
+      <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.82, 0.3, 1.55]} /><meshStandardMaterial color="#2f7bd6" metalness={0.55} roughness={0.28} /></mesh>
+      <mesh position={[0, 0.56, -0.04]} castShadow><boxGeometry args={[0.7, 0.26, 0.85]} /><meshStandardMaterial color="#9fd0f5" metalness={0.75} roughness={0.12} /></mesh>
+      {[-1, 1].map((s) => <mesh key={s} position={[s * 0.25, 0.32, 0.79]}><boxGeometry args={[0.18, 0.07, 0.02]} /><meshStandardMaterial color="#fff6c9" emissive="#fff0a0" emissiveIntensity={0.6} /></mesh>)}
       {ruote.map(([x, z]) => (
-        <mesh key={`${x}${z}`} position={[x, 0.16, z]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.16, 0.16, 0.1, 14]} /><meshStandardMaterial color="#1c1f22" /></mesh>
+        <group key={`${x}${z}`} position={[x, 0.17, z]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh><cylinderGeometry args={[0.17, 0.17, 0.11, 16]} /><meshStandardMaterial color="#1c1f22" /></mesh>
+          <mesh position={[0, x > 0 ? 0.056 : -0.056, 0]}><cylinderGeometry args={[0.09, 0.09, 0.01, 12]} /><meshStandardMaterial color="#c8ced3" metalness={0.8} roughness={0.3} /></mesh>
+        </group>
       ))}
     </group>
   )
@@ -281,45 +330,151 @@ function ColonninaEV() {
     if (m) m.emissiveIntensity = 0.8 + 0.7 * Math.sin(clock.elapsedTime * 3)
   })
   return (
-    <group position={[1.1, 0, PROFONDITA / 2 + 1.1]} rotation={[0, 0.1, 0]}>
+    <group position={[1.15, 0, D / 2 + 1.15]} rotation={[0, 0.1, 0]}>
       <mesh position={[0, 0.55, 0]} castShadow><boxGeometry args={[0.24, 1.1, 0.2]} /><meshStandardMaterial color="#f4f6f8" roughness={0.4} /></mesh>
       <mesh position={[0, 0.85, 0.105]}><boxGeometry args={[0.16, 0.22, 0.01]} /><meshStandardMaterial color="#12161a" /></mesh>
       <mesh ref={led} position={[0, 0.98, 0.112]}><sphereGeometry args={[0.025, 8, 8]} /><meshStandardMaterial color="#3fd0ff" emissive="#3fd0ff" emissiveIntensity={1} /></mesh>
-      <mesh position={[0.35, 0.3, 0.1]} rotation={[0, 0, Math.PI / 2.4]}><torusGeometry args={[0.4, 0.014, 6, 20, Math.PI / 1.4]} /><meshStandardMaterial color="#222" /></mesh>
-      <group position={[1.1, 0, 0.3]} rotation={[0, Math.PI / 2 + 0.1, 0]}><Auto /></group>
+      <mesh position={[0.36, 0.3, 0.1]} rotation={[0, 0, Math.PI / 2.4]}><torusGeometry args={[0.4, 0.014, 6, 20, Math.PI / 1.4]} /><meshStandardMaterial color="#222" /></mesh>
+      <group position={[1.15, 0, 0.3]} rotation={[0, Math.PI / 2 + 0.1, 0]}><Auto /></group>
     </group>
   )
 }
 
-function Albero({ posizione, scala = 1 }: { posizione: [number, number, number]; scala?: number }) {
+// ───────────────────────── giardino ─────────────────────────
+const Latifoglia = ({ posizione, scala = 1, colore = "#4f9a4e" }: { posizione: [number, number, number]; scala?: number; colore?: string }) => (
+  <group position={posizione} scale={scala}>
+    <mesh position={[0, 0.4, 0]} castShadow><cylinderGeometry args={[0.08, 0.12, 0.8, 6]} /><meshStandardMaterial color="#6d4c41" /></mesh>
+    <mesh position={[0, 1.2, 0]} castShadow><icosahedronGeometry args={[0.62, 1]} /><meshStandardMaterial color={colore} flatShading /></mesh>
+    <mesh position={[0.3, 1.0, 0.15]} castShadow><icosahedronGeometry args={[0.38, 1]} /><meshStandardMaterial color={colore} flatShading /></mesh>
+  </group>
+)
+const Abete = ({ posizione, scala = 1 }: { posizione: [number, number, number]; scala?: number }) => (
+  <group position={posizione} scale={scala}>
+    <mesh position={[0, 0.3, 0]} castShadow><cylinderGeometry args={[0.07, 0.1, 0.6, 6]} /><meshStandardMaterial color="#6d4c41" /></mesh>
+    {[[0.95, 0.5, 1.0], [1.4, 0.38, 0.8], [1.8, 0.26, 0.6]].map(([y, r, h]) => (
+      <mesh key={y} position={[0, y!, 0]} castShadow><coneGeometry args={[r!, h!, 8]} /><meshStandardMaterial color="#2f7d4a" flatShading /></mesh>
+    ))}
+  </group>
+)
+const Siepe = ({ x, z }: { x: number; z: number }) => (
+  <mesh position={[x, 0.22, z]} scale={[1, 0.8, 0.9]} castShadow><icosahedronGeometry args={[0.28, 1]} /><meshStandardMaterial color="#3d8a47" flatShading /></mesh>
+)
+
+function Giardino() {
+  const sassi = [0, 1, 2, 3, 4, 5].map((i) => ({ z: D / 2 + 0.7 + i * 0.5, x: Math.sin(i * 1.7) * 0.07 }))
+  const fiori = [[-1.4, 2.1, "#f06292"], [-1.15, 2.2, "#ffd54f"], [-0.95, 2.05, "#ffffff"], [-1.55, 2.25, "#ffd54f"], [1.2, 1.95, "#f06292"]] as const
+  const staccionata = Array.from({ length: 6 }, (_, i) => ({ x: -4.0 + i * 0.52, z: 2.5 + i * 0.22 }))
   return (
-    <group position={posizione} scale={scala}>
-      <mesh position={[0, 0.3, 0]} castShadow><cylinderGeometry args={[0.07, 0.1, 0.6, 6]} /><meshStandardMaterial color="#6d4c41" /></mesh>
-      <mesh position={[0, 0.95, 0]} castShadow><coneGeometry args={[0.42, 1.0, 7]} /><meshStandardMaterial color="#3f8f4a" flatShading /></mesh>
-      <mesh position={[0, 1.4, 0]} castShadow><coneGeometry args={[0.3, 0.7, 7]} /><meshStandardMaterial color="#4aa055" flatShading /></mesh>
-    </group>
+    <>
+      {sassi.map((s, i) => (
+        <mesh key={i} position={[s.x, 0.02, s.z]} rotation={[0, i * 0.3, 0]} receiveShadow><boxGeometry args={[0.7, 0.04, 0.36]} /><meshStandardMaterial color="#c9c2b5" roughness={1} /></mesh>
+      ))}
+      <Siepe x={-1.55} z={1.95} /><Siepe x={-1.1} z={1.95} /><Siepe x={-0.75} z={1.95} />
+      {fiori.map(([x, z, c], i) => <mesh key={i} position={[x, 0.08, z]}><icosahedronGeometry args={[0.055, 0]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.15} flatShading /></mesh>)}
+      {staccionata.map((p, i) => (
+        <group key={i} position={[p.x, 0, p.z]}>
+          <mesh position={[0, 0.2, 0]} castShadow><boxGeometry args={[0.07, 0.4, 0.07]} /><meshStandardMaterial color="#e9e2d0" /></mesh>
+          {i < 5 && <mesh position={[0.26, 0.28, 0.11]} rotation={[0, -0.41, 0]}><boxGeometry args={[0.6, 0.05, 0.03]} /><meshStandardMaterial color="#e9e2d0" /></mesh>}
+        </group>
+      ))}
+      {/* cassetta della posta */}
+      <group position={[0.75, 0, D / 2 + 1.5]}>
+        <mesh position={[0, 0.3, 0]}><boxGeometry args={[0.05, 0.6, 0.05]} /><meshStandardMaterial color="#6d4c41" /></mesh>
+        <mesh position={[0, 0.65, 0]} castShadow><boxGeometry args={[0.22, 0.16, 0.14]} /><meshStandardMaterial color="#c0392b" /></mesh>
+      </group>
+      <Latifoglia posizione={[-3.7, 0, -1.9]} scala={1.25} />
+      <Abete posizione={[3.7, 0, -2.2]} scala={1.1} />
+      <Latifoglia posizione={[4.0, 0, 1.9]} scala={0.8} colore="#7bb04f" />
+      <Abete posizione={[-4.1, 0, 0.9]} scala={0.8} />
+    </>
   )
 }
 
-function Scena({ vista }: { vista: VistaCasa }) {
+// ───────────────────────── atmosfera legata alla classe ─────────────────────────
+const METEO = {
+  sereno: { alto: "#7cc3fa", basso: "#eaf6ff", sole: 1.9, ambiente: 0.7, nuvole: 3, grigio: 0, sfera: 1, nebbia: 0 },
+  velato: { alto: "#b4c4d2", basso: "#e6eaee", sole: 1.25, ambiente: 0.85, nuvole: 5, grigio: 0.35, sfera: 0.25, nebbia: 0.004 },
+  grigio: { alto: "#7e8791", basso: "#c4c8cc", sole: 0.75, ambiente: 1.0, nuvole: 8, grigio: 0.85, sfera: 0, nebbia: 0.012 },
+} as const
+const N_NUVOLE = 8
+
+function Atmosfera({ meteo }: { meteo: Meteo }) {
+  const scena = useThree((s) => s.scene)
+  const cupola = useRef<THREE.ShaderMaterial>(null)
+  const sole = useRef<THREE.DirectionalLight>(null)
+  const ambiente = useRef<THREE.AmbientLight>(null)
+  const sfera = useRef<THREE.Group>(null)
+  const nuvole = useRef<(THREE.Group | null)[]>([])
+  const matNuvola = useMemo(() => new THREE.MeshStandardMaterial({ flatShading: true, transparent: true, opacity: 0.94, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.4 }), [])
+  const uniformi = useMemo(() => ({ alto: { value: new THREE.Color(METEO[meteo].alto) }, basso: { value: new THREE.Color(METEO[meteo].basso) } }), [])
+  const stato = useRef({ sole: METEO[meteo].sole, ambiente: METEO[meteo].ambiente, nuvole: METEO[meteo].nuvole, grigio: METEO[meteo].grigio, sfera: METEO[meteo].sfera, nebbia: METEO[meteo].nebbia })
+  const pos = useMemo(() => Array.from({ length: N_NUVOLE }, (_, i) => ({ a: (i / N_NUVOLE) * Math.PI * 2, r: 8 + (i % 3) * 1.8, h: 5.5 + (i % 4) * 0.8, v: 0.03 + 0.01 * (i % 3) })), [])
+  const BIANCO = useMemo(() => new THREE.Color("#ffffff"), [])
+  const SCURO = useMemo(() => new THREE.Color("#5d6166"), [])
+
+  useFrame(({ clock }, dt) => {
+    const m = METEO[meteo], s = stato.current
+    const f = 1 - Math.exp(-2.2 * Math.min(dt, 0.05))
+    s.sole += (m.sole - s.sole) * f; s.ambiente += (m.ambiente - s.ambiente) * f; s.nuvole += (m.nuvole - s.nuvole) * f
+    s.grigio += (m.grigio - s.grigio) * f; s.sfera += (m.sfera - s.sfera) * f; s.nebbia += (m.nebbia - s.nebbia) * f
+    uniformi.alto.value.lerp(new THREE.Color(m.alto), f); uniformi.basso.value.lerp(new THREE.Color(m.basso), f)
+    if (sole.current) sole.current.intensity = s.sole
+    if (ambiente.current) ambiente.current.intensity = s.ambiente
+    if (sfera.current) { sfera.current.visible = s.sfera > 0.02; sfera.current.scale.setScalar(0.6 + s.sfera * 0.4) }
+    matNuvola.color.lerpColors(BIANCO, SCURO, s.grigio); matNuvola.emissive.lerpColors(BIANCO, new THREE.Color("#000"), s.grigio)
+    const n = Math.round(s.nuvole)
+    pos.forEach((p, i) => {
+      const g = nuvole.current[i]
+      if (!g) return
+      g.visible = i < n
+      const a = p.a + clock.elapsedTime * p.v
+      g.position.set(Math.cos(a) * p.r, p.h, Math.sin(a) * p.r)
+    })
+    scena.fog = s.nebbia > 0.0015 ? new THREE.FogExp2(uniformi.basso.value.clone(), s.nebbia) : null
+  })
+
+  return (
+    <>
+      <mesh>
+        <sphereGeometry args={[60, 24, 16]} />
+        <shaderMaterial ref={cupola} side={THREE.BackSide} depthWrite={false} fog={false} uniforms={uniformi}
+          vertexShader="varying float h; void main(){ h = normalize(position).y; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);} "
+          fragmentShader="uniform vec3 alto; uniform vec3 basso; varying float h; void main(){ gl_FragColor = vec4(mix(basso, alto, smoothstep(-0.05, 0.75, h)), 1.0);} " />
+      </mesh>
+      <ambientLight ref={ambiente} intensity={0.7} />
+      <hemisphereLight args={["#dff1ff", "#6c8f5a", 0.4]} />
+      <directionalLight ref={sole} position={[7, 10, 6]} intensity={1.8} color="#fff4e0" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-7} shadow-camera-right={7} shadow-camera-top={7} shadow-camera-bottom={-7} shadow-bias={-0.0004} />
+      <group ref={sfera} position={[26, 30, 18]}>
+        <mesh><sphereGeometry args={[2.6, 20, 14]} /><meshBasicMaterial color="#fff6cf" fog={false} /></mesh>
+        <mesh><sphereGeometry args={[4.2, 20, 14]} /><meshBasicMaterial color="#fff2b0" transparent opacity={0.28} fog={false} depthWrite={false} /></mesh>
+      </group>
+      {pos.map((_, i) => (
+        <group key={i} ref={(g) => { nuvole.current[i] = g }} visible={false}>
+          {([[-1, 0, 0, 1], [0, 0.35, 0, 1.3], [1.1, 0, 0.2, 0.9]] as const).map(([x, y, z, k], j) => (
+            <mesh key={j} position={[x * 0.9, y * 0.9, z * 0.9]} scale={[1.4, 0.7, 1]} material={matNuvola}><icosahedronGeometry args={[0.9 * k, 1]} /></mesh>
+          ))}
+        </group>
+      ))}
+    </>
+  )
+}
+
+// ───────────────────────── scena ─────────────────────────
+function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
   const casa = useRef<THREE.Group>(null)
   useFrame(({ clock }) => { if (casa.current) casa.current.position.y = Math.sin(clock.elapsedTime * 0.9) * 0.04 })
   return (
     <>
-      <ambientLight intensity={0.75} />
-      <hemisphereLight args={["#dff1ff", "#6c8f5a", 0.45]} />
-      <directionalLight position={[6, 9, 5]} intensity={1.7} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-7} shadow-camera-right={7} shadow-camera-top={7} shadow-camera-bottom={-7} />
+      <Atmosfera meteo={meteo} />
       <group ref={casa}>
-        {/* piattaforma a diorama */}
-        <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 48]} /><meshStandardMaterial color="#6fae5a" roughness={1} flatShading /></mesh>
-        <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[5.4, 4.9, 0.3, 48]} /><meshStandardMaterial color="#8a6a4f" roughness={1} flatShading /></mesh>
-        <mesh position={[0, 0.005, PROFONDITA / 2 + 1.25]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[3.4, 2.2]} /><meshStandardMaterial color="#cfc8bb" roughness={1} /></mesh>
-        <Albero posizione={[-3.4, 0, -1.6]} scala={1.2} />
-        <Albero posizione={[3.6, 0, -2.2]} />
-        <Albero posizione={[-3.8, 0, 2.2]} scala={0.9} />
+        <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color="#6fae5a" roughness={1} flatShading /></mesh>
+        <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[5.4, 4.8, 0.3, 56]} /><meshStandardMaterial color="#8a6a4f" roughness={1} flatShading /></mesh>
+        <Giardino />
 
-        <Pareti rivestimento={vista.rivestimento} />
+        <Volume w={W} h={H} d={D} x={0} rivestimento={vista.rivestimento} />
+        <Volume w={ALA.w} h={ALA.h} d={ALA.d} x={ALA.x} rivestimento={vista.rivestimento} />
         <Tetto />
+        <TettoAla />
         <Facciata rivestimento={vista.rivestimento} vetri={vista.vetri} />
 
         <Apparizione visibile={vista.pannelliFV}><PannelliFV /></Apparizione>
@@ -338,10 +493,11 @@ function Scena({ vista }: { vista: VistaCasa }) {
 
 export function Casa3D({ dotazioni }: { dotazioni: Dotazioni }) {
   const vista = useMemo(() => descriviCasa(dotazioni), [dotazioni])
+  const meteo = meteoDaClasse(punteggioCasa(dotazioni).classe)
   return (
-    <Canvas shadows camera={{ position: [7.5, 5.2, 8.5], fov: 38 }} gl={{ alpha: true, antialias: true }} style={{ background: "transparent" }}>
-      <Scena vista={vista} />
-      <OrbitControls autoRotate autoRotateSpeed={1.1} enablePan={false} minDistance={7} maxDistance={17} minPolarAngle={0.5} maxPolarAngle={Math.PI / 2.1} target={[0, 1, 0]} />
+    <Canvas shadows camera={{ position: [7.8, 5.4, 9], fov: 38 }} gl={{ antialias: true }}>
+      <Scena vista={vista} meteo={meteo} />
+      <OrbitControls autoRotate autoRotateSpeed={1.1} enablePan={false} minDistance={7} maxDistance={18} minPolarAngle={0.5} maxPolarAngle={Math.PI / 2.1} target={[-0.4, 1, 0.2]} />
     </Canvas>
   )
 }

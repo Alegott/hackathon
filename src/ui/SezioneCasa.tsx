@@ -7,7 +7,7 @@ import { Palco } from "../casa/Palco"
 import { Palette, TIPO_DRAG } from "../casa/Palette"
 import { Icona } from "../casa/icone"
 import { punteggioCasa } from "../engine"
-import { ClassificaComunale } from "./ClassificaComunale"
+import { ClassificaCard } from "../casa/ClassificaCard"
 import type { Casa } from "../types"
 import "../casa/casa.css"
 
@@ -170,7 +170,7 @@ export const SezioneCasa: React.FC = () => {
         </aside>
       </div>
 
-      <ClassificaComunale comuneIstat={casa.comune} onChangeComune={(istat) => aggiorna((c) => ({ ...c, comune: istat }))} />
+      <ClassificaCard comuneIstat={casa.comune} onChangeComune={(istat) => aggiorna((c) => ({ ...c, comune: istat }))} utente={casa} />
     </div>
   )
 }
