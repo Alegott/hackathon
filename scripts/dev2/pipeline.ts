@@ -28,7 +28,7 @@ export async function generaDataset(base: DatiBase, opzioni: OpzioniPipeline) {
   try {
     const risposta = await (opzioni.fetch ?? fetch)('https://overpass-api.de/api/interpreter', {
       method: 'POST', body: new URLSearchParams({ data: query }).toString(),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(45_000),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', 'User-Agent': 'vicenza-sostenibile-hackathon/1.0' }, signal: AbortSignal.timeout(45_000),
     });
     if (!risposta.ok) throw new Error(`Overpass HTTP ${risposta.status}`);
     osm = await risposta.json();
