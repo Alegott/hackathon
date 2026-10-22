@@ -122,7 +122,7 @@ export function Provincia() {
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <Canvas
         camera={{ position: DIREZIONE_CAMERA.clone().multiplyScalar(DISTANZA_PROVINCIA).toArray(), fov: 45, near: 0.1, far: 500 }}
-        style={{ background: "#dfeaf2" }}
+        style={{ background: "var(--sfondo-mappa)" }}
         onPointerMissed={() => setHover(null)}
       >
         <ambientLight intensity={0.8} />
