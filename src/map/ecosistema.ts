@@ -4,6 +4,7 @@ import type { Comune, StatoComune } from "../types"
 import { posizioniAlberi } from "../diorama/posizioniAlberi"
 import { puntoInPoligono } from "../diorama/geometria"
 import { presetFascia } from "../diorama/preset"
+import { composizioneFauna, type Fauna } from "./vitaTerritorio"
 import { aCoordinateGeografiche, aCoordinateMetriche } from "./territorio"
 import provincia from "../data/provincia.geojson.json"
 
@@ -60,11 +61,23 @@ export type Habitat = {
   raggio: number
   alberi: [number, number][]
   preset: ReturnType<typeof presetFascia>
+  fauna: Fauna
+  raggioComune: number // raggio del cerchio di pari area, in metri
+}
+
+const raggioEquivalente = (anello: [number, number][]) => {
+  let a = 0
+  for (let i = 0; i < anello.length; i++) {
+    const [x1, y1] = anello[i]!, [x2, y2] = anello[(i + 1) % anello.length]!
+    a += x1 * y2 - x2 * y1
+  }
+  return Math.sqrt(Math.abs(a) / 2 / Math.PI)
 }
 
 // Elementi illustrativi dell'indice, vincolati ai poligoni reali. Non sono censimenti faunistici.
 export function preparaHabitat(comuni: Comune[], indici: Record<string, StatoComune>,
-  selezionato: string | null, centroVista?: [number, number], verdi: [number, number][] = []): Habitat[] {
+  selezionato: string | null, centroVista?: [number, number], verdi: [number, number][] = [],
+  raggioVista = 1500, libero: [number, number][] = []): Habitat[] {
   return comuni.filter((c) => !selezionato || c.istat === selezionato).flatMap((c) => {
     const stato = indici[c.istat]
     if (!stato) return []
@@ -79,10 +92,21 @@ export function preparaHabitat(comuni: Comune[], indici: Record<string, StatoCom
     // In città, privilegia verde OSM caricato nella vista. Gli uccelli orbitano vicino al centro visibile.
     const verdiLocali = verdi.map(aCoordinateMetriche).filter((p) => puntoInPoligono(p, anello)
       && dentroProvincia(aCoordinateGeografiche(p)))
-    const vicini = punti.filter((p) => !selezionato || Math.hypot(p[0] - centroMetrico[0], p[1] - centroMetrico[1]) < 1500)
+    // Alberi sparsi intorno a ciò che si vede, non in tutto il comune: a zoom ravvicinato lo schermo copre poche centinaia di metri.
+    const R = Math.max(120, Math.min(raggioVista, 2500))
+    const attorno: [number, number][] = [[-R, -R], [R, -R], [R, R], [-R, R]].map(([dx, dy]) => [centroMetrico[0] + dx!, centroMetrico[1] + dy!])
+    // Suolo libero (senza edifici sullo schermo): il posto giusto per alberi e animali.
+    const liberoLocale = libero.map(aCoordinateMetriche).filter((p) => puntoInPoligono(p, anello)
+      && dentroProvincia(aCoordinateGeografiche(p)))
+    const vicini = selezionato
+      ? posizioniAlberi({ poligono: attorno, max: 140, densita: 1, seme, ostacoli: [] })
+        .filter((p) => puntoInPoligono(p, anello) && dentroProvincia(aCoordinateGeografiche(p)))
+      : punti
     return [{ istat: c.istat, centro: aCoordinateGeografiche(centroMetrico), raggio: selezionato ? 350 : 1000,
-      alberi: (selezionato ? verdiLocali : punti).slice(0, selezionato ? 80 : 7).map(aCoordinateGeografiche),
-      preset, ...(selezionato && !verdiLocali.length ? { alberi: vicini.slice(0, 12).map(aCoordinateGeografiche) } : {}) }]
+      fauna: composizioneFauna(stato), raggioComune: raggioEquivalente(anello),
+      // In vista comune: prima il verde reale caricato, poi alberi decorativi fino a riempire la vista.
+      alberi: (selezionato ? [...verdiLocali, ...liberoLocale, ...vicini].slice(0, 90) : punti.slice(0, 7)).map(aCoordinateGeografiche),
+      preset }]
   })
 }
 

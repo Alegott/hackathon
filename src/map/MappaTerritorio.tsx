@@ -8,7 +8,7 @@ import { dataset } from "../data/dataset"
 import { aCoordinateGeografiche, aCoordinateMetriche, CENTRI_PRINCIPALI, coloreIndice, confiniGeografici, estensioneGeografica } from "./territorio"
 import { confineProvincia, percorsoProvincia, preparaHabitat, ritagliaEdifici } from "./ecosistema"
 import { EcosistemaLayer } from "./EcosistemaLayer"
-import { presetFascia } from "../diorama/preset"
+import { assegnaComuni, atmosferaDaStato, coloriEdifici, creaTrovaComune, metriPerPixel, statoMedio } from "./vitaTerritorio"
 import { azioneDaClic } from "../diorama/build"
 
 setWorkerUrl(workerUrl)
@@ -35,8 +35,12 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   const estensione = useMemo(() => estensioneGeografica(confini), [confini])
   const statoCorrente = useRef({ indici, selezionato, vista, mostraVita })
   statoCorrente.current = { indici, selezionato, vista, mostraVita }
-  const statoSelezionato = selezionato ? indici[selezionato] : undefined
-  const foschia = statoSelezionato ? presetFascia(statoSelezionato.fascia).nebbia : .08
+  const trovaComune = useMemo(() => creaTrovaComune(dataset.comuni), [])
+  // Cielo, foschia e nuvole seguono l'indice del comune aperto, o la media dell'intera provincia.
+  const statoAtmosfera = vista === "comune" && selezionato ? indici[selezionato] : statoMedio(indici)
+  const atmosferaCorrente = atmosferaDaStato(statoAtmosfera ?? null)
+  const foschia = atmosferaCorrente.foschia
+  const chiaveCielo = JSON.stringify(atmosferaCorrente.sky)
 
   useEffect(() => {
     if (!contenitore.current) return
@@ -133,6 +137,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
           "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
           "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
           "fill-extrusion-opacity": 0.97,
+          "fill-extrusion-color-transition": { duration: 900 },
         },
       }, primaEtichetta)
       const vita = new EcosistemaLayer()
@@ -144,7 +149,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         const center = map.getCenter()
         if (map.getZoom() >= 13) {
           const edifici = map.querySourceFeatures("territorio-osm", { sourceLayer: "building" })
-          ;(map.getSource("edifici-vicenza") as GeoJSONSource).setData(ritagliaEdifici(edifici))
+          ;(map.getSource("edifici-vicenza") as GeoJSONSource).setData(assegnaComuni(ritagliaEdifici(edifici), trovaComune))
         }
         const verdi: [number, number][] = []
         if (vista === "comune") {
@@ -166,8 +171,20 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         }
         verdi.sort((a, b) => Math.hypot(a[0] - center.lng, a[1] - center.lat)
           - Math.hypot(b[0] - center.lng, b[1] - center.lat))
+        const { clientWidth: w, clientHeight: h } = map.getContainer()
+        // Punti dello schermo dove non c'è nessun edificio: li usano alberi e animali.
+        const libero: [number, number][] = []
+        if (vista === "comune") {
+          for (let i = 0; i < 90 && libero.length < 40; i++) {
+            const x = w * (0.08 + 0.62 * Math.random()), y = h * (0.4 + 0.55 * Math.random())
+            if (map.queryRenderedFeatures([x, y], { layers: ["edifici-reali-3d"] }).length) continue
+            const g = map.unproject([x, y])
+            libero.push([g.lng, g.lat])
+          }
+        }
+        const raggioVista = 0.5 * Math.hypot(w, h) * metriPerPixel(map.getZoom(), center.lat) * 0.6
         vita.aggiorna(preparaHabitat(dataset.comuni, indici, vista === "comune" ? selezionato : null,
-          [center.lng, center.lat], verdi), vista === "comune")
+          [center.lng, center.lat], verdi, raggioVista, libero), vista === "comune")
       }
       map.on("moveend", () => aggiornaHabitat.current())
       map.on("sourcedata", (e) => {
@@ -243,10 +260,14 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.setFeatureState({ source: "comuni-vicenza", id: comune.istat }, {
         colore: coloreIndice(indici[comune.istat]), selezionato: comune.istat === selezionato,
       })
-    map.setPaintProperty("edifici-reali-3d", "fill-extrusion-color",
-      selezionato && indici[selezionato] ? coloreIndice(indici[selezionato]) : "#c5cdb7")
+    // Ogni edificio ha il colore della fascia del proprio comune, su tutta la mappa.
+    map.setPaintProperty("edifici-reali-3d", "fill-extrusion-color", coloriEdifici(indici, "#c5cdb7") as never)
     aggiornaHabitat.current()
   }, [pronta, indici, selezionato])
+
+  useEffect(() => {
+    if (pronta) mappa.current?.setSky(JSON.parse(chiaveCielo))
+  }, [pronta, chiaveCielo])
 
   useEffect(() => {
     const map = mappa.current

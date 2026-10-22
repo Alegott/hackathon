@@ -59,4 +59,21 @@ describe("provincia ed ecosistema della mappa reale", () => {
     expect(path).not.toContain("NaN")
     expect(path).not.toContain("Infinity")
   })
+  it("alberi e animali: prima il verde reale, poi il suolo libero (senza edifici), mai fuori dal comune", () => {
+    const verde = aCoordinateGeografiche([centro[0] + 10, centro[1] + 10])
+    const libero = aCoordinateGeografiche([centro[0] - 20, centro[1] + 30])
+    const fuori = aCoordinateGeografiche([centro[0] + 5000, centro[1]])
+    const h = preparaHabitat([comune], { "024116": stato("buona") }, "024116", [11.546, 45.547], [verde], 800, [libero, fuori])[0]!
+    expect(h.alberi[0]![0]).toBeCloseTo(verde[0], 6)
+    expect(h.alberi[1]![0]).toBeCloseTo(libero[0], 6)
+    expect(h.alberi[1]![1]).toBeCloseTo(libero[1], 6)
+    expect(h.alberi.some((p) => Math.abs(p[0] - fuori[0]) < 1e-6 && Math.abs(p[1] - fuori[1]) < 1e-6)).toBe(false)
+  })
+  it("espone la fauna del comune e il suo raggio reale", () => {
+    const h = preparaHabitat([comune], { "024116": stato("ottima") }, "024116")[0]!
+    expect(h.fauna.terra.length).toBeGreaterThan(0)
+    expect(h.raggioComune).toBeCloseTo(Math.sqrt((1600 * 1600) / Math.PI), 0) // quadrato 1600 m di lato
+    const pessimo = preparaHabitat([comune], { "024116": stato("pessima") }, "024116")[0]!
+    expect(pessimo.fauna.terra).toEqual([])
+  })
 })

@@ -90,3 +90,25 @@ provinciale; animali e volumi nello zoom; aggiunta di tre industrie a Vicenza po
 nella fascia pessima, con rosso e zero uccelli, mantenendo montata la mappa reale.
 Test automatici: confine con punti di controllo interni/esterni, edifici fuori e a cavallo del
 bordo, proprietà delle tile normalizzate per i worker, fauna per fascia e proiezione maschera.
+
+## Vita e atmosfera (integrazione del diorama nella mappa reale)
+
+La mappa reale riprende le funzioni del diorama, tutte guidate dagli stessi indici del motore:
+
+- **Animali.** Capriolo, volpe, cervo, lupo e cicogne sono i modelli glTF animati del diorama
+  (`public/models/*.glb`), caricati una sola volta alla prima apertura di un comune e disegnati nel
+  livello Three.js di MapLibre (`FaunaGltf.ts`). Numero e specie seguono la fascia (`composizioneFauna`);
+  aquila reale e lince compaiono con le stesse soglie di spawn del diorama (≥ 0,45 e ≥ 0,65).
+  Camminano e si fermano a brucare, restano dentro la provincia e vengono riportati nella parte visibile
+  se la vista si sposta. Nascono su suolo libero (punti dello schermo senza edifici) o su aree verdi OSM.
+  Dimensione sullo schermo costante (≈ 64 px) tramite `metriPerPixel`: sono illustrativi, non in scala reale.
+- **Edifici colorati.** Ogni edificio 3D riceve la fascia del *proprio* comune (`assegnaComuni` +
+  `coloriEdifici`), su tutta la mappa e non solo nel comune selezionato.
+- **Cielo, nebbia e nuvole.** `atmosferaDaStato` traduce la fascia in parametri di `setSky` di MapLibre
+  (cielo, orizzonte, foschia al suolo), più banchi di nebbia e nuvole a gruppi di sbuffi nel livello 3D.
+  Con un comune aperto valgono i suoi indici (aria + infrastrutture + scenario); a vista provinciale la
+  media dei comuni, e le nuvole sono rade dove l'aria è buona e fitte e scure dove peggiora.
+
+Limiti: richiedono Internet per tile e glTF (circa 8 MB); le specie rare terrestri del diorama
+(gallo cedrone, salamandra) non hanno un modello e non compaiono sulla mappa; gli uccelli della vista
+provinciale restano forme semplici per non appesantire il rendering.

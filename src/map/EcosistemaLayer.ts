@@ -1,6 +1,8 @@
 import * as THREE from "three"
 import { MercatorCoordinate, type Map, type CustomLayerInterface, type CustomRenderMethodInput } from "maplibre-gl"
 import { dentroProvincia, type Habitat } from "./ecosistema"
+import { FaunaGltf } from "./FaunaGltf"
+import { metriPerPixel } from "./vitaTerritorio"
 
 type Pool = { mesh: THREE.InstancedMesh; count: number }
 const CAPACITA = 1800
@@ -24,6 +26,8 @@ export class EcosistemaLayer implements CustomLayerInterface {
   private dummy = new THREE.Object3D()
   private color = new THREE.Color()
   private riduciMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  private fauna = new FaunaGltf()
+  private ultimo = performance.now()
 
   onAdd(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext) {
     this.map = map
@@ -51,13 +55,27 @@ export class EcosistemaLayer implements CustomLayerInterface {
     pool("alaDx", new THREE.BoxGeometry(1, 1, .15), "#66766e")
     pool("animali", new THREE.SphereGeometry(1, 6, 4), "#b68f67")
     pool("orecchie", new THREE.ConeGeometry(.45, 2.5, 4).rotateX(Math.PI / 2), "#b68f67")
-    pool("nuvole", new THREE.IcosahedronGeometry(1, 1), "#ffffff", .28)
+    pool("nuvole", new THREE.IcosahedronGeometry(1, 1), "#ffffff", .62)
+    // Banchi di nebbia: ellissoidi schiacciati e traslucidi, più fitti dove l'aria è peggiore.
+    pool("nebbiaLieve", new THREE.SphereGeometry(1, 18, 8), "#e7ece9", .16)
+    pool("nebbiaFitta", new THREE.SphereGeometry(1, 18, 8), "#cfd4d0", .34)
+    this.scene.add(this.fauna.gruppo)
   }
 
   aggiorna(habitat: Habitat[], selezionato: boolean) {
     this.habitat = habitat
     this.selezionato = selezionato
+    if (selezionato) {
+      this.fauna.avvia(() => { this.configuraFauna(); this.map?.triggerRepaint() })
+      this.configuraFauna()
+    } else this.fauna.configura(null, [], [0, 0], null)
     this.map?.triggerRepaint()
+  }
+
+  private configuraFauna() {
+    const h = this.habitat[0]
+    if (!this.selezionato || !h) return
+    this.fauna.configura(h.fauna, h.alberi.map((p) => this.posizione(...p)), this.posizione(...h.centro), h.istat)
   }
 
   setAttivo(attivo: boolean) {
@@ -87,6 +105,11 @@ export class EcosistemaLayer implements CustomLayerInterface {
     if (!this.map || !this.renderer || !this.attivo) return
     const t = this.riduciMovimento ? 0 : performance.now() / 1000
     const zoom = this.map.getZoom()
+    const ora = performance.now()
+    const dt = this.riduciMovimento ? 0 : Math.min(0.1, (ora - this.ultimo) / 1000)
+    this.ultimo = ora
+    const mpp = metriPerPixel(zoom, this.map.getCenter().lat)
+    const gltf = this.fauna.disponibile
     const s = this.selezionato ? Math.max(2, 20 - zoom) : Math.min(28, Math.max(1.5, 3 * 2 ** (12 - zoom)))
     Object.values(this.pools).forEach((p) => { p.count = 0 })
     for (const h of this.habitat) {
@@ -100,7 +123,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
         this.inserisci("chiome", [x, y, 6 * k], [k, k, k * Math.max(p.fogliame, .12)],
           i, p.fogliame ? "#5b9d59" : "#967c5c")
       })
-      for (let i = 0; i < (this.selezionato ? p.uccelli : Math.ceil(p.uccelli / 3)); i++) {
+      for (let i = 0; i < (this.selezionato ? (gltf ? 0 : p.uccelli) : Math.ceil(p.uccelli / 3)); i++) {
         const a = t * (.17 + (i % 3) * .03) + i * 2.4
         const r = h.raggio * (.25 + (i % 4) * .13)
         const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r
@@ -113,22 +136,56 @@ export class EcosistemaLayer implements CustomLayerInterface {
         this.inserisci("alaSx", [x - Math.cos(a) * size, y + Math.sin(a) * size, z], [size * 2, size * .65, size], -a, undefined, flap)
         this.inserisci("alaDx", [x + Math.cos(a) * size, y - Math.sin(a) * size, z], [size * 2, size * .65, size], -a, undefined, -flap)
       }
-      if (this.selezionato) h.alberi.slice(0, p.animali).forEach((point, i) => {
+      if (this.selezionato && !gltf) h.alberi.slice(0, p.animali).forEach((point, i) => {
         const [x, y] = this.posizione(...point)
         const k = s * .65, offset = Math.sin(t * .7 + i) * 2 * k
         this.inserisci("animali", [x + offset + 7, y, 1.8 * k], [3 * k, 1.7 * k, 1.7 * k], t * .1 + i)
         this.inserisci("orecchie", [x + offset + 9, y, 4 * k], [k, k, k])
       })
-      // Foschia e nuvole restano nella provincia; i cieli peggiori sono più grigi.
-      const clouds = Math.round(p.nuvole.quantita * (this.selezionato ? 4 : 2))
-      for (let i = 0; i < clouds; i++) {
-        const a = i * 2.5 + t * .015
-        const x = cx + Math.cos(a) * h.raggio * .5, y = cy + Math.sin(a) * h.raggio * .5
+      // Nuvole: gruppi di sbuffi, grigi e più numerosi dove l'aria è peggiore. Dimensionate sulla scala
+      // della mappa (a zoom provinciale un comune è alto poche decine di pixel).
+      // Vista provinciale: dove l'aria è buona le nuvole sono rade (un comune su tre), dove peggiora coprono ogni comune.
+      const rada = !this.selezionato && p.nuvole.quantita < .7 && Number(h.istat) % 3 !== 0
+      const nuvole = rada ? 0 : Math.round(p.nuvole.quantita * (this.selezionato ? 5 : 1.6))
+      const larghezza = this.selezionato ? Math.min(900, Math.max(150, mpp * 110)) : Math.min(h.raggioComune * 1.1, mpp * 30)
+      const quota = this.selezionato ? 170 + larghezza * 0.2 : mpp * 14
+      const grigio = this.color.set("#ffffff").lerp(new THREE.Color("#7b827e"), p.nuvole.grigio).getStyle()
+      for (let i = 0; i < nuvole; i++) {
+        const a = i * 2.5 + t * (this.selezionato ? .012 : .004)
+        const raggio = (this.selezionato ? h.raggio * 1.2 : h.raggioComune * .55) * (.45 + (i % 3) * .28)
+        const x = cx + Math.cos(a) * raggio, y = cy + Math.sin(a) * raggio
         const geo = new MercatorCoordinate(this.origin.x + x * this.unit, this.origin.y - y * this.unit).toLngLat()
         if (!dentroProvincia([geo.lng, geo.lat])) continue
-        const k = this.selezionato ? 20 : 8 * s
-        this.inserisci("nuvole", [x, y, this.selezionato ? 160 : 1100], [k * 2.2, k, k * .45], 0,
-          p.nuvole.grigio > .5 ? "#768078" : "#ffffff")
+        for (const [dx, dy, dz, k] of [[-.55, 0, 0, .55], [0, .15, .12, .75], [.6, -.1, 0, .6], [.05, -.45, -.05, .45]] as const)
+          this.inserisci("nuvole", [x + dx * larghezza, y + dy * larghezza, quota + dz * larghezza],
+            [larghezza * k * .5, larghezza * k * .38, larghezza * k * .2], 0, grigio)
+      }
+      // Banchi di nebbia al suolo: opacità e numero crescono con la foschia della fascia.
+      if (p.nebbia >= .15) {
+        const fitta = p.nebbia >= .45
+        const banchi = this.selezionato ? 3 + Math.round(p.nebbia * 5) : 1 + (p.nebbia >= .6 ? 1 : 0)
+        const raggioNebbia = this.selezionato ? h.raggio * 1.4 : h.raggioComune * .8
+        for (let i = 0; i < banchi; i++) {
+          const a = i * 2.1 + 1, r = raggioNebbia * (i === 0 ? 0 : .55)
+          const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r
+          const geo = new MercatorCoordinate(this.origin.x + x * this.unit, this.origin.y - y * this.unit).toLngLat()
+          if (!dentroProvincia([geo.lng, geo.lat])) continue
+          const alto = this.selezionato ? 70 + p.nebbia * 60 : Math.max(60, mpp * 6)
+          this.inserisci(fitta ? "nebbiaFitta" : "nebbiaLieve", [x, y, alto * .35],
+            [raggioNebbia * (i === 0 ? 1 : .7), raggioNebbia * (i === 0 ? .9 : .6), alto])
+        }
+      }
+      if (this.selezionato) {
+        const vista = this.map.getCenter()
+        const { clientWidth: w, clientHeight: hh } = this.map.getContainer()
+        this.fauna.frame(dt, t, {
+          mpp, centro: [cx, cy], raggio: h.raggio,
+          vistaCentro: this.posizione(vista.lng, vista.lat), vistaRaggio: 0.5 * Math.hypot(w, hh) * mpp * 0.55,
+          dentro: (px, py) => {
+            const g = new MercatorCoordinate(this.origin.x + px * this.unit, this.origin.y - py * this.unit).toLngLat()
+            return dentroProvincia([g.lng, g.lat])
+          },
+        })
       }
     }
     Object.values(this.pools).forEach(({ mesh, count }) => {
@@ -146,6 +203,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
   }
 
   onRemove() {
+    this.fauna.libera()
     for (const { mesh } of Object.values(this.pools)) {
       mesh.geometry.dispose()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
