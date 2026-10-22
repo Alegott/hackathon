@@ -3,3 +3,5 @@ __pycache__/
 .mypy_cache/
 data/raw/
 data/processed/
+node_modules
+dist
