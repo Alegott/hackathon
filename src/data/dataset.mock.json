@@ -1,0 +1,21 @@
+{
+  "meta": { "periodoAria": "MOCK 2025", "inquinante": "PM10", "generatoIl": "2026-10-22" },
+  "comuni": [
+    { "istat": "024001", "nome": "Altavilla Finta", "geometria": [[[0,0],[1000,0],[1000,1000],[0,1000]]], "centroide": [500,500], "confinanti": ["024002","024004"], "ariaNorm": 85, "pm10": 20.2, "nCentraline": 3 },
+    { "istat": "024002", "nome": "Borgo Mock", "geometria": [[[1000,0],[2000,0],[2000,1000],[1000,1000]]], "centroide": [1500,500], "confinanti": ["024001","024003","024005"], "ariaNorm": 65, "pm10": 27.8, "nCentraline": 2 },
+    { "istat": "024003", "nome": "Cittadella Demo", "geometria": [[[2000,0],[3000,0],[3000,1000],[2000,1000]]], "centroide": [2500,500], "confinanti": ["024002","024005"], "ariaNorm": 45, "pm10": 35.3, "nCentraline": 2 },
+    { "istat": "024004", "nome": "Dolo Industriale", "geometria": [[[0,1000],[1000,1000],[1000,2000],[0,2000]]], "centroide": [500,1500], "confinanti": ["024001","024005"], "ariaNorm": 25, "pm10": 42.8, "nCentraline": 1 },
+    { "istat": "024005", "nome": "Erba Finta", "geometria": [[[1000,1000],[3000,1000],[3000,2000],[1000,2000]]], "centroide": [2000,1500], "confinanti": ["024002","024003","024004"], "ariaNorm": 10, "pm10": 47.0, "nCentraline": 1 }
+  ],
+  "infrastrutture": [
+    { "id": "i1", "comune": "024001", "tipo": "parco", "posizione": [300,300] },
+    { "id": "i2", "comune": "024002", "tipo": "ciclabile", "posizione": [1500,300] },
+    { "id": "i3", "comune": "024003", "tipo": "colonnine", "posizione": [2500,300] },
+    { "id": "i4", "comune": "024004", "tipo": "industria", "posizione": [500,1500] },
+    { "id": "i5", "comune": "024005", "tipo": "strada", "posizione": [2000,1500] }
+  ],
+  "caseSeed": [
+    { "id": "c1", "comune": "024001", "pubblico": true, "nickname": "Casa Rossi", "dotazioni": { "fotovoltaico": true, "solareTermico": false, "riscaldamento": "pompa_calore", "cottura": "induzione", "isolamento": "buono", "infissi": true, "colonninaEV": false } },
+    { "id": "c2", "comune": "024004", "pubblico": false, "dotazioni": { "fotovoltaico": false, "solareTermico": false, "riscaldamento": "tradizionale", "cottura": "gas", "isolamento": "scarso", "infissi": false, "colonninaEV": false } }
+  ]
+}
