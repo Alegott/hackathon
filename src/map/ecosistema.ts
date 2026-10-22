@@ -1,7 +1,7 @@
 import type { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson"
 import { intersection, type MultiPolygon as ClipMultiPolygon } from "polygon-clipping"
 import type { Comune, StatoComune } from "../types"
-import { posizioniAlberi } from "../diorama/alberi"
+import { posizioniAlberi } from "../diorama/posizioniAlberi"
 import { puntoInPoligono } from "../diorama/geometria"
 import { presetFascia } from "../diorama/preset"
 import { aCoordinateGeografiche, aCoordinateMetriche } from "./territorio"

@@ -4,6 +4,7 @@ import { BarraStrumenti } from "../diorama/BarraStrumenti"
 import { Legenda } from "../map/Legenda"
 import type { Sezione } from "../store/store"
 import { store, useApp } from "./useApp"
+import { useTema, type Tema } from "./tema"
 import { PannelloComune } from "../ui/PannelloComune"
 import { SezioneCasa } from "../ui/SezioneCasa"
 import { SezioneSimulazione } from "../ui/SezioneSimulazione"
@@ -17,6 +18,12 @@ const SEZIONI: { id: Sezione; etichetta: string }[] = [
   { id: "simulazione", etichetta: "Simulazione" },
 ]
 
+const TEMI: { id: Tema; etichetta: string; icona: string }[] = [
+  { id: "chiaro", etichetta: "chiaro", icona: "☀️" },
+  { id: "scuro", etichetta: "scuro", icona: "🌙" },
+  { id: "sistema", etichetta: "del sistema", icona: "💻" },
+]
+
 export function App() {
   const sezione = useApp((s) => s.sezione)
   const vista = useApp((s) => s.vista)
@@ -24,6 +31,7 @@ export function App() {
   const [mostraRoadmap, setMostraRoadmap] = useState(false)
   const [tipoMappa, setTipoMappa] = useState<"territorio" | "diorama">("territorio")
   const modalitaDiorama = tipoMappa === "diorama"
+  const [tema, setTema] = useTema()
 
   const eseguiPassoDemo = (passo: number) => {
     const st = store.getState()
@@ -122,6 +130,20 @@ export function App() {
         </div>
 
         <div className="header-destra">
+          <div className="selettore-tema" role="group" aria-label="Tema">
+            {TEMI.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={tema === t.id}
+                aria-label={`Tema ${t.etichetta}`}
+                title={`Tema ${t.etichetta}`}
+                onClick={() => setTema(t.id)}
+              >
+                <span aria-hidden="true">{t.icona}</span>
+              </button>
+            ))}
+          </div>
           <span className={`pill-stato-mod ${modalita === "scenario" ? "pill-stato-mod--scenario" : ""}`}>
             {modalita === "scenario" ? "🧪 Scenario" : "📍 Realtà"}
           </span>
