@@ -1,13 +1,15 @@
-import { useState } from "react"
+import { lazy, Suspense, useState } from "react"
 import { dataset, èMock } from "../data/dataset"
 import { BarraStrumenti } from "../diorama/BarraStrumenti"
 import { Legenda } from "../map/Legenda"
-import { Provincia } from "../map/Provincia"
 import type { Sezione } from "../store/store"
 import { store, useApp } from "./useApp"
 import { PannelloComune } from "../ui/PannelloComune"
 import { SezioneCasa } from "../ui/SezioneCasa"
 import { SezioneSimulazione } from "../ui/SezioneSimulazione"
+
+const Provincia = lazy(() => import("../map/Provincia").then((m) => ({ default: m.Provincia })))
+const MappaTerritorio = lazy(() => import("../map/MappaTerritorio").then((m) => ({ default: m.MappaTerritorio })))
 
 const SEZIONI: { id: Sezione; etichetta: string }[] = [
   { id: "mappa", etichetta: "Mappa" },
@@ -20,6 +22,8 @@ export function App() {
   const vista = useApp((s) => s.vista)
   const modalita = useApp((s) => s.modalita)
   const [mostraRoadmap, setMostraRoadmap] = useState(false)
+  const [tipoMappa, setTipoMappa] = useState<"territorio" | "diorama">("territorio")
+  const modalitaDiorama = tipoMappa === "diorama"
 
   const eseguiPassoDemo = (passo: number) => {
     const st = store.getState()
@@ -127,7 +131,14 @@ export function App() {
       <main>
         {/* La mappa resta montata per non ricaricare la scena cambiando sezione. */}
         <div className="mappa" style={{ display: sezione === "mappa" ? "block" : "none" }}>
-          <Provincia />
+          <Suspense fallback={<div className="territorio-avviso" role="status">Preparazione della mappa…</div>}>
+            {modalitaDiorama ? <Provincia /> : <MappaTerritorio apriDiorama={() => setTipoMappa("diorama")} />}
+          </Suspense>
+          {modalitaDiorama && (
+            <button className="torna-territorio" onClick={() => { store.getState().setModalita("realta"); setTipoMappa("territorio") }}>
+              ↗ Mappa reale 3D
+            </button>
+          )}
           <Legenda />
           {vista === "comune" && (
             <button className="indietro" onClick={() => store.getState().tornaAllaProvincia()}>

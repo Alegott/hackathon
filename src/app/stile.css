@@ -3,6 +3,47 @@
   --focus-color: #f59e0b;
 }
 
+/* Cartografia reale: colori morbidi, controlli compatti e spazio al territorio. */
+.territorio { position: relative; width: 100%; height: 100%; background: #e8efdd; }
+.territorio > .territorio-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.territorio-esterno { position: absolute; inset: 0; pointer-events: none; z-index: 1; background: #e9eeead6; backdrop-filter: blur(7px) saturate(.15); -webkit-backdrop-filter: blur(7px) saturate(.15); }
+.territorio-atmosfera { position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 50% 30%, #bec3c0, #606962); transition: opacity 1.2s; }
+.territorio .territorio-intro, .territorio .territorio-controlli, .territorio .territorio-aiuto { z-index: 3; }
+.territorio .territorio-avviso { z-index: 4; }
+.territorio .maplibregl-ctrl-bottom-right, .territorio .maplibregl-ctrl-bottom-left { z-index: 3; }
+.mappa:has(.territorio) > .legenda, .mappa:has(.territorio) > .pannello-comune, .mappa:has(.territorio) > .indietro, .mappa:has(.territorio) > .barra-strumenti { z-index: 4; }
+.mappa:has(.territorio) > .barra-strumenti { top: 200px; left: 28px; transform: none; justify-content: flex-start; max-width: min(650px, 70%); }
+.territorio-intro { position: absolute; top: 26px; left: 28px; max-width: min(420px, 65vw); pointer-events: none; color: #244b42; text-shadow: 0 1px 12px #fff, 0 0 30px #fff; }
+.territorio-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .2em; }
+.territorio-intro h2 { margin: 8px 0; font-size: clamp(20px, 2.3vw, 34px); font-weight: 750; letter-spacing: -.04em; line-height: 1.1; }
+.territorio-intro p { margin: 0; font-size: 12px; line-height: 1.5; }
+.territorio-controlli { position: absolute; left: 28px; top: 140px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 65vw; }
+.territorio-controlli button, .torna-territorio { font: inherit; font-size: 12px; font-weight: 650; padding: 10px 14px; border-radius: 24px; border: 1px solid #d9e4dc; color: #31594d; background: #fffffff2; box-shadow: 0 3px 14px #244b4212; cursor: pointer; }
+.territorio-controlli button[aria-pressed="true"] { background: #244f43; border-color: #244f43; color: #fff; }
+.territorio-controlli button:hover, .torna-territorio:hover { box-shadow: 0 3px 18px #244b4233; }
+.territorio-controlli button:disabled { opacity: .5; cursor: wait; }
+.territorio-controlli button:focus-visible, .torna-territorio:focus-visible { outline: 3px solid #e7b64d; outline-offset: 3px; }
+.territorio-aiuto { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); border: 1px solid #ffffffb0; background: #ffffffd9; padding: 8px 15px; border-radius: 24px; font-size: 10px; color: #536a60; pointer-events: none; white-space: nowrap; }
+.territorio-avviso { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 90%; border: 1px solid #d9e4dc; border-radius: 16px; background: #fffffff5; padding: 18px 24px; box-shadow: 0 8px 30px #244b4220; color: #31594d; font-size: 14px; }
+.territorio-avviso button { display: block; margin-top: 10px; border: 0; border-radius: 8px; padding: 8px 12px; background: #244f43; color: #fff; cursor: pointer; }
+.territorio-popup .maplibregl-popup-content { border-radius: 10px; padding: 10px 14px; font-family: inherit; color: #244b42; box-shadow: 0 4px 18px #244b4226; }
+.territorio .maplibregl-ctrl-group { border-radius: 14px; overflow: hidden; box-shadow: 0 3px 14px #244b4220; }
+.territorio .maplibregl-ctrl-bottom-right { bottom: 28px; right: 14px; }
+.torna-territorio { position: absolute; right: 20px; bottom: 45px; z-index: 2; }
+.mappa:has(.territorio) > .indietro { top: auto; bottom: 220px; left: 28px; border-radius: 24px; background: #244f43; }
+.mappa:has(.territorio) > .legenda { border: 1px solid #ffffffb0; border-radius: 16px; box-shadow: 0 6px 24px #244b4214; padding: 14px 18px; bottom: 28px; left: 28px; color: #31594d; font-size: 11px; }
+@media (max-width: 700px) {
+  .territorio-intro { top: 18px; left: 16px; max-width: 85vw; }
+  .territorio-controlli { left: 16px; top: 112px; max-width: 90vw; }
+  .territorio-controlli button { font-size: 10px; padding: 8px 10px; }
+  .territorio-aiuto { display: none; }
+  .mappa:has(.territorio) > .legenda { left: 12px; bottom: 28px; padding: 10px; }
+  .mappa:has(.territorio) > .indietro { bottom: 205px; left: 12px; }
+  .mappa:has(.territorio) > .pannello-comune { top: auto; bottom: 40px; right: 12px; max-height: 42%; overflow-y: auto; width: calc(100% - 24px); }
+  .mappa:has(.territorio):has(.pannello-comune) > .legenda { display: none; }
+  .mappa:has(.territorio):has(.pannello-comune) > .indietro { bottom: auto; top: 160px; }
+}
+
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; color: #1c2733; background: #f4f7f9; }

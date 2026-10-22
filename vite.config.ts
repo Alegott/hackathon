@@ -3,5 +3,6 @@ import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   plugins: [react()],
+  server: { watch: { ignored: ["**/.tmp/**", "**/.venv/**"] } },
   test: { include: ["src/**/*.test.ts"] },
 })
