@@ -1,6 +1,6 @@
 import { Icona } from "./icone"
 import type { Oggetto } from "./oggetti"
-import { paletteOggetti } from "./palette"
+import { paletteOggetti } from "./paletteOggetti"
 import type { Dotazioni } from "../types"
 
 export const TIPO_DRAG = "application/x-casa-oggetto"

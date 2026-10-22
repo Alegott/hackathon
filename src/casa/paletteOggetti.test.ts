@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { paletteOggetti } from "./palette"
+import { paletteOggetti } from "./paletteOggetti"
 import type { Dotazioni } from "../types"
 
 const nulla: Dotazioni = {
