@@ -57,8 +57,10 @@ export const SezioneCasa: React.FC = () => {
   const casa: Casa = casaStore ?? CASA_DEMO_DEFAULT
   const [trascinando, setTrascinando] = useState(false)
   const [salvato, setSalvato] = useState(false)
+  const [nomeCasa, setNomeCasa] = useState(casa.nickname ?? "")
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => setNomeCasa(casa.nickname ?? ""), [casa.nickname])
 
   const elencoComuni = useMemo(() => {
     const mappa = new Map<string, string>()
@@ -159,12 +161,13 @@ export const SezioneCasa: React.FC = () => {
                 <button type="button" className={!casa.pubblico ? "on" : ""} onClick={() => aggiorna((c) => ({ ...c, pubblico: false }))}>Privato</button>
               </div>
             </div>
-            {casa.pubblico && (
+            <form onSubmit={(e) => { e.preventDefault(); if (nomeCasa.trim()) aggiorna((c) => ({ ...c, nickname: nomeCasa.trim() })) }}>
               <label className="campo">
-                <span>Nickname</span>
-                <input type="text" value={casa.nickname ?? ""} maxLength={32} placeholder="Come ti vedono gli altri" onChange={(e) => aggiorna((c) => ({ ...c, nickname: e.target.value }))} />
+                <span>Nome della casa (obbligatorio)</span>
+                <input type="text" required pattern=".*\S.*" value={nomeCasa} maxLength={32} placeholder="Dai un nome alla tua casa" onChange={(e) => setNomeCasa(e.target.value)} onBlur={() => { if (nomeCasa.trim()) aggiorna((c) => ({ ...c, nickname: nomeCasa.trim() })) }} />
               </label>
-            )}
+              <button type="submit">Salva nome casa</button>
+            </form>
             <button type="button" className="link" onClick={() => modifica(CASA_DEMO_DEFAULT)}>Ripristina casa demo</button>
           </section>
         </aside>

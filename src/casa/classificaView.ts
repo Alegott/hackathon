@@ -5,6 +5,7 @@ export type Medaglia = "oro" | "argento" | "bronzo"
 
 export type RigaPubblica = {
   tipo: "pubblica"
+  id: string
   nome: string
   punteggio: number
   classe: Classe
@@ -44,6 +45,7 @@ export function preparaClassifica(i: { case: Casa[]; comune: string; utenteId: s
     const posizione = 1 + pubbliche.filter((x) => x.punteggio > punteggio).length
     return {
       tipo: "pubblica",
+      id: c.id,
       nome: c.nickname || "Casa pubblica",
       punteggio,
       classe: punteggioCasa(c.dotazioni).classe,

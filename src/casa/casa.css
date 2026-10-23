@@ -115,6 +115,11 @@
 .casa-v2 .cl-riga--mia { border-color: var(--c-acc); background: var(--c-acc-bg); }
 .casa-v2 .cl-pos { font-weight: 700; color: var(--c-muto); text-align: center; }
 .casa-v2 .cl-chi { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.casa-v2 .cl-amicizia { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+.casa-v2 .cl-riga > .cl-amicizia { grid-column: 2 / -1; align-items: flex-start; }
+.casa-v2 .cl-amicizia button { border: 1px solid var(--c-acc); border-radius: 9px; padding: 8px 12px; color: var(--c-acc); background: var(--c-acc-bg); font: inherit; font-size: 12px; cursor: pointer; }
+.casa-v2 .cl-amicizia button:disabled { opacity: .65; cursor: default; }
+.casa-v2 .cl-amicizia small { font-size: 11px; color: var(--testo-tenue); }
 .casa-v2 .cl-chi strong { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .casa-v2 .cl-barra { height: 8px; border-radius: 999px; background: var(--c-bg); overflow: hidden; }
 .casa-v2 .cl-barra span { display: block; height: 100%; border-radius: 999px; animation: cl-cresce .9s cubic-bezier(.2,.8,.2,1) both; transform-origin: left; }

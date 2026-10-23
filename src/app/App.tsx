@@ -8,6 +8,7 @@ import { useTema, type Tema } from "./tema"
 import { PannelloComune } from "../ui/PannelloComune"
 import { SezioneCasa } from "../ui/SezioneCasa"
 import { SezioneSimulazione } from "../ui/SezioneSimulazione"
+import { SezioneAmici } from "../social/SezioneAmici"
 
 const Provincia = lazy(() => import("../map/Provincia").then((m) => ({ default: m.Provincia })))
 const MappaTerritorio = lazy(() => import("../map/MappaTerritorio").then((m) => ({ default: m.MappaTerritorio })))
@@ -16,6 +17,7 @@ const SEZIONI: { id: Sezione; etichetta: string }[] = [
   { id: "mappa", etichetta: "Mappa" },
   { id: "casa", etichetta: "Casa" },
   { id: "simulazione", etichetta: "Simulazione" },
+  { id: "amici", etichetta: "Amici" },
 ]
 
 const TEMI: { id: Tema; etichetta: string; icona: string }[] = [
@@ -172,6 +174,7 @@ export function App() {
         </div>
         {sezione === "casa" && <SezioneCasa />}
         {sezione === "simulazione" && <SezioneSimulazione />}
+        {sezione === "amici" && <SezioneAmici />}
       </main>
 
       {mostraRoadmap && (

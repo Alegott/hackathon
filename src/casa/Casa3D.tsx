@@ -491,13 +491,28 @@ function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
   )
 }
 
-export function Casa3D({ dotazioni }: { dotazioni: Dotazioni }) {
+// La miniatura usa la stessa scena della sezione Casa, con camera frontale fissa.
+function CatturaFrontale({ onFoto }: { onFoto: (foto: string) => void }) {
+  const trascorso = useRef(0)
+  const catturata = useRef(false)
+  useFrame(({ gl, scene, camera }, dt) => {
+    gl.render(scene, camera)
+    trascorso.current += dt
+    if (!catturata.current && trascorso.current >= 0.8) {
+      catturata.current = true
+      onFoto(gl.domElement.toDataURL("image/png"))
+    }
+  }, 1)
+  return null
+}
+
+export function Casa3D({ dotazioni, onFotoFrontale }: { dotazioni: Dotazioni; onFotoFrontale?: (foto: string) => void }) {
   const vista = useMemo(() => descriviCasa(dotazioni), [dotazioni])
   const meteo = meteoDaClasse(punteggioCasa(dotazioni).classe)
   return (
-    <Canvas shadows camera={{ position: [7.8, 5.4, 9], fov: 38 }} gl={{ antialias: true }}>
+    <Canvas shadows dpr={onFotoFrontale ? 1 : undefined} camera={{ position: onFotoFrontale ? [-0.4, 3.4, 14] : [7.8, 5.4, 9], fov: 38 }} gl={{ antialias: true, preserveDrawingBuffer: !!onFotoFrontale }} onCreated={({ camera }) => { if (onFotoFrontale) camera.lookAt(-0.4, 1, 0.2) }}>
       <Scena vista={vista} meteo={meteo} />
-      <OrbitControls autoRotate autoRotateSpeed={1.1} enablePan={false} minDistance={7} maxDistance={18} minPolarAngle={0.5} maxPolarAngle={Math.PI / 2.1} target={[-0.4, 1, 0.2]} />
+      {onFotoFrontale ? <CatturaFrontale onFoto={onFotoFrontale} /> : <OrbitControls autoRotate autoRotateSpeed={1.1} enablePan={false} minDistance={7} maxDistance={18} minPolarAngle={0.5} maxPolarAngle={Math.PI / 2.1} target={[-0.4, 1, 0.2]} />}
     </Canvas>
   )
 }
