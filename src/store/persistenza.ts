@@ -7,6 +7,11 @@ const èAuto = (a: any) =>
   ["benzina", "diesel", "gpl", "ibrido", "elettrico"].includes(a.alimentazione) &&
   Number.isInteger(a.euro) && a.euro >= 0 && a.euro <= 6
 
+const èGiardino = (g: any) =>
+  typeof g === "object" && g !== null && typeof g.alberi === "object" && g.alberi !== null &&
+  Object.entries(g.alberi).every(([tipo, n]) =>
+    ["latifoglia", "conifera", "frutto", "ulivo"].includes(tipo) && Number.isInteger(n) && (n as number) >= 0)
+
 const èCasa = (x: unknown): x is Casa => {
   if (typeof x !== "object" || x === null) return false
   const c = x as Record<string, any>
@@ -24,7 +29,8 @@ const èCasa = (x: unknown): x is Casa => {
     ["buono", "medio", "scarso"].includes(d.isolamento) &&
     typeof d.infissi === "boolean" &&
     typeof d.colonninaEV === "boolean" &&
-    (d.auto === undefined || d.auto === null || èAuto(d.auto))
+    (d.auto === undefined || d.auto === null || èAuto(d.auto)) &&
+    (d.giardino === undefined || d.giardino === null || èGiardino(d.giardino))
   )
 }
 

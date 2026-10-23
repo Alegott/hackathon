@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { classeAuto, punteggioCasa } from "./index"
+import { classeAuto, punteggioCasa, puntiGiardino } from "./index"
 import type { Auto, Dotazioni } from "../types"
 
 const nulla: Dotazioni = {
@@ -132,5 +132,37 @@ describe("classeAuto", () => {
   })
   it("un'ibrida recente è migliore di una benzina vecchia", () => {
     expect(classeAuto({ alimentazione: "ibrido", euro: 6 }) < classeAuto({ alimentazione: "benzina", euro: 2 })).toBe(true)
+  })
+})
+
+describe("punteggioCasa - giardino", () => {
+  it("se il giardino non è indicato il punteggio resta quello della sola casa", () => {
+    expect(punteggioCasa({ ...nulla, giardino: undefined })).toEqual(punteggioCasa(nulla))
+  })
+  it("avere un giardino, anche senza alberi, vale più di non averlo", () => {
+    expect(punteggioCasa({ ...perfetta, giardino: { alberi: {} } }).punteggio)
+      .toBeGreaterThan(punteggioCasa({ ...perfetta, giardino: null }).punteggio)
+  })
+  it("più alberi alzano il punteggio, fino a un tetto", () => {
+    const p = [0, 1, 2, 3, 6].map((n) => puntiGiardino({ alberi: { latifoglia: n } }))
+    expect(p).toEqual([3, 7, 11, 15, 15])
+  })
+  it("a parità di numero, il tipo conta: latifoglie > conifere > ulivi > da frutto", () => {
+    const p = (["latifoglia", "conifera", "ulivo", "frutto"] as const).map((t) => puntiGiardino({ alberi: { [t]: 3 } }))
+    expect(p).toEqual([...p].sort((a, b) => b - a))
+    expect(new Set(p).size).toBe(4)
+  })
+  it("un solo albero di tipo diverso dà un punteggio finale diverso (la differenza si vede dopo l'arrotondamento)", () => {
+    for (const base of [nulla, perfetta]) {
+      const p = (["latifoglia", "conifera", "ulivo", "frutto"] as const).map(
+        (t) => punteggioCasa({ ...base, giardino: { alberi: { [t]: 1 } } }).punteggio,
+      )
+      expect(p).toEqual([...p].sort((a, b) => b - a))
+      expect(new Set(p).size).toBe(4)
+    }
+  })
+  it("senza giardino o con pochi alberi compare tra le cose da migliorare", () => {
+    expect(punteggioCasa({ ...nulla, giardino: null }).mancanti.map((m) => m.dotazione)).toContain("giardino")
+    expect(punteggioCasa({ ...nulla, giardino: { alberi: { latifoglia: 3 } } }).mancanti.map((m) => m.dotazione)).not.toContain("giardino")
   })
 })

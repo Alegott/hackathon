@@ -1,8 +1,8 @@
 import { ContactShadows, OrbitControls, RoundedBox } from "@react-three/drei"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { useMemo, useRef, type ReactNode } from "react"
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react"
 import * as THREE from "three"
-import type { Alimentazione, Classe, Dotazioni } from "../types"
+import type { Alimentazione, Classe, Dotazioni, TipoAlbero } from "../types"
 import { meteoDaClasse, type Meteo } from "./meteo"
 import { descriviCasa, type VistaCasa } from "./vista"
 import { punteggioCasa } from "../engine"
@@ -647,7 +647,169 @@ const Siepe = ({ x, z }: { x: number; z: number }) => (
   <mesh position={[x, 0.22, z]} scale={[1, 0.8, 0.9]} castShadow><icosahedronGeometry args={[0.28, 1]} /><meshStandardMaterial color="#3d8a47" flatShading /></mesh>
 )
 
-function Giardino() {
+// Albero da frutto: chioma tonda e bassa con frutti rossi e gialli.
+const DaFrutto = ({ posizione, scala = 1 }: { posizione: [number, number, number]; scala?: number }) => {
+  const frutti = [[0.35, 1.05, 0.2, "#d63c2f"], [-0.3, 1.15, 0.25, "#e8b830"], [0.1, 1.3, -0.35, "#d63c2f"], [-0.2, 0.92, -0.3, "#e8b830"], [0.32, 1.3, -0.1, "#d63c2f"]] as const
+  return (
+    <group position={posizione} scale={scala}>
+      <mesh position={[0, 0.35, 0]} castShadow><cylinderGeometry args={[0.07, 0.1, 0.7, 6]} /><meshStandardMaterial color="#7a5640" /></mesh>
+      <mesh position={[0, 1.1, 0]} scale={[1, 0.82, 1]} castShadow><icosahedronGeometry args={[0.5, 1]} /><meshStandardMaterial color="#5fa344" flatShading /></mesh>
+      {frutti.map(([x, y, z, c], i) => <mesh key={i} position={[x, y, z]}><sphereGeometry args={[0.06, 8, 8]} /><meshStandardMaterial color={c} roughness={0.5} /></mesh>)}
+    </group>
+  )
+}
+
+// Ulivo: tronco nodoso e inclinato, chioma rada argentea.
+const Ulivo = ({ posizione, scala = 1 }: { posizione: [number, number, number]; scala?: number }) => (
+  <group position={posizione} scale={scala}>
+    <mesh position={[0.05, 0.35, 0]} rotation={[0, 0, -0.18]} castShadow><cylinderGeometry args={[0.07, 0.13, 0.75, 6]} /><meshStandardMaterial color="#8a8172" flatShading /></mesh>
+    <mesh position={[-0.12, 0.72, 0.05]} rotation={[0.2, 0, 0.5]}><cylinderGeometry args={[0.04, 0.06, 0.4, 5]} /><meshStandardMaterial color="#8a8172" flatShading /></mesh>
+    {[[0.15, 1.0, 0, 0.42], [-0.32, 0.95, 0.12, 0.32], [0.05, 1.18, -0.2, 0.3], [0.38, 0.88, 0.2, 0.26]].map(([x, y, z, r], i) => (
+      <mesh key={i} position={[x!, y!, z!]} scale={[1.2, 0.65, 1.1]} castShadow><icosahedronGeometry args={[r!, 0]} /><meshStandardMaterial color="#8fa37a" flatShading /></mesh>
+    ))}
+  </group>
+)
+
+// Posti liberi attorno alla casa (lontani da vialetto, auto, colonnina e staccionata), in ordine di priorità.
+const POSTI_ALBERI: [number, number][] = [
+  [-3.7, -1.9], [3.7, -2.2], [4.0, 1.9], [-4.1, 0.9], [0.0, -3.9], [-2.3, -3.5], [2.2, -3.6], [-4.6, -0.5],
+  [4.6, 0.0], [-1.2, -4.5], [1.2, -4.5], [-3.1, 4.0], [3.0, -4.0], [-3.2, -3.9], [4.9, -1.2], [-4.9, -1.6],
+]
+
+function Albero({ tipo, i }: { tipo: TipoAlbero; i: number }) {
+  const [x, z] = POSTI_ALBERI[i]!
+  const scala = 0.8 + ((i * 37) % 5) * 0.1 // un po' di varietà, sempre uguale per lo stesso posto
+  const posizione: [number, number, number] = [x, 0, z]
+  if (tipo === "conifera") return <Abete posizione={posizione} scala={scala + 0.1} />
+  if (tipo === "frutto") return <DaFrutto posizione={posizione} scala={scala} />
+  if (tipo === "ulivo") return <Ulivo posizione={posizione} scala={scala} />
+  return <Latifoglia posizione={posizione} scala={scala + 0.15} colore={i % 3 === 2 ? "#7bb04f" : "#4f9a4e"} />
+}
+
+// Numeri pseudo-casuali con seme: il prato è sempre uguale da un rendering all'altro.
+function casuale(seme: number) {
+  return () => {
+    seme = (seme + 0x6d2b79f5) | 0
+    let t = Math.imul(seme ^ (seme >>> 15), 1 | seme)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Punti del prato liberi da casa, vialetto e posto auto.
+function puntiNelPrato(n: number, seme: number): [number, number][] {
+  const r = casuale(seme)
+  const out: [number, number][] = []
+  while (out.length < n) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 4.9
+    const x = Math.cos(a) * d, z = Math.sin(a) * d
+    const casa = x > -3.8 && x < 2.5 && z > -1.9 && z < 2.0
+    const vialetto = Math.abs(x) < 0.5 && z > 1.8
+    const postoAuto = x > 0.9 && x < 3.6 && z > 2.0 && z < 3.7
+    if (!casa && !vialetto && !postoAuto) out.push([x, z])
+  }
+  return out
+}
+
+const VERDI_ERBA = ["#4f9a3c", "#5fae46", "#6dbb4f", "#3f8a35", "#7cc35a"]
+const COLORI_FIORI = ["#f06292", "#ffd54f", "#ffffff", "#ba68c8", "#ff8a65", "#64b5f6"]
+
+// Ciuffi d'erba (tre fili ciascuno) e fiori su stelo, in istanze per restare leggeri.
+function Prato() {
+  const erba = useRef<THREE.InstancedMesh>(null)
+  const steli = useRef<THREE.InstancedMesh>(null)
+  const corolle = useRef<THREE.InstancedMesh>(null)
+  const ciuffi = useMemo(() => puntiNelPrato(150, 7), [])
+  const fiori = useMemo(() => puntiNelPrato(40, 21), [])
+  useLayoutEffect(() => {
+    const m = new THREE.Object3D(), c = new THREE.Color(), r = casuale(3)
+    ciuffi.forEach(([x, z], i) => {
+      for (let k = 0; k < 3; k++) {
+        const ang = (k / 3) * Math.PI * 2 + r()
+        m.position.set(x + Math.cos(ang) * 0.03, 0.09, z + Math.sin(ang) * 0.03)
+        m.rotation.set(Math.sin(ang) * 0.35, r() * Math.PI, Math.cos(ang) * 0.35)
+        m.scale.set(1, 0.7 + r() * 0.7, 1)
+        m.updateMatrix()
+        erba.current?.setMatrixAt(i * 3 + k, m.matrix)
+        erba.current?.setColorAt(i * 3 + k, c.set(VERDI_ERBA[(i + k) % VERDI_ERBA.length]!))
+      }
+    })
+    fiori.forEach(([x, z], i) => {
+      const h = 0.16 + r() * 0.12
+      m.position.set(x, h / 2, z); m.rotation.set(0, 0, 0); m.scale.set(1, h / 0.2, 1); m.updateMatrix()
+      steli.current?.setMatrixAt(i, m.matrix)
+      m.position.set(x, h + 0.02, z); m.rotation.set(r(), r(), 0); m.scale.setScalar(0.8 + r() * 0.5); m.updateMatrix()
+      corolle.current?.setMatrixAt(i, m.matrix)
+      corolle.current?.setColorAt(i, c.set(COLORI_FIORI[i % COLORI_FIORI.length]!))
+    })
+    for (const im of [erba.current, steli.current, corolle.current]) {
+      if (!im) continue
+      im.instanceMatrix.needsUpdate = true
+      if (im.instanceColor) im.instanceColor.needsUpdate = true
+      ;(im.material as THREE.Material).needsUpdate = true // ricompila con i colori per istanza
+    }
+  }, [ciuffi, fiori])
+  return (
+    <>
+      <instancedMesh ref={erba} args={[undefined, undefined, ciuffi.length * 3]} castShadow>
+        <coneGeometry args={[0.028, 0.2, 3]} /><meshStandardMaterial flatShading roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={steli} args={[undefined, undefined, fiori.length]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.2, 4]} /><meshStandardMaterial color="#3f8a35" />
+      </instancedMesh>
+      <instancedMesh ref={corolle} args={[undefined, undefined, fiori.length]}>
+        <icosahedronGeometry args={[0.045, 0]} /><meshStandardMaterial flatShading emissive="#ffffff" emissiveIntensity={0.08} />
+      </instancedMesh>
+    </>
+  )
+}
+
+// Farfalle: ali che battono e voli a otto attorno alla casa, ognuna col suo ritmo.
+const FARFALLE = [
+  { colore: "#ff9f1c", r: 4.1, h: 0.9, v: 0.32, fase: 0 },
+  { colore: "#ffe066", r: 4.5, h: 1.3, v: -0.26, fase: 1.7 },
+  { colore: "#ffffff", r: 4.0, h: 0.7, v: 0.4, fase: 3.1 },
+  { colore: "#7ec8ff", r: 4.6, h: 1.6, v: 0.22, fase: 4.4 },
+  { colore: "#f78fb3", r: 4.3, h: 1.1, v: -0.35, fase: 5.5 },
+]
+
+function Farfalla({ colore, r, h, v, fase }: (typeof FARFALLE)[number]) {
+  const corpo = useRef<THREE.Group>(null)
+  const alaS = useRef<THREE.Group>(null)
+  const alaD = useRef<THREE.Group>(null)
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime * v + fase
+    const g = corpo.current
+    if (!g) return
+    // giro ondulato attorno alla casa, sempre fuori dai muri
+    const raggio = r + Math.sin(3 * t) * 0.35
+    const x = Math.cos(t) * raggio, z = Math.sin(t) * raggio
+    const y = h + Math.sin(clock.elapsedTime * 2.3 + fase) * 0.18
+    g.position.set(x, y, z)
+    // guarda nella direzione in cui vola (tangente al giro)
+    g.rotation.y = Math.atan2(-Math.sin(t) * Math.sign(v), Math.cos(t) * Math.sign(v))
+    const battito = Math.sin(clock.elapsedTime * 18 + fase) * 0.9
+    if (alaS.current) alaS.current.rotation.z = 0.25 + battito
+    if (alaD.current) alaD.current.rotation.z = -0.25 - battito
+  })
+  return (
+    <group ref={corpo} scale={0.9}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}><capsuleGeometry args={[0.012, 0.08, 4, 6]} /><meshStandardMaterial color="#2b2b2b" /></mesh>
+      {([[alaS, 1], [alaD, -1]] as const).map(([rif, lato]) => (
+        <group key={lato} ref={rif}>
+          <mesh position={[lato * 0.065, 0, 0.015]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, 1.25, 1]}>
+            <circleGeometry args={[0.06, 10]} /><meshStandardMaterial color={colore} side={THREE.DoubleSide} emissive={colore} emissiveIntensity={0.15} />
+          </mesh>
+          <mesh position={[lato * 0.05, 0, -0.045]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.04, 10]} /><meshStandardMaterial color={colore} side={THREE.DoubleSide} emissive={colore} emissiveIntensity={0.15} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+function Giardino({ alberi }: { alberi: TipoAlbero[] | null }) {
   const sassi = [0, 1, 2, 3, 4, 5].map((i) => ({ z: D / 2 + 0.7 + i * 0.5, x: Math.sin(i * 1.7) * 0.07 }))
   const fiori = [[-1.4, 2.1, "#f06292"], [-1.15, 2.2, "#ffd54f"], [-0.95, 2.05, "#ffffff"], [-1.55, 2.25, "#ffd54f"], [1.2, 1.95, "#f06292"]] as const
   const staccionata = Array.from({ length: 6 }, (_, i) => ({ x: -4.0 + i * 0.52, z: 2.5 + i * 0.22 }))
@@ -656,8 +818,22 @@ function Giardino() {
       {sassi.map((s, i) => (
         <mesh key={i} position={[s.x, 0.02, s.z]} rotation={[0, i * 0.3, 0]} receiveShadow><boxGeometry args={[0.7, 0.04, 0.36]} /><meshStandardMaterial color="#c9c2b5" roughness={1} /></mesh>
       ))}
-      <Siepe x={-1.55} z={1.95} /><Siepe x={-1.1} z={1.95} /><Siepe x={-0.75} z={1.95} />
-      {fiori.map(([x, z, c], i) => <mesh key={i} position={[x, 0.08, z]}><icosahedronGeometry args={[0.055, 0]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.15} flatShading /></mesh>)}
+      {alberi && (
+        <>
+          <Siepe x={-1.55} z={1.95} /><Siepe x={-1.1} z={1.95} /><Siepe x={-0.75} z={1.95} />
+          {fiori.map(([x, z, c], i) => <mesh key={i} position={[x, 0.08, z]}><icosahedronGeometry args={[0.055, 0]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.15} flatShading /></mesh>)}
+          {alberi.map((tipo, i) => <Albero key={`${i}${tipo}`} tipo={tipo} i={i} />)}
+          <Prato />
+          {FARFALLE.map((f, i) => <Farfalla key={i} {...f} />)}
+        </>
+      )}
+      {/* senza giardino: qualche vaso sul cortile pavimentato */}
+      {!alberi && [[-1.3, 2.05], [1.25, 2.0]].map(([x, z]) => (
+        <group key={x} position={[x!, 0, z!]}>
+          <mesh position={[0, 0.14, 0]} castShadow><cylinderGeometry args={[0.16, 0.12, 0.28, 12]} /><meshStandardMaterial color="#b8653e" roughness={0.8} /></mesh>
+          <mesh position={[0, 0.36, 0]} castShadow><icosahedronGeometry args={[0.18, 1]} /><meshStandardMaterial color="#4f9a4e" flatShading /></mesh>
+        </group>
+      ))}
       {staccionata.map((p, i) => (
         <group key={i} position={[p.x, 0, p.z]}>
           <mesh position={[0, 0.2, 0]} castShadow><boxGeometry args={[0.07, 0.4, 0.07]} /><meshStandardMaterial color="#e9e2d0" /></mesh>
@@ -669,10 +845,6 @@ function Giardino() {
         <mesh position={[0, 0.3, 0]}><boxGeometry args={[0.05, 0.6, 0.05]} /><meshStandardMaterial color="#6d4c41" /></mesh>
         <mesh position={[0, 0.65, 0]} castShadow><boxGeometry args={[0.22, 0.16, 0.14]} /><meshStandardMaterial color="#c0392b" /></mesh>
       </group>
-      <Latifoglia posizione={[-3.7, 0, -1.9]} scala={1.25} />
-      <Abete posizione={[3.7, 0, -2.2]} scala={1.1} />
-      <Latifoglia posizione={[4.0, 0, 1.9]} scala={0.8} colore="#7bb04f" />
-      <Abete posizione={[-4.1, 0, 0.9]} scala={0.8} />
     </>
   )
 }
@@ -754,9 +926,9 @@ function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
     <>
       <Atmosfera meteo={meteo} />
       <group ref={casa}>
-        <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color="#6fae5a" roughness={1} flatShading /></mesh>
+        <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color={vista.giardino ? "#6fae5a" : "#b3aca0"} roughness={1} flatShading /></mesh>
         <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[5.4, 4.8, 0.3, 56]} /><meshStandardMaterial color="#8a6a4f" roughness={1} flatShading /></mesh>
-        <Giardino />
+        <Giardino alberi={vista.giardino} />
 
         <Volume w={W} h={H} d={D} x={0} rivestimento={vista.rivestimento} />
         <Volume w={ALA.w} h={ALA.h} d={ALA.d} x={ALA.x} rivestimento={vista.rivestimento} />

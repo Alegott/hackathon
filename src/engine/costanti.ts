@@ -29,6 +29,16 @@ export const PESI_AUTO = {
 } as const
 export const PESO_MASSIMO_AUTO = PESI_AUTO.alimentazione.elettrico + PESI_AUTO.euro[6]
 
+// Giardino: il prato vale una base, ogni albero aggiunge secondo quanto ombreggia e assorbe
+// (latifoglie > conifere > ulivi > da frutto), fino a un tetto. Senza giardino: zero.
+export const PESI_GIARDINO = {
+  prato: 3,
+  // distanziati di un punto pieno: ogni tipo sposta davvero il punteggio finale (≈ 4, 3, 2, 1 punti su 100)
+  alberi: { latifoglia: 4, conifera: 3, ulivo: 2, frutto: 1 },
+  tettoAlberi: 12,
+} as const
+export const PESO_MASSIMO_GIARDINO = PESI_GIARDINO.prato + PESI_GIARDINO.tettoAlberi
+
 export const DELTA_INFRA: Record<TipoInfra, number> = {
   parco: 5,
   ciclabile: 3,
