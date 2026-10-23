@@ -5,10 +5,13 @@ import { COMUNI_VICENZA_114 } from "../data/comuni114"
 import { applicaOggetto, togliOggetto, type Oggetto } from "../casa/oggetti"
 import { Palco } from "../casa/Palco"
 import { Palette, TIPO_DRAG } from "../casa/Palette"
-import { Icona } from "../casa/icone"
-import { punteggioCasa } from "../engine"
+import { Icona, IconaAuto } from "../casa/icone"
+import { classeAuto, punteggioCasa, puntiGiardino } from "../engine"
+import { PESI_GIARDINO, PESO_MASSIMO_GIARDINO } from "../engine/costanti"
 import { ClassificaCard } from "../casa/ClassificaCard"
-import type { Casa } from "../types"
+import { META_CLASSI } from "./DashboardCasa"
+import { MAX_ALBERI_VISIBILI } from "../casa/vista"
+import type { Alimentazione, Auto, Casa, CategoriaEuro, Giardino, TipoAlbero } from "../types"
 import "../casa/casa.css"
 
 export const CASA_DEMO_DEFAULT: Casa = {
@@ -24,6 +27,7 @@ export const CASA_DEMO_DEFAULT: Casa = {
     isolamento: "medio",
     infissi: true,
     colonninaEV: false,
+    giardino: { alberi: { latifoglia: 2, conifera: 2 } },
   },
 }
 
@@ -50,6 +54,141 @@ const MIGLIORE: Record<string, { oggetto: Oggetto; etichetta: string }> = {
   isolamento: { oggetto: "isolamento_buono", etichetta: "Isolamento a cappotto" },
   infissi: { oggetto: "infissi", etichetta: "Doppi vetri" },
   colonninaEV: { oggetto: "colonninaEV", etichetta: "Colonnina EV" },
+}
+
+const ALIMENTAZIONI: { id: Alimentazione; etichetta: string }[] = [
+  { id: "benzina", etichetta: "Benzina" },
+  { id: "diesel", etichetta: "Diesel" },
+  { id: "gpl", etichetta: "GPL" },
+  { id: "ibrido", etichetta: "Ibrida" },
+  { id: "elettrico", etichetta: "Elettrica" },
+]
+const CATEGORIE_EURO: CategoriaEuro[] = [0, 1, 2, 3, 4, 5, 6]
+
+// Auto di casa: alimentazione e categoria Euro pesano sul punteggio e cambiano la macchina nel 3D.
+function SchedaAuto({ auto, onCambia }: { auto: Auto | null; onCambia: (a: Auto | null) => void }) {
+  const classe = auto ? classeAuto(auto) : null
+  return (
+    <section className="scheda">
+      <div className="auto-testa">
+        <h3>La mia auto</h3>
+        {classe && (
+          <span className="auto-classe" style={{ background: META_CLASSI[classe].bg, color: META_CLASSI[classe].colore }}>
+            Auto classe {classe}
+          </span>
+        )}
+      </div>
+      <div className="campo">
+        <span id="auto-alim">Alimentazione</span>
+        <div className="auto-scelte" role="group" aria-labelledby="auto-alim">
+          <button type="button" aria-pressed={!auto} onClick={() => onCambia(null)}>Nessuna</button>
+          {ALIMENTAZIONI.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              aria-pressed={auto?.alimentazione === a.id}
+              onClick={() => onCambia({ alimentazione: a.id, euro: auto?.euro ?? 6 })}
+            >
+              {a.etichetta}
+            </button>
+          ))}
+        </div>
+      </div>
+      {auto && auto.alimentazione !== "elettrico" && (
+        <div className="campo">
+          <span id="auto-euro">Categoria Euro</span>
+          <div className="auto-scelte auto-scelte--euro" role="group" aria-labelledby="auto-euro">
+            {CATEGORIE_EURO.map((e) => (
+              <button
+                key={e}
+                type="button"
+                aria-pressed={auto.euro === e}
+                aria-label={`Euro ${e}`}
+                onClick={() => onCambia({ ...auto, euro: e })}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="vuoto auto-nota">
+        {!auto
+          ? "Senza auto il punteggio dipende solo dalla casa."
+          : auto.alimentazione === "elettrico"
+            ? "Zero emissioni allo scarico: la categoria Euro non conta."
+            : "Più alta è la categoria Euro, meno inquina."}
+      </p>
+    </section>
+  )
+}
+
+const ALBERI: { id: TipoAlbero; etichetta: string; icona: string }[] = [
+  { id: "latifoglia", etichetta: "Latifoglie", icona: "🌳" },
+  { id: "conifera", etichetta: "Conifere", icona: "🌲" },
+  { id: "frutto", etichetta: "Da frutto", icona: "🍎" },
+  { id: "ulivo", etichetta: "Ulivi", icona: "🫒" },
+]
+const MAX_PER_TIPO = 8
+// giardino undefined = non ancora indicato: nessuna delle due risposte è selezionata e non pesa sul punteggio.
+function SchedaGiardino({ giardino, onCambia }: { giardino: Giardino | null | undefined; onCambia: (g: Giardino | null) => void }) {
+  const punti = giardino === undefined ? null : puntiGiardino(giardino)
+  const totale = giardino ? Object.values(giardino.alberi).reduce((a, n) => a + (n ?? 0), 0) : 0
+  const imposta = (tipo: TipoAlbero, n: number) =>
+    giardino && onCambia({ alberi: { ...giardino.alberi, [tipo]: Math.max(0, Math.min(MAX_PER_TIPO, n)) } })
+  return (
+    <section className="scheda">
+      <div className="auto-testa">
+        <h3>Il mio giardino</h3>
+        {punti !== null && <span className="auto-classe giardino-totale">{giardino ? `${totale === 1 ? "1 albero" : `${totale} alberi`} · ` : ""}{punti}/{PESO_MASSIMO_GIARDINO} pt</span>}
+      </div>
+      <div className="campo">
+        <span id="giardino-si">Hai un giardino?</span>
+        <div className="auto-scelte" role="group" aria-labelledby="giardino-si">
+          <button type="button" aria-pressed={!!giardino} onClick={() => !giardino && onCambia({ alberi: {} })}>Sì</button>
+          <button type="button" aria-pressed={giardino === null} onClick={() => onCambia(null)}>No</button>
+        </div>
+      </div>
+      {giardino && (
+        <ul className="giardino-alberi">
+          {ALBERI.map((a) => {
+            const n = giardino.alberi[a.id] ?? 0
+            return (
+              <li key={a.id}>
+                <span aria-hidden="true" className="giardino-icona">{a.icona}</span>
+                <span className="giardino-nome" id={`albero-${a.id}`}>
+                  {a.etichetta}
+                  <small>{PESI_GIARDINO.alberi[a.id]} pt l'uno</small>
+                </span>
+                <div className="contatore" role="group" aria-labelledby={`albero-${a.id}`}>
+                  <button type="button" aria-label={`Togli un albero: ${a.etichetta}`} disabled={n === 0} onClick={() => imposta(a.id, n - 1)}>−</button>
+                  <output aria-live="polite">{n}</output>
+                  <button type="button" aria-label={`Aggiungi un albero: ${a.etichetta}`} disabled={n === MAX_PER_TIPO} onClick={() => imposta(a.id, n + 1)}>+</button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <p className="vuoto auto-nota">
+        {giardino === undefined
+          ? "Indica se hai un giardino: prato e alberi alzano il punteggio."
+          : !giardino
+          ? "Senza giardino la casa ha un cortile pavimentato."
+          : totale > MAX_ALBERI_VISIBILI
+            ? `Nel modello 3D ne vedi ${MAX_ALBERI_VISIBILI}, ma li contiamo tutti.`
+            : `Il prato vale ${PESI_GIARDINO.prato} punti, gli alberi fino a ${PESI_GIARDINO.tettoAlberi}.`}
+      </p>
+    </section>
+  )
+}
+
+// Aggiunge latifoglie (l'albero che vale di più) finché il giardino arriva al massimo dei punti.
+function conAlberiAlMassimo(g: Giardino | null): Giardino {
+  const base: Giardino = g ?? { alberi: {} }
+  let latifoglie = base.alberi.latifoglia ?? 0
+  while (puntiGiardino({ alberi: { ...base.alberi, latifoglia: latifoglie } }) < PESO_MASSIMO_GIARDINO && latifoglie < MAX_PER_TIPO) latifoglie++
+  return { alberi: { ...base.alberi, latifoglia: latifoglie } }
 }
 
 export const SezioneCasa: React.FC = () => {
@@ -112,6 +251,13 @@ export const SezioneCasa: React.FC = () => {
             />
           </section>
 
+          <SchedaAuto auto={casa.dotazioni.auto ?? null} onCambia={(auto) => aggiorna((c) => ({ ...c, dotazioni: { ...c.dotazioni, auto } }))} />
+
+          <SchedaGiardino
+            giardino={casa.dotazioni.giardino}
+            onCambia={(giardino) => aggiorna((c) => ({ ...c, dotazioni: { ...c.dotazioni, giardino } }))}
+          />
+
           <section className="scheda">
             <h3>Per salire di classe</h3>
             {mancanti.length === 0 ? (
@@ -119,6 +265,31 @@ export const SezioneCasa: React.FC = () => {
             ) : (
               <ul className="suggerimenti">
                 {mancanti.slice(0, 4).map((m) => {
+                  if (m.dotazione === "auto") {
+                    return (
+                      <li key="auto">
+                        <button
+                          type="button"
+                          onClick={() => aggiorna((c) => ({ ...c, dotazioni: { ...c.dotazioni, auto: { alimentazione: "elettrico", euro: 6 } } }))}
+                        >
+                          <IconaAuto size={20} />
+                          <span>Auto elettrica</span>
+                          <strong>+{m.punti}</strong>
+                        </button>
+                      </li>
+                    )
+                  }
+                  if (m.dotazione === "giardino") {
+                    return (
+                      <li key="giardino">
+                        <button type="button" onClick={() => aggiorna((c) => ({ ...c, dotazioni: { ...c.dotazioni, giardino: conAlberiAlMassimo(c.dotazioni.giardino ?? null) } }))}>
+                          <span aria-hidden="true" className="giardino-icona">🌳</span>
+                          <span>{casa.dotazioni.giardino ? "Pianta altri alberi" : "Un giardino con alberi"}</span>
+                          <strong>+{m.punti}</strong>
+                        </button>
+                      </li>
+                    )
+                  }
                   const s = MIGLIORE[m.dotazione]
                   if (!s) return null
                   return (

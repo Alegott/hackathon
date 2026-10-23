@@ -1,8 +1,8 @@
-import { ContactShadows, OrbitControls } from "@react-three/drei"
+import { ContactShadows, OrbitControls, RoundedBox } from "@react-three/drei"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { useMemo, useRef, type ReactNode } from "react"
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react"
 import * as THREE from "three"
-import type { Dotazioni } from "../types"
+import type { Alimentazione, Classe, Dotazioni, TipoAlbero } from "../types"
 import { meteoDaClasse, type Meteo } from "./meteo"
 import { descriviCasa, type VistaCasa } from "./vista"
 import { punteggioCasa } from "../engine"
@@ -306,19 +306,307 @@ function PianoInduzione() {
   )
 }
 
-function Auto() {
-  const ruote = [[-0.43, 0.55], [0.43, 0.55], [-0.43, -0.55], [0.43, -0.55]] as const
+// ───────────────────────── auto: tre forme, colore e fumo secondo la classe ─────────────────────────
+// Stesso linguaggio per tutte (profilo curvo estruso, bordi smussati, dettagli veri), ma tre auto diverse:
+// A–B compatta moderna e filante, C–D berlina a tre volumi, E–G vecchia utilitaria squadrata.
+type FormaAuto = "moderna" | "normale" | "vecchia"
+const FORMA_AUTO: Record<Classe, FormaAuto> = { A: "moderna", B: "moderna", C: "normale", D: "normale", E: "vecchia", F: "vecchia", G: "vecchia" }
+const STILE_AUTO: Record<Classe, { colore: string; metallo: number; ruvido: number; fumo: { colore: string; quanto: number; ritmo: number } | null }> = {
+  A: { colore: "#e9f5f1", metallo: 0.6, ruvido: 0.2, fumo: null },
+  B: { colore: "#2e9e6b", metallo: 0.6, ruvido: 0.22, fumo: { colore: "#eef1f3", quanto: 0.3, ritmo: 0.3 } },
+  C: { colore: "#2f6fc4", metallo: 0.5, ruvido: 0.3, fumo: { colore: "#dde1e4", quanto: 0.45, ritmo: 0.32 } },
+  D: { colore: "#8a96a3", metallo: 0.45, ruvido: 0.38, fumo: { colore: "#b9bfc4", quanto: 0.6, ritmo: 0.35 } },
+  E: { colore: "#c9a45c", metallo: 0.15, ruvido: 0.6, fumo: { colore: "#8f9499", quanto: 0.8, ritmo: 0.4 } },
+  F: { colore: "#9b5a3c", metallo: 0.1, ruvido: 0.72, fumo: { colore: "#5f6368", quanto: 1.0, ritmo: 0.45 } },
+  G: { colore: "#6f6a52", metallo: 0.05, ruvido: 0.88, fumo: { colore: "#38383b", quanto: 1.3, ritmo: 0.5 } },
+}
+const PLASTICA = "#24292e", CROMO = "#d5dade"
+
+// Profilo laterale (x = lunghezza, y = altezza) estruso sulla larghezza con bordi smussati:
+// resta morbido e stilizzato ma ha cofano, passaruota e abitacolo come un'auto vera.
+function estrudiProfilo(disegna: (s: THREE.Shape) => void, larghezza: number, smusso: number) {
+  const s = new THREE.Shape()
+  disegna(s)
+  const g = new THREE.ExtrudeGeometry(s, { depth: larghezza, bevelEnabled: true, bevelThickness: smusso, bevelSize: smusso, bevelSegments: 5, curveSegments: 20 })
+  g.translate(0, 0, -larghezza / 2)
+  g.rotateY(-Math.PI / 2) // la lunghezza passa sull'asse z: il muso guarda +z
+  g.computeVertexNormals()
+  return g
+}
+
+// Fondo della scocca con i due passaruota incavati, da dietro verso il muso.
+function fondoConPassaruota(s: THREE.Shape, xRetro: number, xMuso: number, y: number, zRuota: number, rRuota: number, rArco: number) {
+  s.moveTo(xRetro, y)
+  s.lineTo(-zRuota - rArco, y)
+  s.absarc(-zRuota, rRuota, rArco, Math.PI, 0, true)
+  s.lineTo(zRuota - rArco, y)
+  s.absarc(zRuota, rRuota, rArco, Math.PI, 0, true)
+  s.lineTo(xMuso, y)
+}
+
+type Cerchio = "aero" | "razze" | "coppa" | "acciaio"
+
+// Pneumatico con fianco arrotondato e cerchio a scelta: aero (elettrica), razze, coppa in plastica, acciaio nudo.
+function Ruota({ r, lato, cerchio }: { r: number; lato: 1 | -1; cerchio: Cerchio }) {
+  const colore = { aero: "#e6eaed", razze: "#b7bec4", coppa: "#c3c8cc", acciaio: "#3a3f44" }[cerchio]
+  return (
+    <group rotation={[0, 0, -Math.PI / 2]}>
+      <mesh castShadow><cylinderGeometry args={[r, r, 0.1, 24]} /><meshStandardMaterial color="#17191b" roughness={0.95} /></mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, lato * 0.05, 0]}><torusGeometry args={[r - 0.012, 0.014, 8, 24]} /><meshStandardMaterial color="#232629" roughness={0.9} /></mesh>
+      <group position={[0, lato * 0.052, 0]}>
+        <mesh><cylinderGeometry args={[r * (cerchio === "acciaio" ? 0.55 : 0.66), r * (cerchio === "acciaio" ? 0.55 : 0.66), 0.012, 24]} /><meshStandardMaterial color={colore} metalness={cerchio === "coppa" ? 0.3 : 0.8} roughness={cerchio === "acciaio" ? 0.6 : 0.28} /></mesh>
+        {cerchio === "aero" && <mesh position={[0, lato * 0.007, 0]}><cylinderGeometry args={[r * 0.4, r * 0.4, 0.006, 24]} /><meshStandardMaterial color="#2a3238" metalness={0.6} roughness={0.3} /></mesh>}
+        {cerchio === "razze" && [0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} rotation={[0, (i * Math.PI * 2) / 5, 0]} position={[0, lato * 0.008, 0]}>
+            <boxGeometry args={[0.022, 0.006, r * 1.2]} /><meshStandardMaterial color="#5d666d" metalness={0.7} roughness={0.35} />
+          </mesh>
+        ))}
+        {cerchio === "coppa" && Array.from({ length: 8 }, (_, i) => (
+          <mesh key={i} rotation={[0, (i * Math.PI) / 4, 0]} position={[Math.cos((i * Math.PI) / 4) * r * 0.45, lato * 0.007, -Math.sin((i * Math.PI) / 4) * r * 0.45]}>
+            <boxGeometry args={[0.035, 0.006, 0.014]} /><meshStandardMaterial color="#4a5157" />
+          </mesh>
+        ))}
+        {cerchio === "acciaio" && [0, 1, 2, 3].map((i) => (
+          <mesh key={i} position={[Math.cos((i * Math.PI) / 2) * r * 0.32, lato * 0.007, Math.sin((i * Math.PI) / 2) * r * 0.32]}>
+            <cylinderGeometry args={[0.012, 0.012, 0.006, 8]} /><meshStandardMaterial color="#14171a" />
+          </mesh>
+        ))}
+        <mesh position={[0, lato * 0.012, 0]}><cylinderGeometry args={[0.02, 0.02, 0.008, 10]} /><meshStandardMaterial color="#9aa3a9" metalness={0.9} /></mesh>
+      </group>
+    </group>
+  )
+}
+
+function QuattroRuote({ x, z, r, cerchio }: { x: number; z: number; r: number; cerchio: Cerchio }) {
+  return (
+    <>
+      {([-1, 1] as const).flatMap((lato) => [-z, z].map((pz) => (
+        <group key={`${lato}${pz}`} position={[lato * x, r, pz]}><Ruota r={r} lato={lato} cerchio={cerchio} /></group>
+      )))}
+    </>
+  )
+}
+
+// ── A–B: compatta moderna, filante ──
+const MOD = { r: 0.16, z: 0.56 }
+const geoScoccaModerna = () => estrudiProfilo((s) => {
+  fondoConPassaruota(s, -0.84, 0.82, 0.13, MOD.z, MOD.r, 0.2)
+  s.quadraticCurveTo(0.9, 0.13, 0.9, 0.24)
+  s.quadraticCurveTo(0.9, 0.36, 0.76, 0.39)
+  s.quadraticCurveTo(0.55, 0.45, 0.36, 0.46)
+  s.lineTo(-0.66, 0.47)
+  s.quadraticCurveTo(-0.86, 0.46, -0.88, 0.36)
+  s.lineTo(-0.88, 0.22)
+  s.quadraticCurveTo(-0.88, 0.13, -0.84, 0.13)
+}, 0.74, 0.05)
+const geoAbitacoloModerna = () => estrudiProfilo((s) => {
+  s.moveTo(0.4, 0.45)
+  s.quadraticCurveTo(0.22, 0.6, 0.04, 0.665)
+  s.lineTo(-0.4, 0.675)
+  s.quadraticCurveTo(-0.6, 0.64, -0.7, 0.46)
+  s.lineTo(0.4, 0.45)
+}, 0.6, 0.04)
+
+const COLORE_MODERNA: Partial<Record<Alimentazione, string>> = { elettrico: "#eef4f2", ibrido: "#1f8a70", gpl: "#2f5fa8" }
+
+// Elettrica: niente griglia né scarico, barra LED continua, cerchi aero, presa di ricarica illuminata.
+function AutoModerna({ classe, alimentazione }: { classe: Classe; alimentazione: Alimentazione }) {
+  const st = STILE_AUTO[classe]
+  const elettrica = alimentazione === "elettrico"
+  const scocca = useMemo(geoScoccaModerna, [])
+  const abitacolo = useMemo(geoAbitacoloModerna, [])
+  const vernice = <meshStandardMaterial color={COLORE_MODERNA[alimentazione] ?? st.colore} metalness={0.55} roughness={0.22} />
+  const alone = useRef<THREE.MeshStandardMaterial>(null)
+  useFrame(({ clock }) => { if (alone.current) alone.current.emissiveIntensity = 0.9 + 0.5 * Math.sin(clock.elapsedTime * 2.2) })
   return (
     <group>
-      <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.82, 0.3, 1.55]} /><meshStandardMaterial color="#2f7bd6" metalness={0.55} roughness={0.28} /></mesh>
-      <mesh position={[0, 0.56, -0.04]} castShadow><boxGeometry args={[0.7, 0.26, 0.85]} /><meshStandardMaterial color="#9fd0f5" metalness={0.75} roughness={0.12} /></mesh>
-      {[-1, 1].map((s) => <mesh key={s} position={[s * 0.25, 0.32, 0.79]}><boxGeometry args={[0.18, 0.07, 0.02]} /><meshStandardMaterial color="#fff6c9" emissive="#fff0a0" emissiveIntensity={0.6} /></mesh>)}
-      {ruote.map(([x, z]) => (
-        <group key={`${x}${z}`} position={[x, 0.17, z]} rotation={[0, 0, Math.PI / 2]}>
-          <mesh><cylinderGeometry args={[0.17, 0.17, 0.11, 16]} /><meshStandardMaterial color="#1c1f22" /></mesh>
-          <mesh position={[0, x > 0 ? 0.056 : -0.056, 0]}><cylinderGeometry args={[0.09, 0.09, 0.01, 12]} /><meshStandardMaterial color="#c8ced3" metalness={0.8} roughness={0.3} /></mesh>
+      <mesh geometry={scocca} castShadow receiveShadow>{vernice}</mesh>
+      <mesh geometry={abitacolo} castShadow><meshStandardMaterial color="#1b2731" metalness={0.9} roughness={0.08} /></mesh>
+      {/* tetto e montanti in tinta */}
+      <RoundedBox args={[0.7, 0.035, 0.46]} radius={0.015} smoothness={3} position={[0, 0.72, -0.17]} castShadow>{vernice}</RoundedBox>
+      <mesh position={[0, 0.58, -0.16]}><boxGeometry args={[0.69, 0.24, 0.05]} />{vernice}</mesh>
+      {/* passaruota in plastica scura */}
+      {[-1, 1].flatMap((lato) => [-MOD.z, MOD.z].map((z) => (
+        <mesh key={`${lato}${z}`} position={[lato * 0.425, MOD.r, z]} rotation={[0, Math.PI / 2, 0]}>
+          <torusGeometry args={[0.215, 0.018, 6, 20, Math.PI]} /><meshStandardMaterial color={PLASTICA} roughness={0.9} />
+        </mesh>
+      )))}
+      {/* specchietti e maniglie */}
+      {[-1, 1].map((lato) => (
+        <group key={lato}>
+          <RoundedBox args={[0.1, 0.06, 0.09]} radius={0.02} smoothness={3} position={[lato * 0.45, 0.5, 0.32]}>{vernice}</RoundedBox>
+          {[0.08, -0.36].map((z) => <mesh key={z} position={[lato * 0.427, 0.41, z]}><boxGeometry args={[0.012, 0.018, 0.08]} /><meshStandardMaterial color={CROMO} metalness={0.9} roughness={0.2} /></mesh>)}
         </group>
       ))}
+      {/* fari: affilati, inclinati verso l'interno */}
+      {[-1, 1].map((lato) => (
+        <RoundedBox key={lato} args={[0.2, 0.045, 0.06]} radius={0.015} smoothness={3} position={[lato * 0.27, 0.36, 0.905]} rotation={[0, 0, lato * -0.12]}>
+          <meshStandardMaterial color="#f4fbff" emissive="#d9f3ff" emissiveIntensity={1.1} />
+        </RoundedBox>
+      ))}
+      {elettrica ? (
+        <>
+          <mesh position={[0, 0.405, 0.885]}><boxGeometry args={[0.36, 0.014, 0.02]} /><meshStandardMaterial color="#e8fbff" emissive="#9be7ff" emissiveIntensity={1.6} /></mesh>
+          <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[0.7, 1.4]} /><meshStandardMaterial ref={alone} color="#3fd0ff" emissive="#3fd0ff" transparent opacity={0.22} depthWrite={false} /></mesh>
+          <mesh position={[-0.428, 0.4, -0.62]} rotation={[0, Math.PI / 2, 0]}><circleGeometry args={[0.035, 16]} /><meshStandardMaterial color="#35c46a" emissive="#35c46a" emissiveIntensity={1.3} side={THREE.DoubleSide} /></mesh>
+          <mesh position={[0, 0.39, -0.93]}><boxGeometry args={[0.7, 0.03, 0.02]} /><meshStandardMaterial color="#ff5a5a" emissive="#ff2d2d" emissiveIntensity={0.9} /></mesh>
+        </>
+      ) : (
+        <>
+          <RoundedBox args={[0.4, 0.09, 0.04]} radius={0.02} smoothness={3} position={[0, 0.25, 0.95]}><meshStandardMaterial color={PLASTICA} roughness={0.6} /></RoundedBox>
+          {[0.23, 0.27].map((y) => <mesh key={y} position={[0, y, 0.972]}><boxGeometry args={[0.36, 0.008, 0.005]} /><meshStandardMaterial color={CROMO} metalness={0.9} roughness={0.2} /></mesh>)}
+          {[-1, 1].map((lato) => <mesh key={lato} position={[lato * 0.29, 0.38, -0.93]}><boxGeometry args={[0.2, 0.04, 0.02]} /><meshStandardMaterial color="#ff5a5a" emissive="#ff2d2d" emissiveIntensity={0.8} /></mesh>)}
+          {alimentazione === "ibrido" && <mesh position={[0.3, 0.44, 0.79]}><boxGeometry args={[0.07, 0.015, 0.03]} /><meshStandardMaterial color="#4fa3ff" emissive="#4fa3ff" emissiveIntensity={0.8} /></mesh>}
+          <mesh position={[0.24, 0.11, -0.92]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.028, 0.028, 0.08, 10]} /><meshStandardMaterial color="#8a9096" metalness={0.8} roughness={0.3} /></mesh>
+          {st.fumo && <group position={[0.24, 0.11, -0.98]}><Fumo {...st.fumo} /></group>}
+        </>
+      )}
+      {/* paraurti in plastica opaca */}
+      {[-1, 1].map((v) => <RoundedBox key={v} args={[0.78, 0.05, 0.05]} radius={0.02} smoothness={3} position={[0, 0.13, v * 0.94]}><meshStandardMaterial color={PLASTICA} roughness={0.85} /></RoundedBox>)}
+      <QuattroRuote x={0.36} z={MOD.z} r={MOD.r} cerchio={elettrica ? "aero" : "razze"} />
+    </group>
+  )
+}
+
+// ── C–D: berlina a tre volumi, più alta e composta ──
+const BER = { r: 0.155, z: 0.6 }
+const geoScoccaBerlina = () => estrudiProfilo((s) => {
+  fondoConPassaruota(s, -0.9, 0.86, 0.13, BER.z, BER.r, 0.19)
+  s.quadraticCurveTo(0.94, 0.13, 0.94, 0.22)
+  s.lineTo(0.94, 0.33)
+  s.quadraticCurveTo(0.93, 0.42, 0.82, 0.43)
+  s.quadraticCurveTo(0.6, 0.46, 0.34, 0.48)
+  s.lineTo(-0.62, 0.49)
+  s.lineTo(-0.9, 0.49) // coda: il baule è un volume a sé
+  s.quadraticCurveTo(-0.96, 0.48, -0.96, 0.4)
+  s.lineTo(-0.96, 0.2)
+  s.quadraticCurveTo(-0.96, 0.13, -0.9, 0.13)
+}, 0.72, 0.05)
+const geoAbitacoloBerlina = () => estrudiProfilo((s) => {
+  s.moveTo(0.36, 0.47)
+  s.quadraticCurveTo(0.24, 0.6, 0.12, 0.69)
+  s.lineTo(-0.36, 0.7)
+  s.quadraticCurveTo(-0.5, 0.67, -0.6, 0.49)
+  s.lineTo(0.36, 0.47)
+}, 0.62, 0.035)
+
+function AutoNormale({ classe }: { classe: Classe }) {
+  const st = STILE_AUTO[classe]
+  const scocca = useMemo(geoScoccaBerlina, [])
+  const abitacolo = useMemo(geoAbitacoloBerlina, [])
+  const vernice = <meshStandardMaterial color={st.colore} metalness={st.metallo} roughness={st.ruvido} />
+  return (
+    <group>
+      <mesh geometry={scocca} castShadow receiveShadow>{vernice}</mesh>
+      <mesh geometry={abitacolo} castShadow><meshStandardMaterial color="#2c3e4c" metalness={0.75} roughness={0.12} /></mesh>
+      <RoundedBox args={[0.7, 0.035, 0.46]} radius={0.015} smoothness={3} position={[0, 0.74, -0.12]} castShadow>{vernice}</RoundedBox>
+      <mesh position={[0, 0.6, -0.12]}><boxGeometry args={[0.7, 0.22, 0.05]} />{vernice}</mesh>
+      {/* modanatura laterale, maniglie e specchietti neri */}
+      {[-1, 1].map((lato) => (
+        <group key={lato}>
+          <mesh position={[lato * 0.412, 0.3, -0.02]}><boxGeometry args={[0.012, 0.035, 1.05]} /><meshStandardMaterial color={PLASTICA} roughness={0.8} /></mesh>
+          {[0.1, -0.32].map((z) => <mesh key={z} position={[lato * 0.414, 0.42, z]}><boxGeometry args={[0.012, 0.02, 0.07]} /><meshStandardMaterial color={PLASTICA} /></mesh>)}
+          <RoundedBox args={[0.09, 0.06, 0.08]} radius={0.015} smoothness={3} position={[lato * 0.44, 0.52, 0.3]}><meshStandardMaterial color={PLASTICA} roughness={0.7} /></RoundedBox>
+        </group>
+      ))}
+      {/* muso: griglia ampia con cornice cromata, fari rettangolari e frecce arancioni */}
+      <RoundedBox args={[0.42, 0.1, 0.03]} radius={0.012} smoothness={3} position={[0, 0.3, 0.985]}><meshStandardMaterial color={CROMO} metalness={0.9} roughness={0.2} /></RoundedBox>
+      <mesh position={[0, 0.3, 1.0]}><boxGeometry args={[0.38, 0.07, 0.01]} /><meshStandardMaterial color="#1a1d20" /></mesh>
+      {[-1, 1].map((lato) => (
+        <group key={lato}>
+          <RoundedBox args={[0.17, 0.07, 0.04]} radius={0.012} smoothness={3} position={[lato * 0.3, 0.34, 0.975]}><meshStandardMaterial color="#f6f9fb" emissive="#fff2c4" emissiveIntensity={0.7} /></RoundedBox>
+          <mesh position={[lato * 0.41, 0.34, 0.96]}><boxGeometry args={[0.04, 0.05, 0.03]} /><meshStandardMaterial color="#ffa53a" emissive="#ff8a00" emissiveIntensity={0.4} /></mesh>
+          {/* fanali posteriori grandi */}
+          <RoundedBox args={[0.22, 0.08, 0.03]} radius={0.012} smoothness={3} position={[lato * 0.27, 0.4, -1.005]}><meshStandardMaterial color="#d93a3a" emissive="#b81d1d" emissiveIntensity={0.6} /></RoundedBox>
+        </group>
+      ))}
+      {/* targa e paraurti */}
+      <mesh position={[0, 0.27, -1.012]}><boxGeometry args={[0.2, 0.06, 0.006]} /><meshStandardMaterial color="#f2f2f2" /></mesh>
+      {[-1, 1].map((v) => <RoundedBox key={v} args={[0.8, 0.07, 0.06]} radius={0.025} smoothness={3} position={[0, 0.15, v * 0.99]}><meshStandardMaterial color="#4a5157" roughness={0.75} /></RoundedBox>)}
+      <mesh position={[0.24, 0.1, -0.99]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.026, 0.026, 0.08, 10]} /><meshStandardMaterial color="#6b7177" metalness={0.7} roughness={0.35} /></mesh>
+      {st.fumo && <group position={[0.24, 0.1, -1.05]}><Fumo {...st.fumo} /></group>}
+      <QuattroRuote x={0.35} z={BER.z} r={BER.r} cerchio="coppa" />
+    </group>
+  )
+}
+
+// ── E–G: vecchia utilitaria squadrata (linee quasi dritte, vetri alti), sempre più malconcia ──
+const VEC = { r: 0.15, z: 0.54 }
+const geoScoccaVecchia = () => estrudiProfilo((s) => {
+  fondoConPassaruota(s, -0.84, 0.86, 0.14, VEC.z, VEC.r, 0.18)
+  s.quadraticCurveTo(0.88, 0.14, 0.88, 0.17)
+  s.lineTo(0.88, 0.42)
+  s.lineTo(0.4, 0.46)
+  s.lineTo(-0.8, 0.48)
+  s.lineTo(-0.85, 0.46)
+  s.lineTo(-0.86, 0.17)
+  s.quadraticCurveTo(-0.86, 0.14, -0.84, 0.14)
+}, 0.74, 0.025)
+const geoAbitacoloVecchia = () => estrudiProfilo((s) => {
+  s.moveTo(0.42, 0.46)
+  s.lineTo(0.2, 0.75)
+  s.lineTo(-0.7, 0.77)
+  s.lineTo(-0.8, 0.47)
+  s.lineTo(0.42, 0.46)
+}, 0.68, 0.02)
+
+function AutoVecchia({ classe }: { classe: Classe }) {
+  const st = STILE_AUTO[classe]
+  const scocca = useMemo(geoScoccaVecchia, [])
+  const abitacolo = useMemo(geoAbitacoloVecchia, [])
+  const vernice = <meshStandardMaterial color={st.colore} metalness={st.metallo} roughness={st.ruvido} />
+  const ruggine = classe === "E" ? 1 : classe === "F" ? 3 : 5
+  const macchie = [[1, 0.3, 0.42], [-1, 0.24, -0.3], [1, 0.22, -0.48], [-1, 0.34, 0.6], [1, 0.4, -0.05]] as const
+  const fari = classe === "E" ? "quadrati" : "tondi"
+  return (
+    <group rotation={[0, 0, classe === "G" ? 0.035 : 0]}>
+      <mesh geometry={scocca} castShadow receiveShadow>{vernice}</mesh>
+      <mesh geometry={abitacolo} castShadow><meshStandardMaterial color="#9fbcc2" metalness={0.35} roughness={0.25} /></mesh>
+      {/* tetto e montanti sottili, montante posteriore largo */}
+      <mesh position={[0, 0.785, -0.25]}><boxGeometry args={[0.72, 0.03, 0.9]} />{vernice}</mesh>
+      <mesh position={[0, 0.62, -0.12]}><boxGeometry args={[0.73, 0.3, 0.035]} />{vernice}</mesh>
+      <mesh position={[0, 0.62, -0.66]}><boxGeometry args={[0.73, 0.3, 0.1]} />{vernice}</mesh>
+      {/* E: portapacchi; F: portiera di un altro colore; G: inclinata e senza una coppa */}
+      {classe === "E" && [-0.45, -0.05].map((z) => <mesh key={z} position={[0, 0.83, z]}><boxGeometry args={[0.74, 0.025, 0.03]} /><meshStandardMaterial color="#2a2d30" metalness={0.5} /></mesh>)}
+      {classe === "F" && <mesh position={[0.395, 0.31, 0.12]}><boxGeometry args={[0.01, 0.28, 0.42]} /><meshStandardMaterial color="#d8cfb8" roughness={0.8} /></mesh>}
+      {macchie.slice(0, ruggine).map(([lato, y, z], i) => (
+        <mesh key={i} position={[lato * 0.398, y, z]} rotation={[0, (lato * Math.PI) / 2, 0]}>
+          <circleGeometry args={[0.05 + i * 0.012, 7]} /><meshStandardMaterial color="#7a3b1c" roughness={1} />
+        </mesh>
+      ))}
+      {/* fari, griglia a listelli, frecce, antenna */}
+      {[-1, 1].map((lato) => (
+        <group key={lato}>
+          {fari === "tondi" ? (
+            <mesh position={[lato * 0.27, 0.33, 0.9]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.065, 0.065, 0.03, 18]} /><meshStandardMaterial color="#fff3c4" emissive="#ffe08a" emissiveIntensity={0.35} /></mesh>
+          ) : (
+            <mesh position={[lato * 0.27, 0.33, 0.9]}><boxGeometry args={[0.15, 0.11, 0.03]} /><meshStandardMaterial color="#fff3c4" emissive="#ffe08a" emissiveIntensity={0.35} /></mesh>
+          )}
+          <mesh position={[lato * 0.37, 0.24, 0.9]}><boxGeometry args={[0.05, 0.04, 0.02]} /><meshStandardMaterial color="#ffa53a" emissive="#ff8a00" emissiveIntensity={0.3} /></mesh>
+          <mesh position={[lato * 0.29, 0.38, -0.893]}><boxGeometry args={[0.16, 0.12, 0.02]} /><meshStandardMaterial color="#b83030" emissive="#8a1a1a" emissiveIntensity={0.4} /></mesh>
+          <mesh position={[lato * 0.405, 0.5, 0.36]}><boxGeometry args={[0.04, 0.05, 0.05]} /><meshStandardMaterial color={CROMO} metalness={0.8} roughness={0.3} /></mesh>
+        </group>
+      ))}
+      {[0.3, 0.34, 0.38].map((y) => <mesh key={y} position={[0, y, 0.9]}><boxGeometry args={[0.3, 0.012, 0.02]} /><meshStandardMaterial color="#1a1d20" /></mesh>)}
+      <mesh position={[0.3, 0.97, 0.05]} rotation={[-0.25, 0, 0]}><cylinderGeometry args={[0.005, 0.005, 0.42, 5]} /><meshStandardMaterial color="#222" /></mesh>
+      {/* paraurti cromati sporgenti */}
+      {[-1, 1].map((v) => <RoundedBox key={v} args={[0.82, 0.06, 0.06]} radius={0.02} smoothness={3} position={[0, 0.19, v * 0.9]}><meshStandardMaterial color={CROMO} metalness={classe === "G" ? 0.4 : 0.9} roughness={classe === "G" ? 0.6 : 0.25} /></RoundedBox>)}
+      <mesh position={[0.25, 0.12, -0.88]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.035, 0.035, 0.12, 8]} /><meshStandardMaterial color="#3b3b3b" metalness={0.5} /></mesh>
+      {st.fumo && <group position={[0.25, 0.12, -0.96]}><Fumo {...st.fumo} /></group>}
+      <QuattroRuote x={0.34} z={VEC.z} r={VEC.r} cerchio={classe === "E" ? "coppa" : "acciaio"} />
+    </group>
+  )
+}
+
+// Posto auto nel vialetto, accanto alla colonnina.
+function Auto({ auto }: { auto: VistaCasa["auto"] }) {
+  const forma = auto ? FORMA_AUTO[auto.classe] : null
+  const classe = auto?.classe ?? "C"
+  return (
+    <group position={[2.32, 0, D / 2 + 1.33]} rotation={[0, Math.PI / 2 + 0.2, 0]}>
+      <Apparizione visibile={forma === "moderna"}><AutoModerna classe={classe} alimentazione={auto?.alimentazione ?? "elettrico"} /></Apparizione>
+      <Apparizione visibile={forma === "normale"}><AutoNormale classe={classe} /></Apparizione>
+      <Apparizione visibile={forma === "vecchia"}><AutoVecchia classe={classe} /></Apparizione>
     </group>
   )
 }
@@ -335,7 +623,6 @@ function ColonninaEV() {
       <mesh position={[0, 0.85, 0.105]}><boxGeometry args={[0.16, 0.22, 0.01]} /><meshStandardMaterial color="#12161a" /></mesh>
       <mesh ref={led} position={[0, 0.98, 0.112]}><sphereGeometry args={[0.025, 8, 8]} /><meshStandardMaterial color="#3fd0ff" emissive="#3fd0ff" emissiveIntensity={1} /></mesh>
       <mesh position={[0.36, 0.3, 0.1]} rotation={[0, 0, Math.PI / 2.4]}><torusGeometry args={[0.4, 0.014, 6, 20, Math.PI / 1.4]} /><meshStandardMaterial color="#222" /></mesh>
-      <group position={[1.15, 0, 0.3]} rotation={[0, Math.PI / 2 + 0.1, 0]}><Auto /></group>
     </group>
   )
 }
@@ -360,7 +647,169 @@ const Siepe = ({ x, z }: { x: number; z: number }) => (
   <mesh position={[x, 0.22, z]} scale={[1, 0.8, 0.9]} castShadow><icosahedronGeometry args={[0.28, 1]} /><meshStandardMaterial color="#3d8a47" flatShading /></mesh>
 )
 
-function Giardino() {
+// Albero da frutto: chioma tonda e bassa con frutti rossi e gialli.
+const DaFrutto = ({ posizione, scala = 1 }: { posizione: [number, number, number]; scala?: number }) => {
+  const frutti = [[0.35, 1.05, 0.2, "#d63c2f"], [-0.3, 1.15, 0.25, "#e8b830"], [0.1, 1.3, -0.35, "#d63c2f"], [-0.2, 0.92, -0.3, "#e8b830"], [0.32, 1.3, -0.1, "#d63c2f"]] as const
+  return (
+    <group position={posizione} scale={scala}>
+      <mesh position={[0, 0.35, 0]} castShadow><cylinderGeometry args={[0.07, 0.1, 0.7, 6]} /><meshStandardMaterial color="#7a5640" /></mesh>
+      <mesh position={[0, 1.1, 0]} scale={[1, 0.82, 1]} castShadow><icosahedronGeometry args={[0.5, 1]} /><meshStandardMaterial color="#5fa344" flatShading /></mesh>
+      {frutti.map(([x, y, z, c], i) => <mesh key={i} position={[x, y, z]}><sphereGeometry args={[0.06, 8, 8]} /><meshStandardMaterial color={c} roughness={0.5} /></mesh>)}
+    </group>
+  )
+}
+
+// Ulivo: tronco nodoso e inclinato, chioma rada argentea.
+const Ulivo = ({ posizione, scala = 1 }: { posizione: [number, number, number]; scala?: number }) => (
+  <group position={posizione} scale={scala}>
+    <mesh position={[0.05, 0.35, 0]} rotation={[0, 0, -0.18]} castShadow><cylinderGeometry args={[0.07, 0.13, 0.75, 6]} /><meshStandardMaterial color="#8a8172" flatShading /></mesh>
+    <mesh position={[-0.12, 0.72, 0.05]} rotation={[0.2, 0, 0.5]}><cylinderGeometry args={[0.04, 0.06, 0.4, 5]} /><meshStandardMaterial color="#8a8172" flatShading /></mesh>
+    {[[0.15, 1.0, 0, 0.42], [-0.32, 0.95, 0.12, 0.32], [0.05, 1.18, -0.2, 0.3], [0.38, 0.88, 0.2, 0.26]].map(([x, y, z, r], i) => (
+      <mesh key={i} position={[x!, y!, z!]} scale={[1.2, 0.65, 1.1]} castShadow><icosahedronGeometry args={[r!, 0]} /><meshStandardMaterial color="#8fa37a" flatShading /></mesh>
+    ))}
+  </group>
+)
+
+// Posti liberi attorno alla casa (lontani da vialetto, auto, colonnina e staccionata), in ordine di priorità.
+const POSTI_ALBERI: [number, number][] = [
+  [-3.7, -1.9], [3.7, -2.2], [4.0, 1.9], [-4.1, 0.9], [0.0, -3.9], [-2.3, -3.5], [2.2, -3.6], [-4.6, -0.5],
+  [4.6, 0.0], [-1.2, -4.5], [1.2, -4.5], [-3.1, 4.0], [3.0, -4.0], [-3.2, -3.9], [4.9, -1.2], [-4.9, -1.6],
+]
+
+function Albero({ tipo, i }: { tipo: TipoAlbero; i: number }) {
+  const [x, z] = POSTI_ALBERI[i]!
+  const scala = 0.8 + ((i * 37) % 5) * 0.1 // un po' di varietà, sempre uguale per lo stesso posto
+  const posizione: [number, number, number] = [x, 0, z]
+  if (tipo === "conifera") return <Abete posizione={posizione} scala={scala + 0.1} />
+  if (tipo === "frutto") return <DaFrutto posizione={posizione} scala={scala} />
+  if (tipo === "ulivo") return <Ulivo posizione={posizione} scala={scala} />
+  return <Latifoglia posizione={posizione} scala={scala + 0.15} colore={i % 3 === 2 ? "#7bb04f" : "#4f9a4e"} />
+}
+
+// Numeri pseudo-casuali con seme: il prato è sempre uguale da un rendering all'altro.
+function casuale(seme: number) {
+  return () => {
+    seme = (seme + 0x6d2b79f5) | 0
+    let t = Math.imul(seme ^ (seme >>> 15), 1 | seme)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Punti del prato liberi da casa, vialetto e posto auto.
+function puntiNelPrato(n: number, seme: number): [number, number][] {
+  const r = casuale(seme)
+  const out: [number, number][] = []
+  while (out.length < n) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 4.9
+    const x = Math.cos(a) * d, z = Math.sin(a) * d
+    const casa = x > -3.8 && x < 2.5 && z > -1.9 && z < 2.0
+    const vialetto = Math.abs(x) < 0.5 && z > 1.8
+    const postoAuto = x > 0.9 && x < 3.6 && z > 2.0 && z < 3.7
+    if (!casa && !vialetto && !postoAuto) out.push([x, z])
+  }
+  return out
+}
+
+const VERDI_ERBA = ["#4f9a3c", "#5fae46", "#6dbb4f", "#3f8a35", "#7cc35a"]
+const COLORI_FIORI = ["#f06292", "#ffd54f", "#ffffff", "#ba68c8", "#ff8a65", "#64b5f6"]
+
+// Ciuffi d'erba (tre fili ciascuno) e fiori su stelo, in istanze per restare leggeri.
+function Prato() {
+  const erba = useRef<THREE.InstancedMesh>(null)
+  const steli = useRef<THREE.InstancedMesh>(null)
+  const corolle = useRef<THREE.InstancedMesh>(null)
+  const ciuffi = useMemo(() => puntiNelPrato(150, 7), [])
+  const fiori = useMemo(() => puntiNelPrato(40, 21), [])
+  useLayoutEffect(() => {
+    const m = new THREE.Object3D(), c = new THREE.Color(), r = casuale(3)
+    ciuffi.forEach(([x, z], i) => {
+      for (let k = 0; k < 3; k++) {
+        const ang = (k / 3) * Math.PI * 2 + r()
+        m.position.set(x + Math.cos(ang) * 0.03, 0.09, z + Math.sin(ang) * 0.03)
+        m.rotation.set(Math.sin(ang) * 0.35, r() * Math.PI, Math.cos(ang) * 0.35)
+        m.scale.set(1, 0.7 + r() * 0.7, 1)
+        m.updateMatrix()
+        erba.current?.setMatrixAt(i * 3 + k, m.matrix)
+        erba.current?.setColorAt(i * 3 + k, c.set(VERDI_ERBA[(i + k) % VERDI_ERBA.length]!))
+      }
+    })
+    fiori.forEach(([x, z], i) => {
+      const h = 0.16 + r() * 0.12
+      m.position.set(x, h / 2, z); m.rotation.set(0, 0, 0); m.scale.set(1, h / 0.2, 1); m.updateMatrix()
+      steli.current?.setMatrixAt(i, m.matrix)
+      m.position.set(x, h + 0.02, z); m.rotation.set(r(), r(), 0); m.scale.setScalar(0.8 + r() * 0.5); m.updateMatrix()
+      corolle.current?.setMatrixAt(i, m.matrix)
+      corolle.current?.setColorAt(i, c.set(COLORI_FIORI[i % COLORI_FIORI.length]!))
+    })
+    for (const im of [erba.current, steli.current, corolle.current]) {
+      if (!im) continue
+      im.instanceMatrix.needsUpdate = true
+      if (im.instanceColor) im.instanceColor.needsUpdate = true
+      ;(im.material as THREE.Material).needsUpdate = true // ricompila con i colori per istanza
+    }
+  }, [ciuffi, fiori])
+  return (
+    <>
+      <instancedMesh ref={erba} args={[undefined, undefined, ciuffi.length * 3]} castShadow>
+        <coneGeometry args={[0.028, 0.2, 3]} /><meshStandardMaterial flatShading roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={steli} args={[undefined, undefined, fiori.length]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.2, 4]} /><meshStandardMaterial color="#3f8a35" />
+      </instancedMesh>
+      <instancedMesh ref={corolle} args={[undefined, undefined, fiori.length]}>
+        <icosahedronGeometry args={[0.045, 0]} /><meshStandardMaterial flatShading emissive="#ffffff" emissiveIntensity={0.08} />
+      </instancedMesh>
+    </>
+  )
+}
+
+// Farfalle: ali che battono e voli a otto attorno alla casa, ognuna col suo ritmo.
+const FARFALLE = [
+  { colore: "#ff9f1c", r: 4.1, h: 0.9, v: 0.32, fase: 0 },
+  { colore: "#ffe066", r: 4.5, h: 1.3, v: -0.26, fase: 1.7 },
+  { colore: "#ffffff", r: 4.0, h: 0.7, v: 0.4, fase: 3.1 },
+  { colore: "#7ec8ff", r: 4.6, h: 1.6, v: 0.22, fase: 4.4 },
+  { colore: "#f78fb3", r: 4.3, h: 1.1, v: -0.35, fase: 5.5 },
+]
+
+function Farfalla({ colore, r, h, v, fase }: (typeof FARFALLE)[number]) {
+  const corpo = useRef<THREE.Group>(null)
+  const alaS = useRef<THREE.Group>(null)
+  const alaD = useRef<THREE.Group>(null)
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime * v + fase
+    const g = corpo.current
+    if (!g) return
+    // giro ondulato attorno alla casa, sempre fuori dai muri
+    const raggio = r + Math.sin(3 * t) * 0.35
+    const x = Math.cos(t) * raggio, z = Math.sin(t) * raggio
+    const y = h + Math.sin(clock.elapsedTime * 2.3 + fase) * 0.18
+    g.position.set(x, y, z)
+    // guarda nella direzione in cui vola (tangente al giro)
+    g.rotation.y = Math.atan2(-Math.sin(t) * Math.sign(v), Math.cos(t) * Math.sign(v))
+    const battito = Math.sin(clock.elapsedTime * 18 + fase) * 0.9
+    if (alaS.current) alaS.current.rotation.z = 0.25 + battito
+    if (alaD.current) alaD.current.rotation.z = -0.25 - battito
+  })
+  return (
+    <group ref={corpo} scale={0.9}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}><capsuleGeometry args={[0.012, 0.08, 4, 6]} /><meshStandardMaterial color="#2b2b2b" /></mesh>
+      {([[alaS, 1], [alaD, -1]] as const).map(([rif, lato]) => (
+        <group key={lato} ref={rif}>
+          <mesh position={[lato * 0.065, 0, 0.015]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, 1.25, 1]}>
+            <circleGeometry args={[0.06, 10]} /><meshStandardMaterial color={colore} side={THREE.DoubleSide} emissive={colore} emissiveIntensity={0.15} />
+          </mesh>
+          <mesh position={[lato * 0.05, 0, -0.045]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.04, 10]} /><meshStandardMaterial color={colore} side={THREE.DoubleSide} emissive={colore} emissiveIntensity={0.15} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+function Giardino({ alberi }: { alberi: TipoAlbero[] | null }) {
   const sassi = [0, 1, 2, 3, 4, 5].map((i) => ({ z: D / 2 + 0.7 + i * 0.5, x: Math.sin(i * 1.7) * 0.07 }))
   const fiori = [[-1.4, 2.1, "#f06292"], [-1.15, 2.2, "#ffd54f"], [-0.95, 2.05, "#ffffff"], [-1.55, 2.25, "#ffd54f"], [1.2, 1.95, "#f06292"]] as const
   const staccionata = Array.from({ length: 6 }, (_, i) => ({ x: -4.0 + i * 0.52, z: 2.5 + i * 0.22 }))
@@ -369,8 +818,22 @@ function Giardino() {
       {sassi.map((s, i) => (
         <mesh key={i} position={[s.x, 0.02, s.z]} rotation={[0, i * 0.3, 0]} receiveShadow><boxGeometry args={[0.7, 0.04, 0.36]} /><meshStandardMaterial color="#c9c2b5" roughness={1} /></mesh>
       ))}
-      <Siepe x={-1.55} z={1.95} /><Siepe x={-1.1} z={1.95} /><Siepe x={-0.75} z={1.95} />
-      {fiori.map(([x, z, c], i) => <mesh key={i} position={[x, 0.08, z]}><icosahedronGeometry args={[0.055, 0]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.15} flatShading /></mesh>)}
+      {alberi && (
+        <>
+          <Siepe x={-1.55} z={1.95} /><Siepe x={-1.1} z={1.95} /><Siepe x={-0.75} z={1.95} />
+          {fiori.map(([x, z, c], i) => <mesh key={i} position={[x, 0.08, z]}><icosahedronGeometry args={[0.055, 0]} /><meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.15} flatShading /></mesh>)}
+          {alberi.map((tipo, i) => <Albero key={`${i}${tipo}`} tipo={tipo} i={i} />)}
+          <Prato />
+          {FARFALLE.map((f, i) => <Farfalla key={i} {...f} />)}
+        </>
+      )}
+      {/* senza giardino: qualche vaso sul cortile pavimentato */}
+      {!alberi && [[-1.3, 2.05], [1.25, 2.0]].map(([x, z]) => (
+        <group key={x} position={[x!, 0, z!]}>
+          <mesh position={[0, 0.14, 0]} castShadow><cylinderGeometry args={[0.16, 0.12, 0.28, 12]} /><meshStandardMaterial color="#b8653e" roughness={0.8} /></mesh>
+          <mesh position={[0, 0.36, 0]} castShadow><icosahedronGeometry args={[0.18, 1]} /><meshStandardMaterial color="#4f9a4e" flatShading /></mesh>
+        </group>
+      ))}
       {staccionata.map((p, i) => (
         <group key={i} position={[p.x, 0, p.z]}>
           <mesh position={[0, 0.2, 0]} castShadow><boxGeometry args={[0.07, 0.4, 0.07]} /><meshStandardMaterial color="#e9e2d0" /></mesh>
@@ -382,10 +845,6 @@ function Giardino() {
         <mesh position={[0, 0.3, 0]}><boxGeometry args={[0.05, 0.6, 0.05]} /><meshStandardMaterial color="#6d4c41" /></mesh>
         <mesh position={[0, 0.65, 0]} castShadow><boxGeometry args={[0.22, 0.16, 0.14]} /><meshStandardMaterial color="#c0392b" /></mesh>
       </group>
-      <Latifoglia posizione={[-3.7, 0, -1.9]} scala={1.25} />
-      <Abete posizione={[3.7, 0, -2.2]} scala={1.1} />
-      <Latifoglia posizione={[4.0, 0, 1.9]} scala={0.8} colore="#7bb04f" />
-      <Abete posizione={[-4.1, 0, 0.9]} scala={0.8} />
     </>
   )
 }
@@ -467,9 +926,9 @@ function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
     <>
       <Atmosfera meteo={meteo} />
       <group ref={casa}>
-        <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color="#6fae5a" roughness={1} flatShading /></mesh>
+        <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color={vista.giardino ? "#6fae5a" : "#b3aca0"} roughness={1} flatShading /></mesh>
         <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[5.4, 4.8, 0.3, 56]} /><meshStandardMaterial color="#8a6a4f" roughness={1} flatShading /></mesh>
-        <Giardino />
+        <Giardino alberi={vista.giardino} />
 
         <Volume w={W} h={H} d={D} x={0} rivestimento={vista.rivestimento} />
         <Volume w={ALA.w} h={ALA.h} d={ALA.d} x={ALA.x} rivestimento={vista.rivestimento} />
@@ -485,6 +944,7 @@ function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
         <Apparizione visibile={vista.cottura === "gas"}><BombolaGas /></Apparizione>
         <Apparizione visibile={vista.cottura === "induzione"}><PianoInduzione /></Apparizione>
         <Apparizione visibile={vista.colonnina}><ColonninaEV /></Apparizione>
+        <Auto auto={vista.auto} />
       </group>
       <ContactShadows position={[0, -0.66, 0]} opacity={0.35} scale={14} blur={2.4} far={2.2} />
     </>
