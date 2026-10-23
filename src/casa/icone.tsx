@@ -16,6 +16,14 @@ const P: Record<Oggetto, string> = {
   colonninaEV: "M8 3h8v18H8zM11 8l-1.5 3h3L11 14M16 8h2.5a1.5 1.5 0 0 1 1.5 1.5V16",
 }
 
+export function IconaAuto({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 16v-3l2-5h10l4 5h2v3h-2M7 16h8M5 11h14M7 18a2 2 0 1 0 0-4a2 2 0 1 0 0 4zM17 18a2 2 0 1 0 0-4a2 2 0 1 0 0 4z" />
+    </svg>
+  )
+}
+
 export function Icona({ oggetto, size = 28 }: { oggetto: Oggetto; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

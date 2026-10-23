@@ -1,0 +1,60 @@
+.amici-pagina { max-width: 1250px; margin: 0 auto; padding: 32px 24px 60px; }
+.amici-titolo { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.amici-titolo h2 { font-size: clamp(24px, 3vw, 36px); margin: 8px 0; letter-spacing: -.035em; }
+.amici-titolo p, .amici-pagina small, .amici-card > p, .amici-profilo > p { color: var(--testo-tenue); }
+.amici-eyebrow { color: var(--accento-testo); font-size: 11px; font-weight: 750; letter-spacing: .15em; }
+.amici-badge { white-space: nowrap; background: var(--accento-tenue); color: var(--accento-testo); padding: 8px 14px; border-radius: 20px; font-size: 12px; }
+.amici-nota { background: var(--avviso-tenue); color: var(--avviso-testo); border: 1px solid var(--avviso-bordo); padding: 14px 18px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.amici-identita, .amici-card { padding: 22px; border: 1px solid var(--bordo); background: var(--superficie); border-radius: 16px; }
+.amici-identita { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 22px; background: var(--accento-tenue); border-color: var(--accento-bordo); }
+.amici-identita p { margin: 6px 0; font-size: 12px; }
+.amici-pagina code { display: block; overflow-wrap: anywhere; font-size: 12px; margin: 8px 0; user-select: all; }
+.amici-identita small { display: block; font-size: 11px; }
+.amici-stato { min-height: 20px; font-size: 13px; color: var(--accento-testo); }
+.amici-griglia { display: grid; grid-template-columns: 350px minmax(0, 1fr); gap: 24px; align-items: start; }
+.amici-sidebar, .amici-dettaglio { display: grid; gap: 16px; min-width: 0; }
+.amici-card h3 { margin: 0 0 16px; font-size: 16px; }
+.amici-card h3 > span { display: inline-block; margin-left: 6px; background: var(--superficie-3); border-radius: 20px; padding: 3px 8px; font-size: 11px; }
+.amici-pagina button { font: inherit; font-size: 12px; font-weight: 650; border: 1px solid transparent; border-radius: 8px; padding: 10px 14px; background: var(--accento); color: #fff; cursor: pointer; }
+.amici-pagina button:hover { filter: brightness(.95); }
+.amici-pagina button:disabled { opacity: .5; cursor: default; }
+.amici-pagina button.secondario { color: var(--testo); background: var(--superficie-2); border-color: var(--bordo); }
+.amici-pagina label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.amici-pagina input, .amici-pagina textarea { font: inherit; font-size: 13px; width: 100%; min-width: 0; color: var(--testo); background: var(--superficie-2); border: 1px solid var(--bordo-campo); padding: 12px; border-radius: 8px; }
+.amici-pagina textarea { resize: vertical; }
+.amici-riga { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.amici-suggerimento { font-size: 11px; color: var(--testo-tenue); }
+.amici-pagina button.amici-link { padding: 0; background: transparent; color: var(--accento-testo); text-decoration: underline; }
+.amici-risultato, .amici-richiesta { border-top: 1px solid var(--bordo-tenue); padding-top: 14px; margin-top: 14px; font-size: 13px; }
+.amici-richiesta small { display: block; margin: 8px 0; }
+.amici-pagina .amici-persona { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: var(--testo); background: transparent; padding: 12px 8px; }
+.amici-pagina .amici-persona[aria-pressed="true"] { background: var(--accento-tenue); border-color: var(--accento-bordo); }
+.amici-persona small { display: block; margin-top: 5px; font-size: 10px; }
+.amici-avatar { display: grid; place-items: center; border-radius: 50%; background: var(--accento-tenue); color: var(--accento-testo); width: 34px; height: 34px; flex-shrink: 0; }
+.amici-profilo ul { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+.amici-profilo li { border: 1px solid var(--accento-bordo); background: var(--accento-tenue); color: var(--accento-testo); border-radius: 20px; padding: 8px 12px; font-size: 12px; }
+.amici-chat-titolo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.amici-messaggi { height: 280px; overflow: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px 4px; border-block: 1px solid var(--bordo-tenue); }
+.amici-messaggio { max-width: 85%; background: var(--superficie-3); border-radius: 12px 12px 12px 0; padding: 12px 16px; }
+.amici-messaggio.mio { align-self: flex-end; background: var(--accento-tenue); border-radius: 12px 12px 0 12px; }
+.amici-messaggio p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; margin: 6px 0; }
+.amici-messaggio time { display: block; font-size: 10px; color: var(--testo-tenue); text-align: right; }
+.amici-invio { margin-top: 16px; }
+.amici-invio .amici-riga { margin-top: 10px; }
+@media (max-width: 780px) { .amici-griglia { grid-template-columns: 1fr; } .amici-pagina { padding: 22px 14px; } .amici-identita { align-items: flex-start; flex-direction: column; } .amici-card { padding: 18px; } }
+.foto-profilo { width: 88px; height: 88px; border-radius: 50%; padding: 4px; background: linear-gradient(135deg,#e8ae57,#cd578c,#637ac8); display: grid; place-items: center; flex-shrink: 0; }
+.foto-profilo img, .foto-profilo > span { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; background: var(--superficie); display: grid; place-items: center; font-size: 30px; }
+.foto-profilo-campo { display: grid; gap: 10px; justify-items: start; }
+.amici-profilo-testa { display: flex; align-items: center; gap: 20px; }
+.amici-profilo-testa h3 { margin-bottom: 8px; }
+.foto-casa { width: 320px; max-width: 100%; margin: 12px 0; flex-shrink: 0; }
+.foto-casa img, .foto-casa-render { display: block; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; }
+.foto-casa img { object-fit: cover; }
+.foto-casa figcaption { font-size: 11px; color: var(--testo-tenue); margin-top: 6px; }
+.amici-identita { flex-wrap: wrap; }
+.amici-identita .foto-casa { width: 260px; }
+.amici-configura { display: grid; gap: 18px; max-width: 480px; }
+.amici-pagina select { width: 100%; padding: 12px; border-radius: 8px; background: var(--superficie-2); color: var(--testo); border: 1px solid var(--bordo-campo); }
+.amici-lettura { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 10px; margin-top: 6px; color: var(--accento-testo); }
+.amici-pallino { width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 50%; }
+.amici-pallino.letto { background: currentColor; }

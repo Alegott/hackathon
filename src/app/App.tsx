@@ -8,6 +8,7 @@ import { useTema, type Tema } from "./tema"
 import { PannelloComune } from "../ui/PannelloComune"
 import { SezioneCasa } from "../ui/SezioneCasa"
 import { SezioneSimulazione } from "../ui/SezioneSimulazione"
+import { SezioneAmici } from "../social/SezioneAmici"
 
 const Provincia = lazy(() => import("../map/Provincia").then((m) => ({ default: m.Provincia })))
 const MappaTerritorio = lazy(() => import("../map/MappaTerritorio").then((m) => ({ default: m.MappaTerritorio })))
@@ -16,6 +17,7 @@ const SEZIONI: { id: Sezione; etichetta: string }[] = [
   { id: "mappa", etichetta: "Mappa" },
   { id: "casa", etichetta: "Casa" },
   { id: "simulazione", etichetta: "Simulazione" },
+  { id: "amici", etichetta: "Amici" },
 ]
 
 const TEMI: { id: Tema; etichetta: string; icona: string }[] = [
@@ -37,13 +39,7 @@ export function App() {
     const st = store.getState()
     setMostraRoadmap(false)
     switch (passo) {
-      case 1:
-        st.resetScenario()
-        st.setModalita("realta")
-        st.tornaAllaProvincia()
-        st.setSezione("mappa")
-        break
-      case 2: {
+      case 1: {
         const indComune =
           dataset.infrastrutture.find((i) => i.tipo === "industria")?.comune ??
           dataset.comuni[0]?.istat ??
@@ -52,37 +48,7 @@ export function App() {
         st.setSezione("mappa")
         break
       }
-      case 3: {
-        const indInf = dataset.infrastrutture.find((i) => i.tipo === "industria")
-        const target = indInf?.comune ?? st.comuneSelezionato ?? dataset.comuni[0]?.istat
-        if (target) {
-          st.selezionaComune(target)
-          st.setModalita("scenario")
-          if (indInf) st.rimuoviInfrastruttura(indInf.id)
-          const cObj = dataset.comuni.find((c) => c.istat === target)
-          st.aggiungiInfrastruttura(target, "parco", cObj?.centroide ?? [500, 500])
-        }
-        st.setSezione("mappa")
-        break
-      }
-      case 4:
-        st.setSezione("casa")
-        break
-      case 5:
-        st.setSezione("simulazione")
-        break
-      case 6:
-        st.setModalita("scenario")
-        st.setMacro({
-          ambito: "provincia",
-          pctFV: 100,
-          pctSenzaGas: 0,
-          pctIsolamentoBuono: 0,
-        })
-        st.tornaAllaProvincia()
-        st.setSezione("mappa")
-        break
-      case 7:
+      case 2:
         setMostraRoadmap(true)
         break
     }
@@ -106,26 +72,11 @@ export function App() {
 
         <div className="barra-demo-rapida" aria-label="Percorso rapido demo">
           <span className="barra-demo-rapida__label">Demo:</span>
-          <button type="button" onClick={() => eseguiPassoDemo(1)} title="1. Vista provincia">
-            1. Provincia
+          <button type="button" onClick={() => eseguiPassoDemo(1)} title="1. Zoom comune industriale">
+            1. Comune ind.
           </button>
-          <button type="button" onClick={() => eseguiPassoDemo(2)} title="2. Zoom comune industriale">
-            2. Comune ind.
-          </button>
-          <button type="button" onClick={() => eseguiPassoDemo(3)} title="3. −Industria +Parco">
-            3. −Ind +Parco
-          </button>
-          <button type="button" onClick={() => eseguiPassoDemo(4)} title="4. Casa e cosa manca">
-            4. Casa
-          </button>
-          <button type="button" onClick={() => eseguiPassoDemo(5)} title="5. Simulatore casa PdC+FV">
-            5. Sim. Casa
-          </button>
-          <button type="button" onClick={() => eseguiPassoDemo(6)} title="6. Macro 100% FV Provincia">
-            6. 100% FV
-          </button>
-          <button type="button" onClick={() => eseguiPassoDemo(7)} title="7. Slide di roadmap">
-            7. Roadmap
+          <button type="button" onClick={() => eseguiPassoDemo(2)} title="2. Slide di roadmap">
+            2. Roadmap
           </button>
         </div>
 
@@ -172,6 +123,7 @@ export function App() {
         </div>
         {sezione === "casa" && <SezioneCasa />}
         {sezione === "simulazione" && <SezioneSimulazione />}
+        {sezione === "amici" && <SezioneAmici />}
       </main>
 
       {mostraRoadmap && (
@@ -185,7 +137,7 @@ export function App() {
           <div className="modale-card" onClick={(e) => e.stopPropagation()}>
             <div className="modale-card__top">
               <div>
-                <span className="eyebrow-tag">Step 7 Demo · Roadmap Evolutiva</span>
+                <span className="eyebrow-tag">Step 2 Demo · Roadmap Evolutiva</span>
                 <h2 id="titolo-roadmap">Social Community &amp; Gamification Cittadina</h2>
               </div>
               <button type="button" className="btn-sec btn-sm" onClick={() => setMostraRoadmap(false)}>
