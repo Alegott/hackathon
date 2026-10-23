@@ -3,6 +3,9 @@
 export type TipoInfra = "parco" | "ciclabile" | "colonnine" | "industria" | "strada" | "nucleare"
 
 // Tipologie di strada tracciabili nello scenario: cambiano impatto, larghezza e aspetto.
+// Industrie più comuni in Veneto: ognuna pesa in modo diverso sul territorio.
+export type TipoIndustria = "artigianale" | "logistica" | "meccanica" | "conciaria"
+
 export type TipoStrada = "urbana" | "provinciale" | "tangenziale" | "autostrada"
 
 export type Dotazioni = {
@@ -48,15 +51,20 @@ export type Dataset = {
   caseSeed: Casa[]
 }
 
+// Cosa l'utente piazza nello scenario. Le forme (percorsi, contorni) sono in metri come le posizioni.
+export type Aggiunta = {
+  id: string
+  comune: string
+  tipo: TipoInfra
+  posizione: [number, number]
+  strada?: { tipo: TipoStrada; tracciato: [number, number][] }
+  ciclabile?: { tracciato: [number, number][] }
+  parco?: { contorno: [number, number][] }
+  industria?: TipoIndustria
+}
+
 export type Scenario = {
-  aggiunte: {
-    id: string
-    comune: string
-    tipo: TipoInfra
-    posizione: [number, number]
-    // Solo per le strade tracciate a mano: tipologia e percorso in metri (come le posizioni).
-    strada?: { tipo: TipoStrada; tracciato: [number, number][] }
-  }[]
+  aggiunte: Aggiunta[]
   rimozioni: string[]
   macro: {
     ambito: "provincia" | string

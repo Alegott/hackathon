@@ -3,27 +3,45 @@ import { store, useApp, useIndici } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import { COMUNI_VICENZA_114 } from "../data/comuni114"
 import { punteggioCasa, statoTerritorio, scenarioVuoto } from "../engine"
-import { deltaAggiunta, DELTA_INFRA, impattoStrada, lunghezzaKm, STRADE } from "../engine/costanti"
+import { areaEttari, deltaAggiunta, DELTA_INFRA, INDUSTRIE, lunghezzaKm, STRADE } from "../engine/costanti"
 import { META_CLASSI } from "./DashboardCasa"
 import { CASA_DEMO_DEFAULT } from "./SezioneCasa"
 import { formatSegno } from "./PannelloComune"
 import { coloreFascia, etichettaFascia } from "../map/fasce"
-import type { Dotazioni, Fascia, TipoInfra } from "../types"
+import type { Aggiunta, Dotazioni, Fascia, TipoIndustria, TipoInfra } from "../types"
 
 const INFRA: { id: TipoInfra; etichetta: string; icona: string }[] = [
   { id: "parco", etichetta: "Parco", icona: "🌳" },
   { id: "ciclabile", etichetta: "Pista ciclabile", icona: "🚲" },
   { id: "colonnine", etichetta: "Colonnine", icona: "🔌" },
   { id: "industria", etichetta: "Industria", icona: "🏭" },
-  { id: "strada", etichetta: "Strada provinciale (2 km)", icona: "🛣️" },
+  { id: "strada", etichetta: "Strada", icona: "🛣️" },
   { id: "nucleare", etichetta: "Centrale nucleare", icona: "⚛️" },
 ]
 
-// Dal pannello la strada si piazza già tracciata (provinciale da 2 km); sulla mappa si disegna a mano.
-const stradaPredefinita = (centro: [number, number]): [number, number][] => [
-  [centro[0] - 1000, centro[1]],
-  [centro[0] + 1000, centro[1]],
+type Forma = Pick<Aggiunta, "strada" | "ciclabile" | "parco" | "industria">
+const quadrato = (c: [number, number], lato: number): [number, number][] => [
+  [c[0] - lato / 2, c[1] - lato / 2], [c[0] + lato / 2, c[1] - lato / 2], [c[0] + lato / 2, c[1] + lato / 2], [c[0] - lato / 2, c[1] + lato / 2],
 ]
+// Dal pannello le forme si piazzano già pronte (parco da 4 ettari, ciclabile da 3 km, provinciale da 2 km);
+// sulla mappa si disegnano a mano.
+const TESSERE: { chiave: string; tipo: TipoInfra; etichetta: string; icona: string; forma?: (c: [number, number]) => Forma }[] = [
+  { chiave: "parco", tipo: "parco", etichetta: "Parco (4 ettari)", icona: "🌳", forma: (c) => ({ parco: { contorno: quadrato(c, 200) } }) },
+  { chiave: "ciclabile", tipo: "ciclabile", etichetta: "Pista ciclabile (3 km)", icona: "🚲",
+    forma: (c) => ({ ciclabile: { tracciato: [[c[0] - 1500, c[1]], [c[0] + 1500, c[1]]] } }) },
+  { chiave: "colonnine", tipo: "colonnine", etichetta: "Colonnine", icona: "🔌" },
+  ...(Object.keys(INDUSTRIE) as TipoIndustria[]).map((v) => ({ chiave: `industria-${v}`, tipo: "industria" as const,
+    etichetta: `Industria ${INDUSTRIE[v].etichetta.toLowerCase()}`, icona: "🏭", forma: () => ({ industria: v }) })),
+  { chiave: "strada", tipo: "strada", etichetta: "Strada provinciale (2 km)", icona: "🛣️",
+    forma: (c) => ({ strada: { tipo: "provinciale" as const, tracciato: [[c[0] - 1000, c[1]], [c[0] + 1000, c[1]]] } }) },
+  { chiave: "nucleare", tipo: "nucleare", etichetta: "Centrale nucleare", icona: "⚛️" },
+]
+const nomeAggiunta = (agg: Aggiunta) =>
+  agg.strada ? `${STRADE[agg.strada.tipo].etichetta} ${lunghezzaKm(agg.strada.tracciato).toFixed(1)} km`
+    : agg.ciclabile ? `Pista ciclabile ${lunghezzaKm(agg.ciclabile.tracciato).toFixed(1)} km`
+    : agg.parco ? `Parco ${areaEttari(agg.parco.contorno).toFixed(1)} ha`
+    : agg.industria ? `Industria ${INDUSTRIE[agg.industria].etichetta.toLowerCase()}`
+    : META_INFRA[agg.tipo].etichetta
 const META_INFRA = Object.fromEntries(INFRA.map((i) => [i.id, i])) as Record<
   TipoInfra,
   (typeof INFRA)[number]
@@ -341,20 +359,18 @@ export const SezioneSimulazione: React.FC = () => {
               <>
                 <h4 className="sim-sottotitolo">Aggiungi a {comuneTarget.nome}</h4>
                 <div className="sim-tessere">
-                  {INFRA.map((item) => {
-                    const d = item.id === "strada" ? impattoStrada("provinciale", stradaPredefinita([0, 0])) : DELTA_INFRA[item.id]
+                  {TESSERE.map((item) => {
+                    const forma = item.forma?.(comuneTarget.centroide)
+                    const d = deltaAggiunta({ id: "", comune: "", tipo: item.tipo, posizione: comuneTarget.centroide, ...forma })
                     return (
                       <button
-                        key={item.id}
+                        key={item.chiave}
                         type="button"
                         className={`sim-tessera ${d >= 0 ? "sim-tessera--buona" : "sim-tessera--cattiva"}`}
                         aria-label={`Aggiungi ${item.etichetta}, ${formatSegno(d)} punti`}
                         onClick={() => {
                           inScenario()
-                          if (item.id === "strada")
-                            st.aggiungiInfrastruttura(comuneTarget.istat, "strada", comuneTarget.centroide,
-                              { tipo: "provinciale", tracciato: stradaPredefinita(comuneTarget.centroide) })
-                          else st.aggiungiInfrastruttura(comuneTarget.istat, item.id, comuneTarget.centroide)
+                          st.aggiungiInfrastruttura(comuneTarget.istat, item.tipo, comuneTarget.centroide, forma)
                         }}
                       >
                         <span className="sim-tessera__icona" aria-hidden="true">
@@ -386,9 +402,7 @@ export const SezioneSimulazione: React.FC = () => {
                         }}
                       >
                         <span aria-hidden="true">{META_INFRA[agg.tipo].icona}</span>
-                        {agg.strada
-                          ? `${STRADE[agg.strada.tipo].etichetta} ${lunghezzaKm(agg.strada.tracciato).toFixed(1)} km`
-                          : META_INFRA[agg.tipo].etichetta}
+                        {nomeAggiunta(agg)}
                         <small>nuova</small>
                         <span aria-hidden="true" className="sim-chip__x">✕</span>
                       </button>

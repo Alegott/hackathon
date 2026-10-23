@@ -1,7 +1,7 @@
 import { createStore } from "zustand/vanilla"
 import { scenarioVuoto } from "../engine"
 import { caricaCasa, salvaCasa } from "./persistenza"
-import type { Casa, Scenario, TipoInfra, TipoStrada } from "../types"
+import type { Aggiunta, Casa, Scenario, TipoIndustria, TipoInfra, TipoStrada } from "../types"
 
 export type Sezione = "mappa" | "casa" | "simulazione"
 
@@ -11,8 +11,9 @@ export type Stato = {
   modalita: "realta" | "scenario"
   strumento: TipoInfra | "rimuovi" | null
   scenario: Scenario
-  // Strada in corso di tracciamento (metri) e tipologia scelta.
+  // Tracciato in corso (strada, pista ciclabile o contorno del parco, in metri) e varianti scelte.
   tipoStrada: TipoStrada
+  tipoIndustria: TipoIndustria
   bozzaStrada: [number, number][]
   casaUtente: Casa | null
   sezione: Sezione
@@ -28,15 +29,16 @@ export type Azioni = {
     comune: string,
     tipo: TipoInfra,
     posizione: [number, number],
-    strada?: { tipo: TipoStrada; tracciato: [number, number][] },
+    extra?: Pick<Aggiunta, "strada" | "ciclabile" | "parco" | "industria">,
   ): void
   spostaInfrastruttura(id: string, comune: string, posizione: [number, number]): void
   setTipoStrada(tipo: TipoStrada): void
+  setTipoIndustria(tipo: TipoIndustria): void
   aggiungiPuntoStrada(punto: [number, number]): void
   annullaUltimoPuntoStrada(): void
   annullaBozzaStrada(): void
   setBozzaStrada(punti: [number, number][]): void
-  confermaStrada(comune: string): void
+  confermaTracciato(comune: string): void
   rimuoviInfrastruttura(id: string): void
   setMacro(macro: Scenario["macro"]): void
   resetScenario(): void
@@ -55,6 +57,7 @@ export function creaStore({ storage }: Opzioni) {
     strumento: null,
     scenario: scenarioVuoto(),
     tipoStrada: "provinciale",
+    tipoIndustria: "meccanica",
     bozzaStrada: [],
     casaUtente: caricaCasa(storage),
     sezione: "mappa",
@@ -66,12 +69,12 @@ export function creaStore({ storage }: Opzioni) {
     setStrumento: (strumento) => {
       if (get().modalita === "scenario") set({ strumento, bozzaStrada: [] })
     },
-    aggiungiInfrastruttura: (comune, tipo, posizione, strada) => {
+    aggiungiInfrastruttura: (comune, tipo, posizione, extra) => {
       const { modalita, scenario } = get()
       if (modalita !== "scenario") return
       const id = `scn-${prossimoId++}`
       set({
-        scenario: { ...scenario, aggiunte: [...scenario.aggiunte, { id, comune, tipo, posizione, ...(strada && { strada }) }] },
+        scenario: { ...scenario, aggiunte: [...scenario.aggiunte, { id, comune, tipo, posizione, ...(extra ?? (tipo === "industria" ? { industria: get().tipoIndustria } : {})) }] },
       })
     },
     spostaInfrastruttura: (id, comune, posizione) => {
@@ -80,11 +83,12 @@ export function creaStore({ storage }: Opzioni) {
       set({
         scenario: {
           ...scenario,
-          aggiunte: scenario.aggiunte.map((a) => (a.id === id && !a.strada ? { ...a, comune, posizione } : a)),
+          aggiunte: scenario.aggiunte.map((a) => (a.id === id && !a.strada && !a.ciclabile && !a.parco ? { ...a, comune, posizione } : a)),
         },
       })
     },
     setTipoStrada: (tipoStrada) => set({ tipoStrada }),
+    setTipoIndustria: (tipoIndustria) => set({ tipoIndustria }),
     aggiungiPuntoStrada: (punto) => {
       if (get().modalita === "scenario") set({ bozzaStrada: [...get().bozzaStrada, punto] })
     },
@@ -93,10 +97,15 @@ export function creaStore({ storage }: Opzioni) {
     setBozzaStrada: (bozzaStrada) => {
       if (get().modalita === "scenario") set({ bozzaStrada })
     },
-    confermaStrada: (comune) => {
-      const { bozzaStrada, tipoStrada } = get()
-      if (bozzaStrada.length < 2) return
-      get().aggiungiInfrastruttura(comune, "strada", bozzaStrada[0]!, { tipo: tipoStrada, tracciato: bozzaStrada })
+    confermaTracciato: (comune) => {
+      const { bozzaStrada: p, tipoStrada, strumento } = get()
+      const [primo] = p
+      if (!primo) return
+      const aggiungi = get().aggiungiInfrastruttura
+      if (strumento === "strada" && p.length >= 2) aggiungi(comune, "strada", primo, { strada: { tipo: tipoStrada, tracciato: p } })
+      else if (strumento === "ciclabile" && p.length >= 2) aggiungi(comune, "ciclabile", primo, { ciclabile: { tracciato: p } })
+      else if (strumento === "parco" && p.length >= 3) aggiungi(comune, "parco", primo, { parco: { contorno: p } })
+      else return
       set({ bozzaStrada: [] })
     },
     rimuoviInfrastruttura: (id) => {

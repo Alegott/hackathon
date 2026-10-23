@@ -28,7 +28,7 @@ export function edificiDaGeometrie(geometrie: Geometria[], o: Origine): Edificio
   return out
 }
 
-const dentro = ([x, y]: P, anello: P[]) => {
+export const dentro = ([x, y]: P, anello: P[]) => {
   let in_ = false
   for (let i = 0, j = anello.length - 1; i < anello.length; j = i++) {
     const [xi, yi] = anello[i]!, [xj, yj] = anello[j]!
@@ -72,5 +72,18 @@ export function percorsoLibero(punti: P[], edifici: Edificio[], semiLarghezza: n
   if (punti.length === 1) return trattoLibero(punti[0]!, punti[0]!, edifici, semiLarghezza)
   for (let i = 1; i < punti.length; i++)
     if (!trattoLibero(punti[i - 1]!, punti[i]!, edifici, semiLarghezza)) return false
+  return true
+}
+
+// Ingombro (raggio in metri) dei modelli puntuali: nessuno può stare sopra un edificio.
+export const INGOMBRO_OGGETTO: Record<string, number> = { colonnine: 18, industria: 34, nucleare: 46 }
+
+// Un'area (contorno chiuso) è libera se il bordo non tocca edifici e nessun edificio vi sta dentro.
+export function areaLibera(contorno: P[], edifici: Edificio[]): boolean {
+  if (!percorsoLibero([...contorno, contorno[0]!], edifici, 0.5)) return false
+  for (const e of edifici) {
+    if (e.maxX < Math.min(...contorno.map((p) => p[0])) || e.minX > Math.max(...contorno.map((p) => p[0]))) continue
+    if (e.anelli.some((a) => a.some((v) => dentro(v, contorno)))) return false
+  }
   return true
 }

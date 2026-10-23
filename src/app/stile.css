@@ -532,3 +532,31 @@ input[type="checkbox"][switch]:focus-visible {
 .griglia-roadmap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .territorio-nota { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); z-index: 5; background: #7a2f26; color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 18px #0004; pointer-events: none; }
+
+/* Scheda di impatto di un'infrastruttura */
+.scheda-impatto { position: absolute; z-index: 6; width: 320px; max-height: 500px; overflow: auto; background: #fffffff7; color: #24362f; border-radius: 14px; box-shadow: 0 8px 30px #0003; padding: 12px 14px; font-size: 12px; line-height: 1.35; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .scheda-impatto { background: #1f2a26f7; color: #e5efe9; } }
+:root[data-theme="dark"] .scheda-impatto { background: #1f2a26f7; color: #e5efe9; }
+.scheda-impatto header { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.scheda-impatto header div { flex: 1; display: flex; flex-direction: column; }
+.scheda-impatto header strong { font-size: 14px; }
+.scheda-impatto small { opacity: .7; }
+.scheda-icona { font-size: 24px; }
+.scheda-punti { font-weight: 800; font-size: 14px; padding: 3px 9px; border-radius: 12px; }
+.scheda-punti--su { background: #d5f0df; color: #1c6b3f; }
+.scheda-punti--giu { background: #f7dcd6; color: #8c2e20; }
+.scheda-chiudi { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 14px; padding: 4px; align-self: flex-start; }
+.scheda-effetti { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 5px; }
+.scheda-effetti li { display: grid; grid-template-columns: 86px 34px 1fr; gap: 6px; align-items: center; }
+.scheda-ambito { font-weight: 700; }
+.scheda-livello { display: inline-flex; gap: 2px; }
+.scheda-livello i { width: 8px; height: 8px; border-radius: 2px; background: #c9d3ce; }
+.scheda-livello--buono i.acceso { background: #2f9d62; }
+.scheda-livello--cattivo i.acceso { background: #d0553f; }
+.scheda-colonne { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #c9d3ce66; padding-top: 8px; }
+.scheda-colonne h4 { margin: 0 0 4px; font-size: 12px; }
+.scheda-colonne div:first-child h4 { color: #2f9d62; }
+.scheda-colonne div:last-child h4 { color: #d0553f; }
+.scheda-colonne ul { margin: 0; padding-left: 15px; display: grid; gap: 3px; }
+.scheda-impatto footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.scheda-impatto footer button { border: 1px solid #d0553f; color: #b63f2a; background: transparent; border-radius: 14px; padding: 4px 12px; font: inherit; font-weight: 650; cursor: pointer; }

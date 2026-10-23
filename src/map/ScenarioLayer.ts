@@ -1,17 +1,28 @@
 import * as THREE from "three"
 import { MercatorCoordinate, type Map, type CustomLayerInterface, type CustomRenderMethodInput } from "maplibre-gl"
 import { STRADE } from "../engine/costanti"
-import type { TipoInfra, TipoStrada } from "../types"
+import { dentro } from "./ostacoli"
+import type { TipoIndustria, TipoInfra, TipoStrada } from "../types"
 import { costruisciNastro } from "./nastro"
 
 export type OggettoScenario = {
   id: string
   tipo: TipoInfra
   lonlat: [number, number]
-  // Percorso in lon/lat per le strade tracciate.
-  strada?: { tipo: TipoStrada; punti: [number, number][] }
+  // Percorso in lon/lat per strade e piste ciclabili tracciate.
+  linea?: { stile: StileLinea; punti: [number, number][] }
+  // Contorno in lon/lat per i parchi disegnati.
+  area?: [number, number][]
+  industria?: TipoIndustria
 }
-export type BozzaStrada = { tipo: TipoStrada; punti: [number, number][] }
+export type StileLinea = TipoStrada | "ciclabile"
+export type BozzaTracciato = { stile: StileLinea | "parco"; punti: [number, number][] }
+
+const STILI_LINEA: Record<StileLinea, { larghezza: number; colore: string; bordo: string; centro: string }> = {
+  ...Object.fromEntries((Object.keys(STRADE) as TipoStrada[]).map((t) => [t,
+    { larghezza: STRADE[t].larghezza, colore: STRADE[t].colore, bordo: "#eceae0", centro: t === "urbana" ? "#d8d8d0" : "#f4d35e" }])) as Record<TipoStrada, never>,
+  ciclabile: { larghezza: 5, colore: "#2f9d8c", bordo: "#f4f0e4", centro: "#ffffff" },
+}
 
 type Fumo = { mesh: THREE.Mesh; base: [number, number, number]; fase: number; quota: number; colore: string }
 
@@ -69,7 +80,7 @@ function alberoParco(rand: () => number, x: number, z: number) {
   return g
 }
 
-function modello(tipo: TipoInfra, id: string, fumi: Fumo[]): { y: THREE.Group; piano: THREE.Object3D[] } {
+function modello(tipo: TipoInfra, id: string, fumi: Fumo[], industria: TipoIndustria = "meccanica"): { y: THREE.Group; piano: THREE.Object3D[] } {
   const y = new THREE.Group()
   const piano: THREE.Object3D[] = []
   const rand = casuale(id)
@@ -103,13 +114,32 @@ function modello(tipo: TipoInfra, id: string, fumi: Fumo[]): { y: THREE.Group; p
       y.add(scatola(4, 1.6, 3.2, i % 2 ? "#3b6ea8" : "#d6d9dc", x, 3.2, 5))
     }
   } else if (tipo === "industria") {
-    y.add(scatola(50, 14, 30, "#9aa1a6", 0, 0, 0))
-    for (let i = 0; i < 3; i++) y.add(scatola(16, 5, 30, "#7e868b", -16 + i * 16, 14, 0))
-    y.add(scatola(18, 9, 14, "#b7bcc0", 14, 0, 24))
-    for (const x of [-18, -8]) {
-      y.add(cilindro(3.4, 34, "#b86b4f", x, 14, -22, 2.6))
-      fumi.push({ mesh: new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), materiale("#5d6064", { transparent: true })),
-        base: [x, 48, -22], fase: rand(), quota: 34, colore: "#5d6064" })
+    const fumo = (x: number, z: number, colore: string, alt = 34) =>
+      fumi.push({ mesh: new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), materiale(colore, { transparent: true })),
+        base: [x, alt + 14, z], fase: rand(), quota: 34, colore })
+    if (industria === "artigianale") {
+      y.add(scatola(26, 9, 16, "#c9c3b4", -10, 0, 0), scatola(26, 1.2, 16.6, "#a9604a", -10, 9, 0))
+      y.add(scatola(18, 7, 12, "#b7bcc0", 16, 0, 12), scatola(18, 1, 12.6, "#8a8f93", 16, 7, 12))
+      y.add(scatola(10, 0.4, 14, "#8f9a8c", 0, 0, -16))
+    } else if (industria === "logistica") {
+      y.add(scatola(72, 11, 32, "#d3d7da", 0, 0, 0), scatola(72.4, 2, 32.4, "#2f6db0", 0, 8, 0))
+      for (let i = 0; i < 6; i++) y.add(scatola(5, 5, 0.8, "#4b5258", -26 + i * 10.4, 0, 16.4))
+      for (const x of [-18, 6]) {
+        y.add(scatola(4.2, 4, 3.6, "#e8e8e8", x, 0.4, 25), scatola(13, 4.6, 3.8, "#f4f4f2", x + 9, 0.4, 25))
+      }
+      y.add(scatola(80, 0.3, 24, "#7c858b", 0, 0, 29))
+    } else if (industria === "conciaria") {
+      y.add(scatola(40, 10, 26, "#a99478", -10, 0, -4), scatola(40.4, 1.4, 26.4, "#7d6a52", -10, 10, -4))
+      for (let i = 0; i < 3; i++) y.add(cilindro(6, 12, "#c7c9c3", 18, 0, -16 + i * 14, 6, 14))
+      const bacino = new THREE.Mesh(new THREE.CircleGeometry(11, 16).rotateX(-Math.PI / 2), materiale("#8fae6a"))
+      bacino.position.set(-14, 0.4, 24)
+      y.add(bacino)
+      for (const x of [-22, -4]) { y.add(cilindro(3, 40, "#9a5b45", x, 10, -14, 2.2)); fumo(x, -14, "#b3a86a", 40) }
+    } else {
+      y.add(scatola(50, 14, 30, "#9aa1a6", 0, 0, 0))
+      for (let i = 0; i < 3; i++) y.add(scatola(16, 5, 30, "#7e868b", -16 + i * 16, 14, 0))
+      y.add(scatola(18, 9, 14, "#b7bcc0", 14, 0, 24))
+      y.add(cilindro(3.4, 34, "#b86b4f", -18, 14, -22, 2.6)); fumo(-18, -22, "#5d6064")
     }
   } else if (tipo === "nucleare") {
     y.add(scatola(60, 0.8, 70, "#8d979c", 0, 0, 4))
@@ -152,7 +182,7 @@ export class ScenarioLayer implements CustomLayerInterface {
   private matrix = new THREE.Matrix4()
   private riduciMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches
   private elenco: OggettoScenario[] = []
-  private bozza: BozzaStrada | null = null
+  private bozza: BozzaTracciato | null = null
   private radici: THREE.Group[] = []
   private fumi: Fumo[] = []
   private kStrade = 0
@@ -168,7 +198,7 @@ export class ScenarioLayer implements CustomLayerInterface {
     this.ricostruisci()
   }
 
-  imposta(oggetti: OggettoScenario[], bozza: BozzaStrada | null) {
+  imposta(oggetti: OggettoScenario[], bozza: BozzaTracciato | null) {
     this.elenco = oggetti
     this.bozza = bozza
     this.ricostruisci()
@@ -197,11 +227,11 @@ export class ScenarioLayer implements CustomLayerInterface {
     this.radici = []
     this.fumi = []
     for (const o of this.elenco) {
-      if (o.strada) continue
+      if (o.linea || o.area) continue
       const radice = new THREE.Group()
       const [x, y] = this.locale(...o.lonlat)
       radice.position.set(x, y, 0)
-      const { y: modelloY, piano } = modello(o.tipo, o.id, this.fumi)
+      const { y: modelloY, piano } = modello(o.tipo, o.id, this.fumi, o.industria)
       modelloY.rotation.x = Math.PI / 2
       radice.add(modelloY, ...piano)
       for (const f of this.fumi.filter((f) => !f.mesh.parent)) modelloY.add(f.mesh)
@@ -213,20 +243,58 @@ export class ScenarioLayer implements CustomLayerInterface {
   private ricostruisciStrade(kr: number) {
     this.svuota(this.strade)
     this.svuota(this.bozzaGruppo)
-    const disegna = (gruppo: THREE.Group, tipo: TipoStrada, punti: [number, number][], opaca: boolean) => {
+    const extra = (opaca: boolean) => ({ polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      transparent: !opaca, opacity: opaca ? 1 : 0.8 })
+    const linea = (gruppo: THREE.Group, stile: StileLinea, punti: [number, number][], opaca: boolean) => {
       if (punti.length < 2) return
       const locali = punti.map((p) => this.locale(...p))
-      const { larghezza, colore } = STRADE[tipo]
-      const w = larghezza * kr
-      const extra = { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-        transparent: !opaca, opacity: opaca ? 1 : 0.8 }
-      gruppo.add(nastroMesh(locali, w * 1.18, 0.5 * kr, "#eceae0", extra),
-        nastroMesh(locali, w, 1 * kr, colore, extra),
-        nastroMesh(locali, Math.max(0.5, w * 0.05), 1.5 * kr, tipo === "urbana" ? "#d8d8d0" : "#f4d35e", extra))
+      const st = STILI_LINEA[stile]
+      const w = st.larghezza * kr
+      gruppo.add(nastroMesh(locali, w * 1.18, 0.5 * kr, st.bordo, extra(opaca)),
+        nastroMesh(locali, w, 1 * kr, st.colore, extra(opaca)),
+        nastroMesh(locali, Math.max(0.5, w * 0.05), 1.5 * kr, st.centro, extra(opaca)))
     }
-    for (const o of this.elenco) if (o.strada) disegna(this.strade, o.strada.tipo, o.strada.punti, true)
+    const area = (gruppo: THREE.Group, id: string, punti: [number, number][], opaca: boolean) => {
+      if (punti.length < 3) return
+      const locali = punti.map((p) => this.locale(...p))
+      const forma = new THREE.Shape(locali.map(([x, y]) => new THREE.Vector2(x, y)))
+      const prato = new THREE.Mesh(new THREE.ShapeGeometry(forma), materiale("#86c971", { side: THREE.DoubleSide, ...extra(opaca) }))
+      prato.position.z = 0.4 * kr
+      gruppo.add(prato, nastroMesh([...locali, locali[0]!], 2.4 * kr, 0.9 * kr, "#4f9d4f", extra(opaca)))
+      // Alberi sparsi nel contorno, in numero proporzionale all'area.
+      let a2 = 0
+      locali.forEach(([x1, y1], i) => { const [x2, y2] = locali[(i + 1) % locali.length]!; a2 += x1 * y2 - x2 * y1 })
+      const quanti = Math.max(3, Math.min(70, Math.round(Math.abs(a2) / 2 / 500)))
+      const xs = locali.map((p) => p[0]), ys = locali.map((p) => p[1])
+      const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+      const rand = casuale(id)
+      const tronchi = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.8, 1.1, 5, 5).rotateX(Math.PI / 2), materiale("#8a5f3f"), quanti)
+      const chiome = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(5, 0), materiale("#3f9a4a", extra(opaca)), quanti)
+      const m = new THREE.Matrix4()
+      let n = 0
+      for (let tent = 0; tent < quanti * 12 && n < quanti; tent++) {
+        const x = x0 + rand() * (x1 - x0), y = y0 + rand() * (y1 - y0)
+        if (!dentro([x, y], locali)) continue
+        const k = (0.8 + rand() * 0.5) * kr
+        m.makeScale(k, k, k).setPosition(x, y, 2.5 * k)
+        tronchi.setMatrixAt(n, m)
+        m.makeScale(k, k, k).setPosition(x, y, 8 * k)
+        chiome.setMatrixAt(n, m)
+        n++
+      }
+      tronchi.count = chiome.count = n
+      tronchi.frustumCulled = chiome.frustumCulled = false
+      gruppo.add(tronchi, chiome)
+    }
+    for (const o of this.elenco) {
+      if (o.linea) linea(this.strade, o.linea.stile, o.linea.punti, true)
+      if (o.area) area(this.strade, o.id, o.area, true)
+    }
     if (this.bozza) {
-      disegna(this.bozzaGruppo, this.bozza.tipo, this.bozza.punti, false)
+      if (this.bozza.stile === "parco") {
+        area(this.bozzaGruppo, "bozza", this.bozza.punti, false)
+        if (this.bozza.punti.length < 3) linea(this.bozzaGruppo, "urbana", this.bozza.punti, false)
+      } else linea(this.bozzaGruppo, this.bozza.stile, this.bozza.punti, false)
       for (const p of this.bozza.punti) {
         const [x, y] = this.locale(...p)
         const punto = new THREE.Mesh(new THREE.SphereGeometry(5 * kr, 10, 8), materiale("#e7b64d"))
@@ -242,7 +310,7 @@ export class ScenarioLayer implements CustomLayerInterface {
     const t = this.riduciMovimento ? 0 : performance.now() / 1000
     // Gli oggetti restano leggibili anche allontanandosi: la scala cresce al calare dello zoom.
     const kr = Math.min(12, Math.max(1, 2 ** (15.5 - zoom)))
-    const kOggetti = kr * 1.3
+    const kOggetti = kr * 2
     for (const r of this.radici) r.scale.setScalar(kOggetti)
     if (Math.abs(kr - this.kStrade) > 0.05 * this.kStrade || !this.kStrade) {
       this.kStrade = kr

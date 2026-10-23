@@ -191,7 +191,7 @@ describe("store - strade e spostamenti", () => {
     s.getState().setTipoStrada("tangenziale")
     s.getState().aggiungiPuntoStrada([0, 0])
     s.getState().aggiungiPuntoStrada([1500, 0])
-    s.getState().confermaStrada("024001")
+    s.getState().confermaTracciato("024001")
     expect(s.getState().bozzaStrada).toEqual([])
     expect(s.getState().scenario.aggiunte[0]).toMatchObject({
       comune: "024001", tipo: "strada", strada: { tipo: "tangenziale", tracciato: [[0, 0], [1500, 0]] },
@@ -200,7 +200,7 @@ describe("store - strade e spostamenti", () => {
   it("con un solo punto la strada non viene creata", () => {
     const s = inScenario()
     s.getState().aggiungiPuntoStrada([0, 0])
-    s.getState().confermaStrada("024001")
+    s.getState().confermaTracciato("024001")
     expect(s.getState().scenario.aggiunte).toEqual([])
   })
   it("cambiare strumento scarta la bozza", () => {
@@ -212,11 +212,36 @@ describe("store - strade e spostamenti", () => {
   it("sposta un oggetto piazzato ma non una strada", () => {
     const s = inScenario()
     s.getState().aggiungiInfrastruttura("024001", "nucleare", [1, 1])
-    s.getState().aggiungiInfrastruttura("024001", "strada", [0, 0], { tipo: "urbana", tracciato: [[0, 0], [10, 0]] })
+    s.getState().aggiungiInfrastruttura("024001", "strada", [0, 0], { strada: { tipo: "urbana", tracciato: [[0, 0], [10, 0]] } })
     const [n, r] = s.getState().scenario.aggiunte
     s.getState().spostaInfrastruttura(n!.id, "024002", [5, 5])
     s.getState().spostaInfrastruttura(r!.id, "024002", [5, 5])
     expect(s.getState().scenario.aggiunte[0]).toMatchObject({ comune: "024002", posizione: [5, 5] })
     expect(s.getState().scenario.aggiunte[1]).toMatchObject({ comune: "024001", posizione: [0, 0] })
+  })
+  it("conclude una pista ciclabile e un parco con la forma disegnata", () => {
+    const s = inScenario()
+    s.getState().setStrumento("ciclabile")
+    s.getState().setBozzaStrada([[0, 0], [500, 0]])
+    s.getState().confermaTracciato("024001")
+    s.getState().setStrumento("parco")
+    s.getState().setBozzaStrada([[0, 0], [100, 0], [100, 100]])
+    s.getState().confermaTracciato("024001")
+    const [c, p] = s.getState().scenario.aggiunte
+    expect(c).toMatchObject({ tipo: "ciclabile", ciclabile: { tracciato: [[0, 0], [500, 0]] } })
+    expect(p).toMatchObject({ tipo: "parco", parco: { contorno: [[0, 0], [100, 0], [100, 100]] } })
+  })
+  it("un parco con meno di tre punti non viene creato", () => {
+    const s = inScenario()
+    s.getState().setStrumento("parco")
+    s.getState().setBozzaStrada([[0, 0], [100, 0]])
+    s.getState().confermaTracciato("024001")
+    expect(s.getState().scenario.aggiunte).toEqual([])
+  })
+  it("l'industria piazzata porta la tipologia scelta", () => {
+    const s = inScenario()
+    s.getState().setTipoIndustria("conciaria")
+    s.getState().aggiungiInfrastruttura("024001", "industria", [0, 0])
+    expect(s.getState().scenario.aggiunte[0]).toMatchObject({ industria: "conciaria" })
   })
 })

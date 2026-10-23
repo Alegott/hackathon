@@ -15,8 +15,8 @@ describe("derivaIndici", () => {
     s.getState().setModalita("scenario")
     s.getState().aggiungiInfrastruttura("A", "industria", [0, 0])
     const r = derivaIndici(ds, s.getState())
-    expect(r.A).toMatchObject({ scenario: -12, totale: 38 })
-    expect(r.B).toMatchObject({ scenario: -6, totale: 44 })
+    expect(r.A).toMatchObject({ scenario: -9, totale: 41 })
+    expect(r.B).toMatchObject({ scenario: -4.5, totale: 45.5 })
   })
   it("tornando in realtà lo scenario non influenza gli indici, e tornando in scenario riappare", () => {
     const s = store()
@@ -25,7 +25,7 @@ describe("derivaIndici", () => {
     s.getState().setModalita("realta")
     expect(derivaIndici(ds, s.getState()).A?.totale).toBe(50)
     s.getState().setModalita("scenario")
-    expect(derivaIndici(ds, s.getState()).A?.totale).toBe(38)
+    expect(derivaIndici(ds, s.getState()).A?.totale).toBe(41)
   })
   it("dopo il reset gli indici tornano a quelli reali", () => {
     const s = store()

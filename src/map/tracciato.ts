@@ -1,20 +1,25 @@
 import type { Stato, Azioni } from "../store/store"
 import { aCoordinateGeografiche } from "./territorio"
 
+// Strumenti che si usano disegnando sulla mappa invece di un solo clic.
+export const èTracciabile = (s: string | null): s is "strada" | "ciclabile" | "parco" =>
+  s === "strada" || s === "ciclabile" || s === "parco"
+
 export const TIPI_TRASCINABILI = ["parco", "ciclabile", "colonnine", "industria", "strada", "nucleare"] as const
 
 // Chiude la strada in tracciamento nel comune del suo primo punto. Restituisce se è stata creata.
-export function terminaStrada(
+export function terminaTracciato(
   st: Stato & Azioni,
   trovaComune: (lonlat: [number, number]) => string | null,
 ): boolean {
   const primo = st.bozzaStrada[0]
-  const comune = primo && st.bozzaStrada.length >= 2 ? trovaComune(aCoordinateGeografiche(primo)) : null
+  const minimo = st.strumento === "parco" ? 3 : 2
+  const comune = primo && st.bozzaStrada.length >= minimo ? trovaComune(aCoordinateGeografiche(primo)) : null
   if (!comune) {
     st.annullaBozzaStrada()
     return false
   }
-  st.confermaStrada(comune)
+  st.confermaTracciato(comune)
   return true
 }
 

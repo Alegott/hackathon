@@ -247,3 +247,28 @@ describe("strade tracciate e centrale nucleare", () => {
     expect(r.D!.scenario).toBe(1)
   })
 })
+
+describe("parco, pista ciclabile e industrie", () => {
+  const ds = dataset()
+  const con = (extra: Partial<Scenario["aggiunte"][number]> & { tipo: Scenario["aggiunte"][number]["tipo"] }): Scenario => ({
+    aggiunte: [{ id: "x", comune: "A", posizione: [0, 0], ...extra }], rimozioni: [], macro: null,
+  })
+  const quadrato = (lato: number): [number, number][] => [[0, 0], [lato, 0], [lato, lato], [0, lato]]
+  it("un parco più grande rende di più, con tetto", () => {
+    const piccolo = statoTerritorio(ds, con({ tipo: "parco", parco: { contorno: quadrato(100) } })).A!.scenario
+    const grande = statoTerritorio(ds, con({ tipo: "parco", parco: { contorno: quadrato(400) } })).A!.scenario
+    const enorme = statoTerritorio(ds, con({ tipo: "parco", parco: { contorno: quadrato(5000) } })).A!.scenario
+    expect(grande).toBeGreaterThan(piccolo)
+    expect(enorme).toBe(10)
+  })
+  it("una pista ciclabile più lunga rende di più", () => {
+    const pista = (km: number) => con({ tipo: "ciclabile", ciclabile: { tracciato: [[0, 0], [km * 1000, 0]] } })
+    expect(statoTerritorio(ds, pista(6)).A!.scenario).toBeGreaterThan(statoTerritorio(ds, pista(1)).A!.scenario)
+    expect(statoTerritorio(ds, pista(100)).A!.scenario).toBe(5)
+  })
+  it("le industrie pesano in ordine: artigianale < logistica < metalmeccanica < conciaria", () => {
+    const v = (industria: "artigianale" | "logistica" | "meccanica" | "conciaria") =>
+      statoTerritorio(ds, con({ tipo: "industria", industria })).A!.scenario
+    expect([v("artigianale"), v("logistica"), v("meccanica"), v("conciaria")]).toEqual([-4, -6, -9, -14])
+  })
+})

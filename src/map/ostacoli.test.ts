@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { percorsoLibero, trattoLibero, type Edificio } from "./ostacoli"
+import { areaLibera, percorsoLibero, trattoLibero, type Edificio } from "./ostacoli"
 
 const casa: Edificio = { minX: 40, minY: -10, maxX: 60, maxY: 10, anelli: [[[40, -10], [60, -10], [60, 10], [40, 10]]] }
 
@@ -19,5 +19,11 @@ describe("strade ed edifici", () => {
   })
   it("un percorso che aggira l'edificio è libero", () => {
     expect(percorsoLibero([[0, 0], [30, 30], [70, 30], [100, 0]], [casa], 4)).toBe(true)
+  })
+  it("un parco che racchiude un edificio non è libero", () => {
+    expect(areaLibera([[0, -50], [100, -50], [100, 50], [0, 50]], [casa])).toBe(false)
+  })
+  it("un parco accanto all'edificio è libero", () => {
+    expect(areaLibera([[0, 30], [100, 30], [100, 80], [0, 80]], [casa])).toBe(true)
   })
 })

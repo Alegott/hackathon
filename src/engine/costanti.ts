@@ -1,4 +1,4 @@
-import type { Dotazioni, Scenario, TipoInfra, TipoStrada } from "../types"
+import type { Aggiunta, Dotazioni, TipoIndustria, TipoInfra, TipoStrada } from "../types"
 
 // Pesi della checklist casa (SPEC → Punteggio casa). Congelati alle 16:30.
 export const PESI = {
@@ -60,9 +60,40 @@ export function impattoStrada(tipo: TipoStrada, tracciato: [number, number][]): 
   return Math.max(TETTO_IMPATTO_STRADA, Math.min(IMPATTO_MINIMO_STRADA, impatto))
 }
 
-// Delta di un'aggiunta dello scenario: le strade tracciate dipendono da tipo e lunghezza.
-export function deltaAggiunta(a: Scenario["aggiunte"][number]): number {
-  return a.strada ? impattoStrada(a.strada.tipo, a.strada.tracciato) : DELTA_INFRA[a.tipo]
+// Industrie tipiche del Veneto, dalla più leggera alla più impattante.
+export const INDUSTRIE: Record<TipoIndustria, { etichetta: string; descrizione: string; delta: number }> = {
+  artigianale: { etichetta: "Artigianale", descrizione: "capannoni di PMI e laboratori", delta: -4 },
+  logistica: { etichetta: "Logistica", descrizione: "magazzini e traffico di camion", delta: -6 },
+  meccanica: { etichetta: "Metalmeccanica", descrizione: "fonderie e officine", delta: -9 },
+  conciaria: { etichetta: "Conciaria", descrizione: "distretto della pelle (Valle del Chiampo)", delta: -14 },
+}
+
+// Pista ciclabile tracciata: beneficio per chilometro, con minimo e tetto.
+export const CICLABILE_PER_KM = 0.6
+export const TETTO_CICLABILE = 5
+export const impattoCiclabile = (tracciato: [number, number][]) =>
+  Math.min(TETTO_CICLABILE, Math.max(0.1, CICLABILE_PER_KM * lunghezzaKm(tracciato)))
+
+// Parco disegnato: il beneficio cresce con l'area (ettari), ma sempre meno che proporzionalmente.
+export const TETTO_PARCO = 10
+export function areaEttari(contorno: [number, number][]): number {
+  let a = 0
+  for (let i = 0; i < contorno.length; i++) {
+    const [x1, y1] = contorno[i]!, [x2, y2] = contorno[(i + 1) % contorno.length]!
+    a += x1 * y2 - x2 * y1
+  }
+  return Math.abs(a) / 2 / 10000
+}
+export const impattoParco = (contorno: [number, number][]) =>
+  Math.min(TETTO_PARCO, Math.max(0.2, 2.5 * Math.sqrt(areaEttari(contorno))))
+
+// Delta di un'aggiunta dello scenario: forme e varianti pesano in modo diverso dal valore base.
+export function deltaAggiunta(a: Aggiunta): number {
+  if (a.strada) return impattoStrada(a.strada.tipo, a.strada.tracciato)
+  if (a.ciclabile) return impattoCiclabile(a.ciclabile.tracciato)
+  if (a.parco) return impattoParco(a.parco.contorno)
+  if (a.industria) return INDUSTRIE[a.industria].delta
+  return DELTA_INFRA[a.tipo]
 }
 
 export type ChiaveDotazione = keyof Dotazioni
