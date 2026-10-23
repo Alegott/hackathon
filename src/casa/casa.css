@@ -143,6 +143,7 @@
 @media (max-width: 760px) {
   .casa-v2 .cl-podio { grid-template-columns: 1fr; }
   .casa-v2 .cl-riga { grid-template-columns: 28px 1fr 34px 30px; }
+  .casa-v2 .cl-riga--anonima { grid-template-columns: 28px minmax(0, 1fr); }
   .casa-v2 .cl-barra, .casa-v2 .cl-icone { display: none; }
 }
 
@@ -169,3 +170,27 @@
 .casa-v2 .contatore button:disabled { opacity: .35; cursor: default; box-shadow: none; }
 .casa-v2 .contatore output { min-width: 28px; text-align: center; font-weight: 650; font-variant-numeric: tabular-nums; }
 .casa-v2 .giardino-nome small { display: block; font-size: 12px; color: var(--c-muto); }
+
+.casa-v2 :is(.casa-testa, .cl-testa, .cl-riepilogo) { flex-wrap: wrap; gap: 12px; }
+.casa-v2 :is(.campo, .palette-tessere, .cl-testa > div) { min-width: 0; }
+.casa-v2 .campo :is(input, select) { width: 100%; min-width: 0; }
+.casa-v2 .palco-suggerimento { width: max-content; max-width: calc(100% - 24px); white-space: normal; text-align: center; }
+@media (max-width: 960px) {
+  .casa-v2 .palco { position: relative; top: auto; height: clamp(320px, 60dvh, 540px); }
+}
+@media (max-width: 600px) {
+  .casa-v2 { padding: 16px 12px 32px; }
+  .casa-v2 .scheda, .casa-v2 .classifica-v2 { padding: 14px; }
+  .casa-v2 .palette-gruppo { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .casa-v2 .palette-titolo { flex-basis: auto; }
+  .casa-v2 .palette-tessere { width: 100%; }
+  .casa-v2 .tessera { flex: 1 1 72px; }
+  .casa-v2 .tessera-nome { white-space: normal; text-align: center; }
+  .casa-v2 .segmenti { display: flex; flex-wrap: wrap; align-self: stretch; }
+  .casa-v2 .segmenti button { flex: 1; padding-inline: 10px; }
+  .casa-v2 .palco-punteggio { left: 10px; right: 10px; top: 10px; flex-wrap: wrap; gap: 8px; padding: 10px; }
+  .casa-v2 .palco-numero { font-size: 40px; }
+  .casa-v2 .cl-riga { grid-template-columns: 24px minmax(0, 1fr) 30px 28px; gap: 6px; padding: 10px 8px; }
+  .casa-v2 .cl-riga--anonima { grid-template-columns: 24px minmax(0, 1fr); }
+  .casa-v2 .giardino-alberi li { flex-wrap: wrap; }
+}

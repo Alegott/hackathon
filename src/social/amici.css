@@ -58,3 +58,18 @@
 .amici-lettura { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 10px; margin-top: 6px; color: var(--accento-testo); }
 .amici-pallino { width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 50%; }
 .amici-pallino.letto { background: currentColor; }
+
+.amici-pagina :is(.amici-titolo, .amici-riga, .amici-profilo-testa) { flex-wrap: wrap; }
+.amici-pagina :is(.amici-persona > span, .amici-profilo-testa > div, .amici-identita > div) { min-width: 0; }
+.amici-pagina select { min-width: 0; max-width: 100%; }
+@media (min-width: 781px) and (max-width: 1000px) {
+  .amici-griglia { grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr); gap: 16px; }
+}
+@media (max-width: 600px) {
+  .amici-pagina { padding: 16px 12px 32px; }
+  .amici-card, .amici-identita { padding: 14px; }
+  .amici-titolo { gap: 10px; }
+  .amici-profilo-testa { gap: 12px; }
+  .amici-messaggi { height: clamp(200px, 45dvh, 360px); }
+  .amici-messaggio { max-width: 95%; padding: 10px 12px; }
+}

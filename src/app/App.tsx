@@ -16,8 +16,8 @@ const MappaTerritorio = lazy(() => import("../map/MappaTerritorio").then((m) => 
 const SEZIONI: { id: Sezione; etichetta: string }[] = [
   { id: "mappa", etichetta: "Mappa" },
   { id: "casa", etichetta: "Casa" },
-  { id: "simulazione", etichetta: "Simulazione" },
   { id: "amici", etichetta: "Amici" },
+  { id: "simulazione", etichetta: "Simulazione" },
 ]
 
 const TEMI: { id: Tema; etichetta: string; icona: string }[] = [
@@ -56,13 +56,29 @@ export function App() {
 
   return (
     <div className="app">
-      <header>
+      <header className="app-header">
+        <div className="tema-menu">
+          <button type="button" className="tema-trigger" popoverTarget="menu-tema" aria-label="Scegli il tema della pagina" title="Colore della pagina">
+            <span aria-hidden="true">🖥️</span><span aria-hidden="true">▾</span>
+          </button>
+          <div id="menu-tema" className="tema-opzioni" popover="auto" role="group" aria-label="Colore della pagina">
+            <strong>Colore della pagina</strong>
+            {TEMI.map((t) => (
+              <button key={t.id} type="button" aria-pressed={tema === t.id}
+                onClick={(e) => { setTema(t.id); e.currentTarget.closest<HTMLElement>("[popover]")?.hidePopover() }}>
+                <span aria-hidden="true">{t.icona}</span> Tema {t.etichetta}
+                {tema === t.id && <span aria-hidden="true">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
         <h1>Vicenza Sostenibile</h1>
         <nav aria-label="Sezioni principali">
           {SEZIONI.map((x) => (
             <button
               key={x.id}
               className={sezione === x.id ? "attivo" : ""}
+              aria-current={sezione === x.id ? "page" : undefined}
               onClick={() => store.getState().setSezione(x.id)}
             >
               {x.etichetta}
@@ -80,30 +96,11 @@ export function App() {
           </button>
         </div>
 
-        <div className="header-destra">
-          <div className="selettore-tema" role="group" aria-label="Tema">
-            {TEMI.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                aria-pressed={tema === t.id}
-                aria-label={`Tema ${t.etichetta}`}
-                title={`Tema ${t.etichetta}`}
-                onClick={() => setTema(t.id)}
-              >
-                <span aria-hidden="true">{t.icona}</span>
-              </button>
-            ))}
-          </div>
-          <span className={`pill-stato-mod ${modalita === "scenario" ? "pill-stato-mod--scenario" : ""}`}>
-            {modalita === "scenario" ? "🧪 Scenario" : "📍 Realtà"}
-          </span>
-          {èMock && <span className="badge-mock">dati di prova</span>}
-        </div>
+        {èMock && <span className="badge-mock">dati di prova</span>}
       </header>
       <main>
         {/* La mappa resta montata per non ricaricare la scena cambiando sezione. */}
-        <div className="mappa" style={{ display: sezione === "mappa" ? "block" : "none" }}>
+        <div className="mappa" hidden={sezione !== "mappa"}>
           <Suspense fallback={<div className="territorio-avviso" role="status">Preparazione della mappa…</div>}>
             {modalitaDiorama ? <Provincia /> : <MappaTerritorio apriDiorama={() => setTipoMappa("diorama")} />}
           </Suspense>

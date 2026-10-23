@@ -1,7 +1,9 @@
 import * as THREE from "three"
+import { puntoInPoligono } from "../diorama/geometria"
 import { MercatorCoordinate, type Map, type CustomLayerInterface, type CustomRenderMethodInput } from "maplibre-gl"
 import { dentroProvincia, type Habitat } from "./ecosistema"
 import { FaunaGltf } from "./FaunaGltf"
+import { Traffico } from "./Traffico"
 import { AlberiGltf } from "./AlberiGltf"
 import { metriPerPixel } from "./vitaTerritorio"
 import { coloreNuvola } from "./sostenibilita"
@@ -36,9 +38,11 @@ export class EcosistemaLayer implements CustomLayerInterface {
   private color = new THREE.Color()
   private riduciMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches
   private fauna = new FaunaGltf()
+  private traffico = new Traffico()
   private alberi = new AlberiGltf()
   private terrenoLibero: TerrenoLibero = () => true
   private ultimo = performance.now()
+  private areeVerdi: [number, number][][][] = []
 
   onAdd(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext) {
     this.map = map
@@ -70,6 +74,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
     pool("nebbiaLieve", new THREE.SphereGeometry(1, 18, 8), "#e7ece9", .16)
     pool("nebbiaFitta", new THREE.SphereGeometry(1, 18, 8), "#cfd4d0", .34)
     this.scene.add(this.fauna.gruppo)
+    this.scene.add(this.traffico.gruppo)
     this.scene.add(this.alberi.gruppo)
     this.alberi.avvia(() => this.map?.triggerRepaint())
   }
@@ -107,11 +112,13 @@ export class EcosistemaLayer implements CustomLayerInterface {
     this.habitat = habitat
     this.terrenoLibero = terrenoLibero
     this.selezionato = selezionato
+    this.traffico.setComune(selezionato ? habitat[0]?.istat ?? null : null)
     if (this.strade.length) this.applicaStrade()
     if (selezionato) {
       this.fauna.avvia(() => { this.configuraFauna(); this.map?.triggerRepaint() })
       this.configuraFauna()
     } else this.fauna.configura(null, [], [0, 0], null)
+    this.traffico.gruppo.visible = selezionato
     this.map?.triggerRepaint()
   }
 
@@ -121,6 +128,15 @@ export class EcosistemaLayer implements CustomLayerInterface {
     // Le ancore vengono scelte nella vista arrivata a destinazione, non all'inizio del volo sul comune.
     if (!this.map || this.map.isMoving() || this.map.getZoom() < 13) return
     this.fauna.configura(h.fauna, h.ancoreFauna.map((p) => this.posizione(...p)), this.posizione(...h.centro), h.istat)
+  }
+
+  setPercorsiFauna(strade: [number, number][][], verdi: [number, number][][][] = []) {
+    this.areeVerdi = verdi.map((polygon) => polygon.map((ring) => ring.map((p) => this.posizione(...p))))
+    this.fauna.setPercorsi(strade.map((linea) => linea.map((p) => this.posizione(...p))))
+  }
+
+  setPercorsiTraffico(strade: [number, number][][]) {
+    this.traffico.setPercorsi(strade.map((linea) => linea.map((p) => this.posizione(...p))))
   }
 
   setAttivo(attivo: boolean) {
@@ -202,13 +218,20 @@ export class EcosistemaLayer implements CustomLayerInterface {
         const vista = this.map.getCenter()
         const { clientWidth: w, clientHeight: hh } = this.map.getContainer()
         this.fauna.frame(dt, t, {
+          verde: (x, y) => this.areeVerdi.some((rings) => !!rings[0] && puntoInPoligono([x, y], rings[0])
+            && !rings.slice(1).some((ring) => puntoInPoligono([x, y], ring))),
           mpp, centro: [cx, cy], raggio: h.raggio,
           vistaCentro: this.posizione(vista.lng, vista.lat), vistaRaggio: 0.5 * Math.hypot(w, hh) * mpp * 0.55,
           dentro: (px, py) => {
             const g = new MercatorCoordinate(this.origin.x + px * this.unit, this.origin.y - py * this.unit).toLngLat()
-            return dentroProvincia([g.lng, g.lat]) && this.terrenoLibero([g.lng, g.lat], 12)
+            return dentroProvincia([g.lng, g.lat]) && this.terrenoLibero([g.lng, g.lat], 2)
           },
         })
+        this.traffico.frame(dt, zoom >= 13 && p.nuvole.grigio <= .4,
+          this.posizione(vista.lng, vista.lat), mpp, (x, y) => {
+            const g = new MercatorCoordinate(this.origin.x + x * this.unit, this.origin.y - y * this.unit).toLngLat()
+            return dentroProvincia([g.lng, g.lat]) && this.terrenoLibero([g.lng, g.lat], 2)
+          })
       }
     }
     this.alberi.fineFrame()
@@ -232,6 +255,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
 
   onRemove() {
     this.fauna.libera()
+    this.traffico.libera()
     this.alberi.libera()
     for (const { mesh } of Object.values(this.pools)) {
       mesh.geometry.dispose()

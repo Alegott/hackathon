@@ -950,12 +950,10 @@ function Atmosfera({ meteo }: { meteo: Meteo }) {
 
 // ───────────────────────── scena ─────────────────────────
 function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
-  const casa = useRef<THREE.Group>(null)
-  useFrame(({ clock }) => { if (casa.current) casa.current.position.y = Math.sin(clock.elapsedTime * 0.9) * 0.04 })
   return (
     <>
       <Atmosfera meteo={meteo} />
-      <group ref={casa}>
+      <group>
         <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color={vista.giardino ? "#6fae5a" : "#b3aca0"} roughness={1} flatShading /></mesh>
         {vista.giardino === null && <CortilePavimentato />}
         <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[5.4, 4.8, 0.3, 56]} /><meshStandardMaterial color="#8a6a4f" roughness={1} flatShading /></mesh>
@@ -1003,7 +1001,7 @@ export function Casa3D({ dotazioni, onFotoFrontale }: { dotazioni: Dotazioni; on
   return (
     <Canvas shadows dpr={onFotoFrontale ? 1 : undefined} camera={{ position: onFotoFrontale ? [-0.4, 3.4, 14] : [7.8, 5.4, 9], fov: 38 }} gl={{ antialias: true, preserveDrawingBuffer: !!onFotoFrontale }} onCreated={({ camera }) => { if (onFotoFrontale) camera.lookAt(-0.4, 1, 0.2) }}>
       <Scena vista={vista} meteo={meteo} />
-      {onFotoFrontale ? <CatturaFrontale onFoto={onFotoFrontale} /> : <OrbitControls autoRotate autoRotateSpeed={1.1} enablePan={false} minDistance={7} maxDistance={18} minPolarAngle={0.5} maxPolarAngle={Math.PI / 2.1} target={[-0.4, 1, 0.2]} />}
+      {onFotoFrontale ? <CatturaFrontale onFoto={onFotoFrontale} /> : <OrbitControls enableDamping={false} enablePan={false} minDistance={7} maxDistance={18} minPolarAngle={0.5} maxPolarAngle={Math.PI / 2.1} target={[-0.4, 1, 0.2]} />}
     </Canvas>
   )
 }

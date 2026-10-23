@@ -4,6 +4,7 @@ import { STRADE } from "../engine/costanti"
 import { dentro } from "./ostacoli"
 import type { TipoIndustria, TipoInfra, TipoStrada } from "../types"
 import { costruisciNastro } from "./nastro"
+import { renderCondiviso } from "./renderCondiviso"
 
 export type OggettoScenario = {
   id: string
@@ -308,10 +309,9 @@ export class ScenarioLayer implements CustomLayerInterface {
     if (!this.map || !this.renderer) return
     const zoom = this.map.getZoom()
     const t = this.riduciMovimento ? 0 : performance.now() / 1000
-    // Gli oggetti restano leggibili anche allontanandosi: la scala cresce al calare dello zoom.
+    // Le strutture mantengono la stessa impronta geografica e si rimpiccioliscono con la mappa.
     const kr = Math.min(12, Math.max(1, 2 ** (15.5 - zoom)))
-    const kOggetti = kr * 2
-    for (const r of this.radici) r.scale.setScalar(kOggetti)
+    for (const r of this.radici) r.scale.setScalar(2)
     if (Math.abs(kr - this.kStrade) > 0.05 * this.kStrade || !this.kStrade) {
       this.kStrade = kr
       this.ricostruisciStrade(kr)
@@ -325,9 +325,8 @@ export class ScenarioLayer implements CustomLayerInterface {
     const locale = new THREE.Matrix4().makeTranslation(this.origin.x, this.origin.y, 0)
       .scale(new THREE.Vector3(this.unit, -this.unit, this.unit))
     this.camera.projectionMatrix = this.matrix.fromArray(args.defaultProjectionData.mainMatrix).multiply(locale)
-    this.renderer.resetState()
-    this.renderer.render(this.scene, this.camera)
-    this.renderer.resetState()
+    const renderer = this.renderer
+    renderCondiviso(_gl, renderer, () => renderer.render(this.scene, this.camera))
     if (this.fumi.length && !this.riduciMovimento && !document.hidden) this.map.triggerRepaint()
   }
 

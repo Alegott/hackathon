@@ -1,3 +1,4 @@
+import { convertFilter } from "@maplibre/maplibre-gl-style-spec"
 import type { DragEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Map, NavigationControl, ScaleControl, Popup, setWorkerUrl, type GeoJSONSource, type ExpressionSpecification } from "maplibre-gl"
@@ -45,7 +46,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   // Oggetto dello scenario che l'utente sta spostando: posizione provvisoria fino al rilascio.
   // Gesto a mano libera per tracciare una strada tenendo premuto il tasto sinistro.
   const disegnando = useRef<{ base: [number, number][]; campioni: [number, number][]; ultimoPx: [number, number] } | null>(null)
-  const trascinando = useRef<{ id: string; lonlat: [number, number]; mosso: boolean } | null>(null)
+  const trascinando = useRef<{ id: string; lonlat: [number, number]; inizioPx: [number, number]; mosso: boolean } | null>(null)
   const [pronta, setPronta] = useState(false)
   const [errore, setErrore] = useState(false)
   const [tridimensionale, setTridimensionale] = useState(true)
@@ -105,6 +106,13 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
           if (/water/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", "#9ad9e8")
           else if (/park|wood|forest/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", "#acd69d")
           else if (/residential/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", "#f3eee0")
+        }
+        // Fuori provincia restano strade e nomi dei centri abitati.
+        // Il filtro evita il posizionamento dei simboli e testi superflui.
+        if ((layer.type === "symbol" && layer["source-layer"] !== "place") ||
+            (layer.type === "line" && !/transportation|waterway/.test(layer["source-layer"] ?? ""))) {
+          const interno: ExpressionSpecification = ["within", confineProvincia.geometry]
+          map.setFilter(layer.id, layer.filter ? ["all", convertFilter(layer.filter), interno] : interno)
         }
         // I centri minori compaiono avvicinandosi; sotto, solo i riferimenti principali.
         if (layer.type === "symbol" && layer["source-layer"] === "place")
@@ -185,7 +193,13 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         if (map.getZoom() >= 13) {
           ;(map.getSource("edifici-vicenza") as GeoJSONSource).setData(assegnaComuni(ritagliaEdifici(edifici), trovaComune))
         }
+        const stradeFauna = vincoli("transportation").filter((f) =>
+          !/motorway|trunk|rail|ferry/.test(String(f.properties.class ?? "")) && !f.properties.brunnel)
+          .flatMap((f) => f.geometry.type === "LineString" ? [f.geometry.coordinates]
+            : f.geometry.type === "MultiLineString" ? f.geometry.coordinates : [])
+          .map((linea) => linea.map((p): [number, number] => [p[0]!, p[1]!]))
         const verdi: [number, number][] = []
+        const areeVerdi: [number, number][][][] = []
         if (vista === "comune") {
           for (const layer of ["landuse", "landcover", "park"]) {
             const features = map.querySourceFeatures("territorio-osm", { sourceLayer: layer })
@@ -194,6 +208,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
               const rings = f.geometry.type === "Polygon" ? [f.geometry.coordinates]
                 : f.geometry.type === "MultiPolygon" ? f.geometry.coordinates : []
               for (const polygon of rings) {
+                areeVerdi.push(polygon.map((ring) => ring.map((p): [number, number] => [p[0]!, p[1]!])) )
                 const ring = polygon[0]
                 if (!ring?.length) continue
                 const x = ring.reduce((n, p) => n + p[0]!, 0) / ring.length
@@ -203,6 +218,13 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
             }
           }
         }
+        vita.setPercorsiFauna(stradeFauna, areeVerdi)
+        vita.setPercorsiTraffico(vincoli("transportation").filter((f) =>
+          /^(primary|secondary|tertiary|minor|service|residential|unclassified)$/.test(String(f.properties.class ?? ""))
+          && !f.properties.brunnel)
+          .flatMap((f) => f.geometry.type === "LineString" ? [f.geometry.coordinates]
+            : f.geometry.type === "MultiLineString" ? f.geometry.coordinates : [])
+          .map((linea) => linea.map((p): [number, number] => [p[0]!, p[1]!])) )
         verdi.sort((a, b) => Math.hypot(a[0] - center.lng, a[1] - center.lat)
           - Math.hypot(b[0] - center.lng, b[1] - center.lat))
         const { clientWidth: w, clientHeight: h } = map.getContainer()
@@ -233,11 +255,11 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         filter: ["==", ["geometry-type"], "LineString"],
         paint: { "line-width": 18, "line-color": "#ffffff", "line-opacity": 0 },
       })
-      // Zona sensibile attorno a ogni modello 3D: segue la sua dimensione sullo schermo (cresce oltre lo zoom 15,5).
+      // Presa compatta: a zoom ravvicinato non deve coprire gli oggetti vicini.
       const raggioPresa: ExpressionSpecification = ["interpolate", ["exponential", 2], ["zoom"],
-        10, ["*", ["match", ["get", "tipo"], "nucleare", 1.5, "colonnine", 0.7, "strada", 0.4, 1], 45],
-        15.5, ["*", ["match", ["get", "tipo"], "nucleare", 1.5, "colonnine", 0.7, "strada", 0.4, 1], 45],
-        19, ["*", ["match", ["get", "tipo"], "nucleare", 1.5, "colonnine", 0.7, "strada", 0.4, 1], 45 * 2 ** 3.5]]
+        10, ["*", ["match", ["get", "tipo"], "nucleare", 1.5, "colonnine", 0.7, "strada", 0.4, 1], 45 / 2 ** 5.5],
+        15.5, ["*", ["match", ["get", "tipo"], "nucleare", 1.5, "colonnine", 0.7, "strada", 0.4, 1], 20],
+        19, ["*", ["match", ["get", "tipo"], "nucleare", 1.5, "colonnine", 0.7, "strada", 0.4, 1], 24]]
       map.addLayer({
         id: "infrastrutture-vive", type: "circle", source: "infrastrutture-vive", minzoom: 10,
         filter: ["==", ["geometry-type"], "Point"],
@@ -378,11 +400,11 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.on("mousedown", "infrastrutture-vive", (e) => {
         const st = store.getState()
         const id = e.features?.[0]?.properties?.id as string | undefined
-        if (st.modalita !== "scenario" || st.strumento === "rimuovi" || èTracciabile(st.strumento)) return
+        if (e.originalEvent.button !== 0 || st.modalita !== "scenario" || st.strumento === "rimuovi" || èTracciabile(st.strumento)) return
         if (!id || !st.scenario.aggiunte.some((a) => a.id === id && !a.strada && !a.ciclabile && !a.parco)) return
         e.preventDefault()
         map.dragPan.disable()
-        trascinando.current = { id, lonlat: [e.lngLat.lng, e.lngLat.lat], mosso: false }
+        trascinando.current = { id, lonlat: [e.lngLat.lng, e.lngLat.lat], inizioPx: [e.point.x, e.point.y], mosso: false }
         const rilascia = () => {
           const t = trascinando.current
           map.dragPan.enable()
@@ -401,6 +423,8 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.on("mousemove", (e) => {
         const t = trascinando.current
         if (!t) return
+        // Il tremolio del mouse durante un clic non deve impedire l'apertura della scheda.
+        if (!t.mosso && Math.hypot(e.point.x - t.inizioPx[0], e.point.y - t.inizioPx[1]) < 6) return
         t.lonlat = [e.lngLat.lng, e.lngLat.lat]
         t.mosso = true
         map.getCanvas().style.cursor = "grabbing"
@@ -566,6 +590,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   return (
     <div className="territorio" onDragOver={(e) => { if (modalita === "scenario") e.preventDefault() }} onDrop={rilascia}>
       <div ref={contenitore} className="territorio-canvas" aria-label="Mappa geografica 3D della provincia di Vicenza" />
+      <div className="territorio-testata">
       <div className="territorio-intro">
         <span className="territorio-eyebrow">PROVINCIA DI VICENZA · 114 COMUNI</span>
         <h2>{vista === "provincia" ? "Un territorio che respira." : dataset.comuni.find((c) => c.istat === selezionato)?.nome}</h2>
@@ -575,6 +600,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         <button disabled={!pronta} aria-pressed={tridimensionale} onClick={cambiaDimensione}>{tridimensionale ? "◈ 3D" : "◇ 2D"}</button>
         <button disabled={!pronta} aria-pressed={mostraVita} onClick={() => setMostraVita(!mostraVita)}>❧ Alberi e fauna</button>
         <button aria-pressed={modalita === "scenario"} onClick={() => store.getState().setModalita(modalita === "scenario" ? "realta" : "scenario")}>✧ {modalita === "scenario" ? "Scenario attivo" : "Crea uno scenario"}</button>
+      </div>
       </div>
       {scheda && modalita === "scenario" && (
         <SchedaImpatto id={scheda.id} x={scheda.x} y={scheda.y} larghezza={contenitore.current?.clientWidth ?? 800}

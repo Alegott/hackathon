@@ -47,17 +47,22 @@ it("limita l'ingombro allo zoom ravvicinato senza cambiare orbite o quota", asyn
   expect(attivi[0]!.scale.x * 1.3 / .2).toBeCloseTo(48, 8)
 })
 
-it("animali e uccelli restano statici con il trascorrere del tempo", async () => {
+it("gli animali avanzano sulle strade senza cambiare modelli o quota", async () => {
   const f = await prepara()
   f.frame(0, 0, contesto)
   f.gruppo.updateMatrixWorld(true)
   const posizioni = f.gruppo.children.filter((s) => s.visible).map((s) => s.position.clone())
-  f.frame(.1, 120, contesto)
-  expect(f.gruppo.children.filter((s) => s.visible).map((s) => s.position)).toEqual(posizioni)
+  f.setPercorsi([[[100, 200], [200, 200], [200, 300]]])
+  for (let i = 0; i < 100; i++) f.frame(.1, i / 10, contesto)
+  const animale = f.gruppo.children.find((s) => s.visible)!
+  expect(animale.position.distanceTo(posizioni[0]!)).toBeGreaterThan(5)
+  expect(animale.position.y).toBeCloseTo(200)
+  expect(animale.position.z).toBe(0)
 })
 
 it("non usa il centroide come ripiego quando non esistono punti sicuri", async () => {
-  const f = await prepara()
+  const f = new FaunaGltf()
+  await new Promise<void>((resolve) => f.avvia(resolve))
   f.configura({ terra: ["capriolo"], uccelli: 0, aquila: false, lince: false, spawnRate: 0 }, [], [0, 0], "024116")
   f.frame(0, 0, contesto)
   expect(f.gruppo.children.filter((s) => s.visible)).toHaveLength(0)
@@ -70,4 +75,52 @@ it("non sovrappone più animali sullo stesso punto e nasconde le ancore divenute
   expect(f.gruppo.children.filter((s) => s.visible)).toHaveLength(2)
   f.frame(0, 0, { ...contesto, dentro: () => false })
   expect(f.gruppo.children.filter((s) => s.visible)).toHaveLength(0)
+})
+
+
+it("non attraversa edifici o acqua anche quando la strada prosegue oltre", async () => {
+  const f = await prepara()
+  f.setPercorsi([[[100, 200], [200, 200]]])
+  const c = { ...contesto, dentro: (x: number) => x < 105 || x > 115 }
+  for (let i = 0; i < 400; i++) {
+    f.frame(.1, i / 10, c)
+    const animale = f.gruppo.children.find((s) => s.visible)!
+    expect(animale.position.x).toBeLessThan(105)
+  }
+})
+
+it("esplora il verde senza uscire dai suoi confini", async () => {
+  const f = await prepara()
+  const casuale = vi.spyOn(Math, "random").mockReturnValue(.5)
+  try {
+    const verde = (x: number, y: number) => x >= 100 && x <= 200 && y >= 190 && y <= 210
+    for (let i = 0; i < 100; i++) f.frame(.1, i / 10, { ...contesto, verde })
+    const animale = f.gruppo.children.find((s) => s.visible)!
+    expect(animale.position.x).toBeGreaterThan(120)
+    expect(verde(animale.position.x, animale.position.y)).toBe(true)
+  } finally { casuale.mockRestore() }
+})
+it("mantiene gli animali per dieci secondi quando le ancore spariscono durante lo zoom", async () => {
+  vi.useFakeTimers()
+  try {
+    const f = await prepara()
+    f.frame(0, 0, contesto)
+    const animale = f.gruppo.children.find((s) => s.visible)!
+    const posizione = animale.position.clone()
+    const dati = { terra: ["capriolo" as const], uccelli: 0, aquila: false, lince: false, spawnRate: 1 }
+    f.configura(dati, [], [100, 200], "024116")
+    vi.advanceTimersByTime(9000)
+    f.frame(0, 9, contesto)
+    expect(animale.visible).toBe(true)
+    f.configura(dati, [[500, 600]], [100, 200], "024116")
+    f.frame(0, 9, contesto)
+    expect(animale.position).toEqual(posizione)
+    f.configura(dati, [], [100, 200], "024116")
+    vi.advanceTimersByTime(10001)
+    f.frame(0, 20, contesto)
+    expect(animale.visible).toBe(false)
+    f.configura(dati, [[500, 600]], [100, 200], "024116")
+    f.frame(0, 20, contesto)
+    expect(animale.visible).toBe(true)
+  } finally { vi.useRealTimers() }
 })

@@ -206,7 +206,7 @@ export function Provincia() {
   const statoHover = hover && indici[hover.istat]
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div className="provincia-canvas">
       <Canvas
         camera={{
           position: DIREZIONE_CAMERA.clone().multiplyScalar(DISTANZA_PROVINCIA).toArray(),
