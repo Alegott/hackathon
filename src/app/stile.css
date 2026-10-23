@@ -628,3 +628,54 @@ input[type="checkbox"][switch]:focus-visible {
   .sim-tessere { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sim-chip { max-width: 100%; flex-wrap: wrap; padding-block: 8px; text-align: left; }
 }
+
+/* ───────── Macchina del tempo ───────── */
+.mappa > .tempo-apri, .mappa > .tempo-barra, .mappa > .tempo-finale { z-index: 5; }
+.mappa:has(.tempo-barra) .territorio-aiuto { display: none; }
+.tempo-apri { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; font-weight: 700; padding: 11px 20px; border-radius: 999px; border: 1px solid #ffffff40; color: #fff; background: linear-gradient(135deg, #0f3d32, #1f6b55); box-shadow: 0 6px 24px #0f3d3255; cursor: pointer; letter-spacing: .01em; }
+.tempo-apri:hover { box-shadow: 0 8px 30px #0f3d3288; transform: translateX(-50%) translateY(-1px); }
+.tempo-apri:focus-visible, .tempo-barra button:focus-visible, .tempo-finale button:focus-visible { outline: 3px solid #e7b64d; outline-offset: 3px; }
+.tempo-barra { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(760px, calc(100% - 32px)); box-sizing: border-box; padding: 14px 18px 10px; border-radius: 20px; color: #eef7f2; background: #0c1d18e8; backdrop-filter: blur(10px); box-shadow: 0 12px 40px #0006; border: 1px solid #ffffff1f; }
+.tempo-riga { display: flex; align-items: center; gap: 14px; }
+.tempo-play { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; background: #34d399; color: #062b20; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 0 0 6px #34d39926; }
+.tempo-play:hover { background: #6ee7b7; }
+.tempo-anno { flex: none; min-width: 3.2ch; font-size: 42px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tempo-cursore { flex: 1; min-width: 0; accent-color: #34d399; }
+.tempo-chiudi { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #ffffff33; background: transparent; color: #eef7f2; cursor: pointer; }
+.tempo-chiudi:hover { background: #ffffff1a; }
+.tempo-piani { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+.tempo-piani button { font: inherit; font-size: 12px; font-weight: 650; padding: 6px 12px; border-radius: 999px; border: 1px solid #ffffff33; background: transparent; color: #d7ebe1; cursor: pointer; }
+.tempo-piani button:hover { background: #ffffff14; }
+.tempo-piani button[aria-checked="true"] { background: #eef7f2; color: #0c1d18; border-color: #eef7f2; }
+.tempo-piani .tempo-piano--rischio[aria-checked="true"] { background: #fdba74; border-color: #fdba74; }
+.tempo-contatori { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tempo-contatore { padding: 8px 10px; border-radius: 12px; background: #ffffff0f; transition: background-color .4s; }
+.tempo-contatore--su { background: #34d39922; }
+.tempo-contatore--giu { background: #f9731626; }
+.tempo-contatore__etichetta { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: #a7c4b6; }
+.tempo-contatore strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.tempo-contatore small { font-size: 12px; font-weight: 600; color: #a7c4b6; }
+.tempo-contatore--su strong { color: #6ee7b7; }
+.tempo-contatore--giu strong { color: #fdba74; }
+.tempo-ipotesi { margin: 8px 0 0; font-size: 10.5px; color: #8fae9f; }
+.tempo-finale { position: absolute; right: 24px; top: 84px; width: min(400px, calc(100% - 32px)); box-sizing: border-box; padding: 18px 22px; border-radius: 20px; color: #0c1d18; background: #fffffff5; box-shadow: 0 16px 50px #0005; animation: tempo-entra .5s ease-out; }
+.tempo-finale__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #1f6b55; }
+.tempo-finale h3 { margin: 4px 0 10px; font-size: 22px; line-height: 1.2; }
+.tempo-finale dl { margin: 0; display: grid; gap: 6px; }
+.tempo-finale dl div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+.tempo-finale dt { color: #55646f; }
+.tempo-finale dd { margin: 0; font-variant-numeric: tabular-nums; }
+.tempo-finale__azioni { display: flex; gap: 8px; margin-top: 12px; }
+.tempo-finale__azioni button { font: inherit; font-size: 13px; font-weight: 650; padding: 8px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #0c1d18; cursor: pointer; }
+.tempo-finale__azioni button:first-child { background: #0f3d32; color: #fff; border-color: #0f3d32; }
+@keyframes tempo-entra { from { opacity: 0; transform: translateY(12px); } }
+@media (max-width: 640px) {
+  .tempo-contatori { grid-template-columns: repeat(2, 1fr); }
+  .tempo-anno { font-size: 30px; }
+  .tempo-finale { top: auto; right: 16px; bottom: 330px; }
+}
+@media (prefers-reduced-motion: reduce) { .tempo-finale { animation: none; } }
+
+/* Paesaggio sonoro */
+.territorio-ascolto { flex-basis: 100%; width: fit-content; font-size: 11.5px; color: #31594d; background: #ffffffe6; border: 1px solid #d9e4dc; padding: 6px 12px; border-radius: 999px; box-shadow: 0 3px 14px #244b4212; }
+.mappa:has(.pannello-comune) > .tempo-finale { right: auto; left: 28px; top: 280px; }

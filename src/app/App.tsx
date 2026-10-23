@@ -3,7 +3,10 @@ import { dataset, èMock } from "../data/dataset"
 import { BarraStrumenti } from "../diorama/BarraStrumenti"
 import { Legenda } from "../map/Legenda"
 import type { Sezione } from "../store/store"
-import { store, useApp } from "./useApp"
+import { store, storeTempo, useApp, useTempo } from "./useApp"
+import { PIANI } from "../engine/tempo"
+import { scenarioVuoto } from "../engine"
+import { MacchinaDelTempo } from "../map/MacchinaDelTempo"
 import { useTema, type Tema } from "./tema"
 import { PannelloComune } from "../ui/PannelloComune"
 import { SezioneCasa } from "../ui/SezioneCasa"
@@ -30,6 +33,7 @@ export function App() {
   const sezione = useApp((s) => s.sezione)
   const vista = useApp((s) => s.vista)
   const modalita = useApp((s) => s.modalita)
+  const tempoAttivo = useTempo((s) => s.attivo)
   const [mostraRoadmap, setMostraRoadmap] = useState(false)
   const [tipoMappa, setTipoMappa] = useState<"territorio" | "diorama">("territorio")
   const modalitaDiorama = tipoMappa === "diorama"
@@ -51,6 +55,17 @@ export function App() {
       case 2:
         setMostraRoadmap(true)
         break
+      case 3: {
+        // Macchina del tempo sulla provincia con il "Piano clima", subito in riproduzione.
+        st.tornaAllaProvincia()
+        st.setSezione("mappa")
+        const t = storeTempo.getState()
+        const base = st.modalita === "scenario" ? st.scenario : scenarioVuoto()
+        if (!t.attivo) t.apri(dataset, base, st.casaUtente ?? undefined)
+        storeTempo.getState().scegliPiano(dataset, PIANI.find((p) => p.id === "piano-clima")!, base, st.casaUtente ?? undefined)
+        window.setTimeout(() => storeTempo.getState().play(), 1300)
+        break
+      }
     }
   }
 
@@ -94,6 +109,9 @@ export function App() {
           <button type="button" onClick={() => eseguiPassoDemo(2)} title="2. Slide di roadmap">
             2. Roadmap
           </button>
+          <button type="button" onClick={() => eseguiPassoDemo(3)} title="3. Macchina del tempo fino al 2040">
+            3. 2040
+          </button>
         </div>
 
         {èMock && <span className="badge-mock">dati di prova</span>}
@@ -115,8 +133,9 @@ export function App() {
               ← Torna alla provincia
             </button>
           )}
-          {(vista === "comune" || modalita === "scenario") && <BarraStrumenti />}
+          {(vista === "comune" || modalita === "scenario") && !tempoAttivo && <BarraStrumenti />}
           <PannelloComune />
+          <MacchinaDelTempo />
         </div>
         {sezione === "casa" && <SezioneCasa />}
         {sezione === "simulazione" && <SezioneSimulazione />}

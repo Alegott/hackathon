@@ -5,7 +5,7 @@ import { Map, NavigationControl, ScaleControl, Popup, setWorkerUrl, type GeoJSON
 import type { FeatureCollection } from "geojson"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 import "maplibre-gl/dist/maplibre-gl.css"
-import { store, useApp, useIndici } from "../app/useApp"
+import { store, storeTempo, useApp, useIndici, useTempo } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import { aCoordinateGeografiche, aCoordinateMetriche, CENTRI_PRINCIPALI, coloreIndice, confiniGeografici, estensioneGeografica } from "./territorio"
 import { confineProvincia, esternoProvincia, preparaHabitat, ritagliaEdifici } from "./ecosistema"
@@ -19,6 +19,8 @@ import { SchedaImpatto } from "./SchedaImpatto"
 import { INDUSTRIE, STRADE } from "../engine/costanti"
 import { èTracciabile, semplifica, pulisciTracciato, terminaTracciato, TIPI_TRASCINABILI } from "./tracciato"
 import type { Aggiunta, TipoIndustria, TipoInfra } from "../types"
+import { descriviLivelli, livelliZona } from "../audio/paesaggio"
+import { PaesaggioSonoro } from "../audio/PaesaggioSonoro"
 
 setWorkerUrl(workerUrl)
 
@@ -52,6 +54,10 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   const [tridimensionale, setTridimensionale] = useState(true)
   const [mostraVita, setMostraVita] = useState(true)
   const [zoom, setZoom] = useState(9)
+  // Paesaggio sonoro: segue il comune al centro della mappa (o quello aperto), altrimenti la provincia.
+  const [suoni, setSuoni] = useState(false)
+  const audio = useRef<PaesaggioSonoro | null>(null)
+  const [comuneCentro, setComuneCentro] = useState<string | null>(null)
   const indici = useIndici()
   const vista = useApp((s) => s.vista)
   const selezionato = useApp((s) => s.comuneSelezionato)
@@ -61,6 +67,11 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   const strumento = useApp((s) => s.strumento)
   const bozzaStrada = useApp((s) => s.bozzaStrada)
   const tipoStrada = useApp((s) => s.tipoStrada)
+  const tempoAttivo = useTempo((s) => s.attivo)
+  const inRiproduzione = useTempo((s) => s.inRiproduzione)
+  const annoTempo = useTempo((s) => Math.floor(s.anno + 1e-6))
+  const pianoTempo = useTempo((s) => s.piano)
+  const annoHabitat = useRef<number | null>(null)
   const confini = useMemo(() => confiniGeografici(dataset.comuni), [])
   const estensione = useMemo(() => estensioneGeografica(confini), [confini])
   const statoCorrente = useRef({ indici, selezionato, vista, mostraVita })
@@ -449,6 +460,10 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.on("mouseleave", "indice-comuni", () => { map.getCanvas().style.cursor = ""; popup.remove() })
       map.on("movestart", () => setScheda(null))
       map.on("zoomend", () => setZoom(map.getZoom()))
+      map.on("moveend", () => {
+        const c = map.getCenter()
+        setComuneCentro(map.getZoom() >= 11 ? trovaComune([c.lng, c.lat]) : null)
+      })
       setPronta(true)
       setErrore(false)
     })
@@ -476,8 +491,36 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       })
     // Ogni edificio ha il colore della fascia del proprio comune, su tutta la mappa.
     map.setPaintProperty("edifici-reali-3d", "fill-extrusion-color", coloriEdifici(indici, "#c5cdb7") as never)
+    // In riproduzione la macchina del tempo cambia gli indici più volte all'anno: alberi e fauna
+    // (costosi da rigenerare) si aggiornano solo al cambio d'anno.
+    const t = storeTempo.getState()
+    const anno = t.attivo ? Math.floor(t.anno + 1e-6) : null
+    if (t.inRiproduzione && anno === annoHabitat.current) return
+    annoHabitat.current = anno
     aggiornaHabitat.current()
   }, [pronta, indici, selezionato])
+
+  // Aprendo la macchina del tempo la provincia si inquadra sopra la barra; chiudendola si torna alla vista solita.
+  const tempoPrima = useRef(false)
+  useEffect(() => {
+    const map = mappa.current
+    if (!pronta || !map || vista !== "provincia" || tempoPrima.current === tempoAttivo) return
+    tempoPrima.current = tempoAttivo
+    map.fitBounds(estensione, tempoAttivo
+      ? { padding: { top: 110, bottom: 250, left: 60, right: 60 }, pitch: tridimensionale ? 45 : 0, bearing: -12, duration: 1200 }
+      : { padding: 70, pitch: tridimensionale ? 40 : 0, bearing: -12, duration: 1200 })
+  }, [pronta, tempoAttivo, vista, estensione, tridimensionale])
+
+  // Riproduzione della macchina del tempo: a vista provincia la camera ruota lentamente.
+  useEffect(() => {
+    const map = mappa.current
+    if (!pronta || !map || !inRiproduzione || vista !== "provincia") return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const { anno, piano } = storeTempo.getState()
+    const durata = Math.max(1000, (piano.annoFine - anno) * 800)
+    map.easeTo({ bearing: map.getBearing() + 28, pitch: tridimensionale ? 52 : 0, duration: durata, easing: (x) => x })
+    return () => { map.stop() }
+  }, [pronta, inRiproduzione, vista, tridimensionale])
 
   useEffect(() => {
     if (pronta) mappa.current?.setSky(JSON.parse(chiaveCielo))
@@ -581,6 +624,38 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
 
   useEffect(() => { if (sezione === "mappa") mappa.current?.resize() }, [sezione])
 
+  const comuneAscolto = vista === "comune" && selezionato ? selezionato : comuneCentro
+  const zonaSonora = useMemo(() => {
+    if (!comuneAscolto) return { nome: "Provincia di Vicenza", livelli: livelliZona({ stato: statoMedio(indici), industrie: 0, strade: 0.5 }) }
+    const rimosse = new Set(modalita === "scenario" ? scenario.rimozioni : [])
+    const presenti = [
+      ...dataset.infrastrutture.filter((i) => !rimosse.has(i.id)),
+      ...(modalita === "scenario" ? scenario.aggiunte : []),
+    ].filter((i) => i.comune === comuneAscolto)
+    const conta = (tipo: TipoInfra) => presenti.filter((i) => i.tipo === tipo).length
+    return {
+      nome: dataset.comuni.find((c) => c.istat === comuneAscolto)?.nome ?? "",
+      livelli: livelliZona({ stato: indici[comuneAscolto] ?? null, industrie: conta("industria"), strade: conta("strada") }),
+    }
+  }, [comuneAscolto, indici, modalita, scenario])
+
+  useEffect(() => { if (suoni) audio.current?.imposta(zonaSonora.livelli) }, [suoni, zonaSonora])
+  useEffect(() => () => { audio.current?.chiudi(); audio.current = null }, [])
+
+  const cambiaSuoni = () => {
+    if (suoni) {
+      audio.current?.chiudi()
+      audio.current = null
+      setSuoni(false)
+      return
+    }
+    // L'AudioContext nasce dentro il clic: i browser bloccano l'audio senza un gesto dell'utente.
+    audio.current = new PaesaggioSonoro()
+    audio.current.imposta(zonaSonora.livelli)
+    void audio.current.riprendi()
+    setSuoni(true)
+  }
+
   const cambiaDimensione = () => {
     const nuovo = !tridimensionale
     setTridimensionale(nuovo)
@@ -593,13 +668,20 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       <div className="territorio-testata">
       <div className="territorio-intro">
         <span className="territorio-eyebrow">PROVINCIA DI VICENZA · 114 COMUNI</span>
-        <h2>{vista === "provincia" ? "Un territorio che respira." : dataset.comuni.find((c) => c.istat === selezionato)?.nome}</h2>
-        <p>{zoom < 13 ? "I colori raccontano l’ambiente. La vita cambia insieme a lui." : "Aria, verde e fauna: il tuo comune prende vita."}</p>
+        {tempoAttivo ? <>
+          <h2>{vista === "provincia" ? "Vicenza" : dataset.comuni.find((c) => c.istat === selezionato)?.nome} nel {annoTempo}</h2>
+          <p>{pianoTempo.nome}: {pianoTempo.descrizione.toLowerCase()}.</p>
+        </> : <>
+          <h2>{vista === "provincia" ? "Un territorio che respira." : dataset.comuni.find((c) => c.istat === selezionato)?.nome}</h2>
+          <p>{zoom < 13 ? "I colori raccontano l’ambiente. La vita cambia insieme a lui." : "Aria, verde e fauna: il tuo comune prende vita."}</p>
+        </>}
       </div>
       <div className="territorio-controlli" aria-label="Aspetto della mappa">
         <button disabled={!pronta} aria-pressed={tridimensionale} onClick={cambiaDimensione}>{tridimensionale ? "◈ 3D" : "◇ 2D"}</button>
         <button disabled={!pronta} aria-pressed={mostraVita} onClick={() => setMostraVita(!mostraVita)}>❧ Alberi e fauna</button>
+        <button aria-pressed={suoni} onClick={cambiaSuoni}>{suoni ? "🔊 Suoni" : "🔈 Suoni"}</button>
         <button aria-pressed={modalita === "scenario"} onClick={() => store.getState().setModalita(modalita === "scenario" ? "realta" : "scenario")}>✧ {modalita === "scenario" ? "Scenario attivo" : "Crea uno scenario"}</button>
+        {suoni && <span className="territorio-ascolto" role="status">In ascolto: <b>{zonaSonora.nome}</b> · {descriviLivelli(zonaSonora.livelli)}</span>}
       </div>
       </div>
       {scheda && modalita === "scenario" && (

@@ -1,0 +1,158 @@
+import { useEffect } from "react"
+import { dataset } from "../data/dataset"
+import { scenarioVuoto } from "../engine"
+import { PIANI, type Riepilogo } from "../engine/tempo"
+import { store, storeTempo, useApp, useMomento, useTempo } from "../app/useApp"
+
+// Durata di un anno in riproduzione: 2025 → 2040 in circa 12 secondi.
+const MS_PER_ANNO = 800
+// Passo con cui l'anno avanza durante la riproduzione: limita i ricalcoli della mappa.
+const PASSO = 0.2
+
+const num = (n: number, decimali = 0) => n.toLocaleString("it-IT", { minimumFractionDigits: decimali, maximumFractionDigits: decimali })
+const buoni = (r: Riepilogo) => r.perFascia.ottima
+
+function baseCorrente() {
+  const st = store.getState()
+  return { base: st.modalita === "scenario" ? st.scenario : scenarioVuoto(), casa: st.casaUtente ?? undefined }
+}
+
+function Contatore({ etichetta, valore, decimali = 0, unita, partenza, meglioSeScende = false }: {
+  etichetta: string; valore: number; decimali?: number; unita: string; partenza: number; meglioSeScende?: boolean
+}) {
+  const delta = valore - partenza
+  const buono = meglioSeScende ? delta < -0.05 : delta > 0.05
+  const cattivo = meglioSeScende ? delta > 0.05 : delta < -0.05
+  return (
+    <div className={`tempo-contatore ${buono ? "tempo-contatore--su" : cattivo ? "tempo-contatore--giu" : ""}`}>
+      <span className="tempo-contatore__etichetta">{etichetta}</span>
+      <strong>{num(valore, decimali)}<small>{unita}</small></strong>
+    </div>
+  )
+}
+
+export function MacchinaDelTempo() {
+  const attivo = useTempo((s) => s.attivo)
+  const inRiproduzione = useTempo((s) => s.inRiproduzione)
+  const piano = useTempo((s) => s.piano)
+  const concluso = useTempo((s) => s.concluso)
+  const fot = useTempo((s) => s.fotogrammi)
+  const momento = useMomento()
+  const sezione = useApp((s) => s.sezione)
+
+  // Riproduzione: l'anno avanza con il tempo reale, a passi discreti.
+  useEffect(() => {
+    if (!inRiproduzione) return
+    let frame = 0
+    let ultimo = performance.now()
+    let anno = storeTempo.getState().anno
+    const passo = (ora: number) => {
+      anno += (ora - ultimo) / MS_PER_ANNO
+      ultimo = ora
+      const st = storeTempo.getState()
+      if (anno >= st.piano.annoFine) return st.concludi()
+      const q = Math.floor(anno / PASSO) * PASSO
+      if (Math.abs(q - st.anno) > 1e-6) st.setAnno(q)
+      frame = requestAnimationFrame(passo)
+    }
+    frame = requestAnimationFrame(passo)
+    return () => cancelAnimationFrame(frame)
+  }, [inRiproduzione])
+
+  // La barra spaziatrice avvia e ferma la riproduzione mentre la macchina è aperta.
+  useEffect(() => {
+    if (!attivo) return
+    const tasto = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t?.closest("input, textarea, select, button")) return
+      if (e.key === " ") {
+        e.preventDefault()
+        const st = storeTempo.getState()
+        if (st.inRiproduzione) st.pausa()
+        else st.play()
+      } else if (e.key === "Escape") storeTempo.getState().chiudi()
+    }
+    window.addEventListener("keydown", tasto)
+    return () => window.removeEventListener("keydown", tasto)
+  }, [attivo])
+
+  if (sezione !== "mappa") return null
+
+  if (!attivo || !momento || !fot.length) {
+    return (
+      <button type="button" className="tempo-apri" onClick={() => {
+        const { base, casa } = baseCorrente()
+        storeTempo.getState().apri(dataset, base, casa)
+      }}>
+        <span aria-hidden="true">🕰</span> Viaggia al 2040
+      </button>
+    )
+  }
+
+  const inizio = fot[0]!.riepilogo
+  const fine = fot.at(-1)!.riepilogo
+  const r = momento.riepilogo
+  const annoIntero = Math.floor(momento.anno + 1e-6)
+  const st = storeTempo.getState()
+
+  return (
+    <>
+      {concluso && (
+        <section className="tempo-finale" aria-labelledby="tempo-finale-titolo">
+          <span className="tempo-finale__eyebrow">{piano.nome} · {piano.annoInizio} → {piano.annoFine}</span>
+          <h3 id="tempo-finale-titolo">
+            {fine.indiceMedio < inizio.indiceMedio
+              ? `L'indice medio scende da ${num(inizio.indiceMedio)} a ${num(fine.indiceMedio)}`
+              : `${buoni(fine)} comuni su 114 in fascia ottima`}
+          </h3>
+          <dl>
+            <div><dt>PM10 medio</dt><dd>{num(inizio.pm10Medio, 1)} → <b>{num(fine.pm10Medio, 1)}</b> µg/m³</dd></div>
+            <div><dt>Case con fotovoltaico</dt><dd>{num(inizio.pctFV)}% → <b>{num(fine.pctFV)}%</b></dd></div>
+            <div><dt>Indice ambientale medio</dt><dd>{num(inizio.indiceMedio)} → <b>{num(fine.indiceMedio)}</b></dd></div>
+          </dl>
+          <div className="tempo-finale__azioni">
+            <button type="button" onClick={() => st.play()}>↺ Rivedi</button>
+            <button type="button" onClick={() => st.chiudi()}>Torna al presente</button>
+          </div>
+        </section>
+      )}
+      <section className="tempo-barra" aria-label="Macchina del tempo">
+        <div className="tempo-riga">
+          <button type="button" className="tempo-play" onClick={() => (inRiproduzione ? st.pausa() : st.play())}
+            aria-label={inRiproduzione ? "Pausa" : "Avvia la riproduzione"}>
+            {inRiproduzione ? "❚❚" : "▶"}
+          </button>
+          <div className="tempo-anno" aria-live="off">{annoIntero}</div>
+          <input type="range" className="tempo-cursore" min={piano.annoInizio} max={piano.annoFine} step={0.1}
+            value={momento.anno} aria-label="Anno"
+            onChange={(e) => { st.pausa(); st.setAnno(Number(e.target.value)) }} />
+          <button type="button" className="tempo-chiudi" onClick={() => st.chiudi()} aria-label="Torna al presente" title="Torna al presente (Esc)">✕</button>
+        </div>
+        <div className="tempo-piani" role="radiogroup" aria-label="Piano">
+          {PIANI.map((p) => (
+            <button key={p.id} type="button" role="radio" aria-checked={p.id === piano.id} title={p.descrizione}
+              className={p.id === "passo-indietro" ? "tempo-piano--rischio" : ""}
+              onClick={() => {
+                const { base, casa } = baseCorrente()
+                st.scegliPiano(dataset, p, base, casa)
+                storeTempo.getState().play()
+              }}>
+              {p.nome}
+            </button>
+          ))}
+        </div>
+        <div className="tempo-contatori">
+          <Contatore etichetta="Comuni in fascia ottima" valore={r.perFascia.ottima} unita="/114" partenza={inizio.perFascia.ottima} />
+          <Contatore etichetta="PM10 medio" valore={r.pm10Medio} decimali={1} unita=" µg/m³" partenza={inizio.pm10Medio} meglioSeScende />
+          <Contatore etichetta="Case con fotovoltaico" valore={r.pctFV} unita="%" partenza={inizio.pctFV} />
+          <Contatore etichetta="Indice medio" valore={r.indiceMedio} unita="/100" partenza={inizio.indiceMedio} />
+        </div>
+        <p className="tempo-ipotesi">
+          Proiezione illustrativa · PM10 {piano.trendPm10PctAnno > 0 ? "+" : ""}{num(piano.trendPm10PctAnno, 1)}% l'anno
+          {piano.obiettivi.pctFV > 0 && <> · al {piano.annoFine}: fotovoltaico {piano.obiettivi.pctFV}%, senza gas {piano.obiettivi.pctSenzaGas}%, isolamento buono {piano.obiettivi.pctIsolamentoBuono}% delle case</>}
+          {" "}· modello semplificato
+        </p>
+      </section>
+    </>
+  )
+}
