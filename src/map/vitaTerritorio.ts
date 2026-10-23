@@ -1,7 +1,8 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson"
 import { calcolaSpawnSpecieRare } from "../diorama/specie"
 import { puntoInPoligono } from "../diorama/geometria"
-import { PRESET_PROVINCIA, presetFascia, type PresetVisivo } from "../diorama/preset"
+import { PRESET_PROVINCIA, presetFascia } from "../diorama/preset"
+import { sostenibilitaStato } from "./sostenibilita"
 import { fasciaDa } from "../engine/territorio"
 import type { Comune, StatoComune } from "../types"
 import { aCoordinateMetriche, coloreIndice } from "./territorio"
@@ -20,9 +21,9 @@ export type Fauna = {
 }
 
 // Quanta e quale fauna mostrare in un comune. Dipende solo dallo stato calcolato dal motore:
-// il numero segue il preset della fascia, le specie rare le regole di spawn della SPEC di Dev 5.
+// il numero segue il totale di sostenibilit?; le specie rare mantengono le condizioni ambientali.
 export function composizioneFauna(stato: StatoComune): Fauna {
-  const preset = presetFascia(stato.fascia)
+  const preset = sostenibilitaStato(stato)
   const nTerra = Math.round(preset.animali)
   const uccelli = Math.round(preset.uccelli)
   const { spawnRate } = calcolaSpawnSpecieRare(stato)
@@ -56,7 +57,7 @@ const mescola = (a: [number, number, number], b: [number, number, number], t: nu
 // Cielo e foschia per MapLibre (`setSky`) a partire dal preset della fascia: la stessa fonte del
 // diorama, quindi cielo, nebbia e nuvole peggiorano insieme all'indice.
 export function atmosferaDaStato(stato: StatoComune | null): Atmosfera {
-  const p: PresetVisivo = stato ? presetFascia(stato.fascia) : { ...PRESET_PROVINCIA, cielo: presetFascia("ottima").cielo, nebbia: 0.08 }
+  const p = stato ? sostenibilitaStato(stato) : { ...PRESET_PROVINCIA, cielo: presetFascia("ottima").cielo, nebbia: 0.08 }
   const foschiaDensa = Math.min(1, Math.max(0, p.nebbia))
   const orizzonte = mescola(p.cielo, [0.96, 0.97, 0.98], 0.55 * (1 - foschiaDensa))
   return {

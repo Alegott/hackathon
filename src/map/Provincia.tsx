@@ -8,7 +8,7 @@ import type { Comune, StatoComune } from "../types"
 import { Diorama } from "../diorama/Diorama"
 import { misuraComune } from "../diorama/misura"
 import { altezzaComune } from "./altezza"
-import { coloreFascia } from "./fasce"
+import { colorePunteggio } from "./fasce"
 import { creaProiezione, type Proiezione } from "./scena"
 
 const DIMENSIONE = 24
@@ -110,7 +110,7 @@ function ComuneMesh({
     [estrusioni, bordi],
   )
 
-  const coloreBase = coloreFascia(stato.fascia)
+  const coloreBase = colorePunteggio(stato.totale)
 
   // Sfumatura orografica realistica (Prealpi / Altopiano a nord più roccioso-fresco, pianura a sud)
   const colore = useMemo(() => {

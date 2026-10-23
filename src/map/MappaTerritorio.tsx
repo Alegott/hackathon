@@ -6,7 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css"
 import { store, useApp, useIndici } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import { aCoordinateGeografiche, aCoordinateMetriche, CENTRI_PRINCIPALI, coloreIndice, confiniGeografici, estensioneGeografica } from "./territorio"
-import { confineProvincia, percorsoProvincia, preparaHabitat, ritagliaEdifici } from "./ecosistema"
+import { confineProvincia, esternoProvincia, preparaHabitat, ritagliaEdifici } from "./ecosistema"
 import { EcosistemaLayer } from "./EcosistemaLayer"
 import { assegnaComuni, atmosferaDaStato, coloriEdifici, creaTrovaComune, metriPerPixel, statoMedio } from "./vitaTerritorio"
 import { azioneDaClic } from "../diorama/build"
@@ -16,8 +16,6 @@ setWorkerUrl(workerUrl)
 export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   const contenitore = useRef<HTMLDivElement>(null)
   const mappa = useRef<Map | null>(null)
-  const esterno = useRef<HTMLDivElement>(null)
-  const atmosfera = useRef<HTMLDivElement>(null)
   const ecosistema = useRef<EcosistemaLayer | null>(null)
   const aggiornaHabitat = useRef<() => void>(() => {})
   const [pronta, setPronta] = useState(false)
@@ -39,7 +37,6 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   // Cielo, foschia e nuvole seguono l'indice del comune aperto, o la media dell'intera provincia.
   const statoAtmosfera = vista === "comune" && selezionato ? indici[selezionato] : statoMedio(indici)
   const atmosferaCorrente = atmosferaDaStato(statoAtmosfera ?? null)
-  const foschia = atmosferaCorrente.foschia
   const chiaveCielo = JSON.stringify(atmosferaCorrente.sky)
 
   useEffect(() => {
@@ -65,14 +62,6 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
     map.addControl(new NavigationControl({ visualizePitch: true }), "bottom-right")
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right")
     const popup = new Popup({ closeButton: false, closeOnClick: true, offset: 14, className: "territorio-popup" })
-    const ritaglia = () => {
-      const path = percorsoProvincia((p) => map.project(p))
-      const { clientWidth: w, clientHeight: h } = map.getContainer()
-      if (esterno.current) esterno.current.style.clipPath = `path(evenodd, "M0,0H${w}V${h}H0Z${path}")`
-      if (atmosfera.current) atmosfera.current.style.clipPath = `path(evenodd, "${path}")`
-    }
-    map.on("move", ritaglia)
-    map.on("resize", ritaglia)
     let timerHabitat = 0
     const timeout = window.setTimeout(() => { if (!map.isStyleLoaded()) setErrore(true) }, 20000)
     map.on("load", () => {
@@ -94,6 +83,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.addSource("territorio-osm", { type: "vector", url: "https://tiles.openfreemap.org/planet" })
       map.addSource("comuni-vicenza", { type: "geojson", data: confini })
       map.addSource("provincia-vicenza", { type: "geojson", data: confineProvincia })
+      map.addSource("esterno-provincia", { type: "geojson", data: esternoProvincia })
       map.addSource("infrastrutture-vive", { type: "geojson", data: { type: "FeatureCollection", features: [] } })
       map.addSource("edifici-vicenza", { type: "geojson", data: { type: "FeatureCollection", features: [] } })
       map.addSource("rilievo", {
@@ -143,7 +133,10 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       const vita = new EcosistemaLayer()
       ecosistema.current = vita
       map.addLayer(vita, primaEtichetta)
+      map.addLayer({ id: "esterno-provincia", type: "fill", source: "esterno-provincia",
+        paint: { "fill-color": "#dfe7e2", "fill-opacity": .72 } }, primaEtichetta)
       aggiornaHabitat.current = () => {
+        if (map.isMoving()) return
         const { indici, selezionato, vista } = statoCorrente.current
         const bounds = map.getBounds()
         const center = map.getCenter()
@@ -172,23 +165,16 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         verdi.sort((a, b) => Math.hypot(a[0] - center.lng, a[1] - center.lat)
           - Math.hypot(b[0] - center.lng, b[1] - center.lat))
         const { clientWidth: w, clientHeight: h } = map.getContainer()
-        // Punti dello schermo dove non c'è nessun edificio: li usano alberi e animali.
-        const libero: [number, number][] = []
-        if (vista === "comune") {
-          for (let i = 0; i < 90 && libero.length < 40; i++) {
-            const x = w * (0.08 + 0.62 * Math.random()), y = h * (0.4 + 0.55 * Math.random())
-            if (map.queryRenderedFeatures([x, y], { layers: ["edifici-reali-3d"] }).length) continue
-            const g = map.unproject([x, y])
-            libero.push([g.lng, g.lat])
-          }
-        }
         const raggioVista = 0.5 * Math.hypot(w, h) * metriPerPixel(map.getZoom(), center.lat) * 0.6
         vita.aggiorna(preparaHabitat(dataset.comuni, indici, vista === "comune" ? selezionato : null,
-          [center.lng, center.lat], verdi, raggioVista, libero), vista === "comune")
+          [center.lng, center.lat], verdi, raggioVista), vista === "comune")
       }
-      map.on("moveend", () => aggiornaHabitat.current())
+      map.on("moveend", () => {
+        window.clearTimeout(timerHabitat)
+        timerHabitat = window.setTimeout(() => aggiornaHabitat.current(), 120)
+      })
       map.on("sourcedata", (e) => {
-        if (e.sourceId !== "territorio-osm" || !e.isSourceLoaded) return
+        if (e.sourceId !== "territorio-osm" || !e.isSourceLoaded || map.isMoving()) return
         window.clearTimeout(timerHabitat)
         timerHabitat = window.setTimeout(() => aggiornaHabitat.current(), 400)
       })
@@ -237,7 +223,6 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.on("zoomend", () => setZoom(map.getZoom()))
       setPronta(true)
       setErrore(false)
-      ritaglia()
     })
     const observer = new ResizeObserver(() => map.resize())
     observer.observe(contenitore.current)
@@ -317,8 +302,6 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   return (
     <div className="territorio">
       <div ref={contenitore} className="territorio-canvas" aria-label="Mappa geografica 3D della provincia di Vicenza" />
-      <div ref={esterno} className="territorio-esterno" aria-hidden="true" />
-      <div ref={atmosfera} className="territorio-atmosfera" aria-hidden="true" style={{ opacity: mostraVita ? foschia * .45 : 0 }} />
       <div className="territorio-intro">
         <span className="territorio-eyebrow">PROVINCIA DI VICENZA · 114 COMUNI</span>
         <h2>{vista === "provincia" ? "Un territorio che respira." : dataset.comuni.find((c) => c.istat === selezionato)?.nome}</h2>

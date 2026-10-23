@@ -13,7 +13,8 @@ import { Nuvole } from "./Cielo"
 import { Fauna } from "./Fauna"
 import { CasaMesh, Infrastruttura, TrattoStradaleMesh } from "./Modelli"
 import { misuraComune } from "./misura"
-import { avanzaPreset, PRESET_PROVINCIA, presetFascia, type PresetVisivo } from "./preset"
+import { avanzaPreset, PRESET_PROVINCIA, type PresetVisivo } from "./preset"
+import { sostenibilitaStato } from "../map/sostenibilita"
 import {
   calcolaOstacoliCompleti,
   calcolaPosizioniCase,
@@ -47,7 +48,7 @@ export function Diorama({ proiezione }: { proiezione: Proiezione }) {
   const stato = istat ? indici[istat] : undefined
   const attivo = vista === "comune" && !!comune && !!stato && !!misura
 
-  const obiettivo = attivo && stato ? presetFascia(stato.fascia) : PRESET_PROVINCIA
+  const obiettivo = attivo && stato ? sostenibilitaStato(stato) : PRESET_PROVINCIA
   const corrente = useRef<PresetVisivo>(PRESET_PROVINCIA)
   const dimensioneRif = misura?.dimensione ?? 1000
   const materialeTerreno = useRef<THREE.MeshStandardMaterial>(null)

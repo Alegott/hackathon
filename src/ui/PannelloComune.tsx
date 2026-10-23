@@ -1,7 +1,7 @@
 import React from "react"
 import { dataset } from "../data/dataset"
 import { store, useApp, useIndici } from "../app/useApp"
-import { coloreFascia, etichettaFascia } from "../map/fasce"
+import { colorePunteggio, etichettaFascia } from "../map/fasce"
 import { DELTA_INFRA } from "../engine/costanti"
 import { calcolaSpawnSpecieRare } from "../diorama/Fauna"
 import type { TipoInfra } from "../types"
@@ -32,7 +32,7 @@ export const PannelloComune: React.FC = () => {
   if (!c || !s) return null
 
   const mostraScenario = modalita === "scenario" || s.scenario !== 0
-  const colore = coloreFascia(s.fascia)
+  const colore = colorePunteggio(s.totale)
   const rimozioniSet = new Set(scenario.rimozioni)
   const infraReali = dataset.infrastrutture.filter((i) => i.comune === c.istat)
   const infraAggiunte = scenario.aggiunte.filter(

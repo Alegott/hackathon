@@ -8,15 +8,16 @@ const stato = (totale: number, fascia: Fascia, extra: Partial<StatoComune> = {})
 })
 
 describe("composizioneFauna", () => {
-  it("fascia ottima: sei animali a terra nell'ordine capriolo, volpe, cervo, lupo, e dieci uccelli", () => {
+  it("indice 90: ventuno animali distribuiti per specie e trentadue uccelli", () => {
     const f = composizioneFauna(stato(90, "ottima"))
-    expect(f.terra).toEqual(["capriolo", "volpe", "cervo", "lupo", "capriolo", "volpe"])
-    expect(f.uccelli).toBe(10)
+    expect(f.terra).toHaveLength(21)
+    expect(f.terra.slice(0, 4)).toEqual(["capriolo", "volpe", "cervo", "lupo"])
+    expect(f.uccelli).toBe(32)
   })
-  it("fascia media: pochi animali (capriolo, volpe) e tre uccelli", () => {
+  it("indice 50: nove animali e quattordici uccelli", () => {
     const f = composizioneFauna(stato(50, "media"))
-    expect(f.terra).toEqual(["capriolo", "volpe"])
-    expect(f.uccelli).toBe(3)
+    expect(f.terra).toHaveLength(9)
+    expect(f.uccelli).toBe(14)
   })
   it("fascia pessima: nessun animale e nessun uccello, nemmeno le specie rare", () => {
     expect(composizioneFauna(stato(10, "pessima"))).toEqual({ terra: [], uccelli: 0, aquila: false, lince: false, spawnRate: 0 })
@@ -36,7 +37,7 @@ describe("composizioneFauna", () => {
     expect(f.spawnRate).toBe(0)
     expect(f.aquila).toBe(false)
     expect(f.lince).toBe(false)
-    expect(f.terra).toHaveLength(6)
+    expect(f.terra).toHaveLength(20)
   })
 })
 
@@ -52,14 +53,14 @@ describe("atmosferaDaStato", () => {
     expect(b!).toBeGreaterThan(r!)
     expect(a.foschia).toBe(0)
     expect(a.sky["fog-ground-blend"]).toBeLessThan(0.1)
-    expect(a.nuvole.grigio).toBe(0)
+    expect(a.nuvole.grigio).toBeCloseTo(.1)
   })
   it("aria pessima: foschia fitta a terra, cielo scuro e nuvole scure", () => {
     const a = atmosferaDaStato(stato(10, "pessima"))
     expect(a.foschia).toBeGreaterThanOrEqual(0.8)
     expect(a.sky["fog-ground-blend"]).toBeGreaterThanOrEqual(0.5)
     expect(luce(a.sky["sky-color"])).toBeLessThan(0.45 * 255)
-    expect(a.nuvole.grigio).toBe(1)
+    expect(a.nuvole.grigio).toBeCloseTo(.9)
   })
   it("peggiorando la fascia la foschia aumenta e il cielo si scurisce, senza inversioni", () => {
     const viste = FASCE.map(([f, t]) => atmosferaDaStato(stato(t, f)))
@@ -137,14 +138,15 @@ describe("coloriEdifici (espressione MapLibre)", () => {
     expect(e[1]).toEqual(["get", "istat"])
     expect(e[e.length - 1]).toBe("#cccccc")
   })
-  it("ogni comune ha il colore della sua fascia", () => {
+  it("distingue anche punteggi della stessa classe del motore", () => {
     const gruppi = new Map<string, string[]>()
     for (let i = 2; i < e.length - 1; i += 2) gruppi.set(e[i + 1] as string, e[i] as string[])
-    expect(gruppi.get(coloreIndice(indici.A))).toEqual(expect.arrayContaining(["A", "C"]))
+    expect(gruppi.get(coloreIndice(indici.A))).toEqual(["A"])
+    expect(gruppi.get(coloreIndice(indici.C))).toEqual(["C"])
     expect(gruppi.get(coloreIndice(indici.B))).toEqual(["B"])
   })
-  it("i comuni della stessa fascia sono raggruppati: tante regole quanti sono i colori", () => {
-    expect((e.length - 3) / 2).toBe(2)
+  it("una regola per ciascuno dei tre colori distinti", () => {
+    expect((e.length - 3) / 2).toBe(3)
   })
   it("senza indici resta solo il colore di riserva", () => {
     expect(coloriEdifici({}, "#cccccc")).toBe("#cccccc")
