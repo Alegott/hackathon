@@ -60,3 +60,29 @@ describe("macchina del tempo", () => {
     expect(interpola(f, 2025).indici).toBe(f[0]!.indici)
   })
 })
+
+describe("crescita del territorio", () => {
+  const conGeometria = dataset({
+    comuni: dataset().comuni.map((c, i) => ({ ...c, pm10: 30, geometria: [[[i * 1000, 0], [i * 1000 + 900, 0], [i * 1000 + 900, 900], [i * 1000, 900]]] as [number, number][][] })),
+    caseSeed: Array.from({ length: 100 }, (_, i) => casaSeed(`c${i}`, "ABCD"[i % 4]!)),
+  })
+  const crescita = { casePctAnno: 2, industrieAnno: 1, stradeAnno: 1, parchiAnno: 0, ciclabiliAnno: 0 }
+  const p: PianoTemporale = { ...piano, crescita }
+
+  it("nel primo anno non c'è ancora nulla di nuovo, poi le opere si accumulano", () => {
+    const f = fotogrammi(conGeometria, p, scenarioVuoto)
+    expect(f[0]!.aggiunte).toHaveLength(0)
+    expect(f[0]!.riepilogo.crescita.case).toBe(0)
+    expect(f.at(-1)!.riepilogo.crescita.industrie).toBe(15)
+    expect(f.at(-1)!.riepilogo.crescita.case).toBe(30)
+    for (let i = 1; i < f.length; i++) expect(f[i]!.aggiunte.length).toBeGreaterThanOrEqual(f[i - 1]!.aggiunte.length)
+  })
+
+  it("è deterministica e le industrie nuove pesano sull'indice", () => {
+    const a = fotogrammi(conGeometria, p, scenarioVuoto)
+    const b = fotogrammi(conGeometria, p, scenarioVuoto)
+    expect(a.at(-1)!.aggiunte).toEqual(b.at(-1)!.aggiunte)
+    const senza = fotogrammi(conGeometria, { ...p, crescita: { ...crescita, industrieAnno: 0, stradeAnno: 0 } }, scenarioVuoto)
+    expect(a.at(-1)!.riepilogo.indiceMedio).toBeLessThan(senza.at(-1)!.riepilogo.indiceMedio)
+  })
+})

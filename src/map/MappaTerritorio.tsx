@@ -507,7 +507,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
     if (!pronta || !map || vista !== "provincia" || tempoPrima.current === tempoAttivo) return
     tempoPrima.current = tempoAttivo
     map.fitBounds(estensione, tempoAttivo
-      ? { padding: { top: 110, bottom: 250, left: 60, right: 60 }, pitch: tridimensionale ? 45 : 0, bearing: -12, duration: 1200 }
+      ? { padding: { top: 110, bottom: 330, left: 60, right: 60 }, pitch: tridimensionale ? 45 : 0, bearing: -12, duration: 1200 }
       : { padding: 70, pitch: tridimensionale ? 40 : 0, bearing: -12, duration: 1200 })
   }, [pronta, tempoAttivo, vista, estensione, tridimensionale])
 
@@ -558,9 +558,12 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       const inScenario = st.modalita === "scenario"
       const rimosse = new Set(inScenario ? st.scenario.rimozioni : [])
       const spostato = trascinando.current
-      // Le infrastrutture reali si vedono nel comune aperto; quelle aggiunte ovunque.
+      // Le infrastrutture reali si vedono nel comune aperto; quelle aggiunte ovunque, insieme alle opere
+      // costruite fino all'anno mostrato dalla macchina del tempo.
+      const t = storeTempo.getState()
+      const opereTempo = t.attivo ? t.fotogrammi[Math.floor(t.anno + 1e-6) - t.piano.annoInizio]?.aggiunte ?? [] : []
       const infra = [...dataset.infrastrutture.filter((i) => !rimosse.has(i.id) && i.comune === st.comuneSelezionato),
-        ...(inScenario ? st.scenario.aggiunte : [])]
+        ...(inScenario ? st.scenario.aggiunte : []), ...opereTempo]
       const oggetti: OggettoScenario[] = infra.map((i) => {
         const x = i as Partial<Aggiunta>
         return { id: i.id, tipo: i.tipo,
@@ -576,7 +579,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
           : o.area ? { type: "Polygon", coordinates: [[...o.area, o.area[0]!]] }
           : { type: "Point", coordinates: o.lonlat } }))
       ;(map.getSource("infrastrutture-vive") as GeoJSONSource).setData({ type: "FeatureCollection", features })
-      ecosistema.current?.setStrade(oggetti.filter((o) => o.linea && inScenario).map((o) => ({
+      ecosistema.current?.setStrade(oggetti.filter((o) => o.linea && (inScenario || t.attivo)).map((o) => ({
         punti: o.linea!.punti, semi: (o.linea!.stile === "ciclabile" ? 5 : STRADE[o.linea!.stile].larghezza) / 2 })))
       const stile = st.strumento === "strada" ? st.tipoStrada : st.strumento
       scenarioLayer.current?.imposta(oggetti, inScenario && èTracciabile(st.strumento) && st.bozzaStrada.length && stile
@@ -589,7 +592,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
     map.setPaintProperty("infrastrutture-vive", "circle-opacity", attive ? 0.06 : 0)
     map.setPaintProperty("infrastrutture-linee", "line-opacity", attive ? 0.04 : 0)
     map.setPaintProperty("infrastrutture-aree", "fill-opacity", attive ? 0.03 : 0)
-  }, [pronta, modalita, scenario, selezionato, bozzaStrada, tipoStrada, strumento])
+  }, [pronta, modalita, scenario, selezionato, bozzaStrada, tipoStrada, strumento, tempoAttivo, annoTempo, pianoTempo])
 
   useEffect(() => {
     const map = mappa.current

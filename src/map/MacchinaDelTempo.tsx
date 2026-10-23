@@ -108,6 +108,7 @@ export function MacchinaDelTempo() {
           <dl>
             <div><dt>PM10 medio</dt><dd>{num(inizio.pm10Medio, 1)} → <b>{num(fine.pm10Medio, 1)}</b> µg/m³</dd></div>
             <div><dt>Case con fotovoltaico</dt><dd>{num(inizio.pctFV)}% → <b>{num(fine.pctFV)}%</b></dd></div>
+            <div><dt>Costruito</dt><dd>+{fine.crescita.case} case · +{fine.crescita.industrie} capannoni · +{num(fine.crescita.stradeKm)} km strade · +{fine.crescita.parchi} parchi</dd></div>
             <div><dt>Indice ambientale medio</dt><dd>{num(inizio.indiceMedio)} → <b>{num(fine.indiceMedio)}</b></dd></div>
           </dl>
           <div className="tempo-finale__azioni">
@@ -147,10 +148,24 @@ export function MacchinaDelTempo() {
           <Contatore etichetta="Case con fotovoltaico" valore={r.pctFV} unita="%" partenza={inizio.pctFV} />
           <Contatore etichetta="Indice medio" valore={r.indiceMedio} unita="/100" partenza={inizio.indiceMedio} />
         </div>
+        <div className="tempo-crescita" aria-label={`Costruito dal ${piano.annoInizio}`}>
+          <span className="tempo-crescita__titolo">Costruito dal {piano.annoInizio}</span>
+          <span title="Case nuove (classe energetica quasi zero, obbligatoria dal 2021)">🏠 +{r.crescita.case} case</span>
+          <span className={r.crescita.industrie ? "tempo-crescita--peso" : ""}>🏭 +{r.crescita.industrie} capannoni</span>
+          <span className={r.crescita.stradeKm >= 1 ? "tempo-crescita--peso" : ""}>🛣 +{num(r.crescita.stradeKm)} km strade</span>
+          <span className={r.crescita.parchi ? "tempo-crescita--bene" : ""}>🌳 +{r.crescita.parchi} parchi</span>
+          <span className={r.crescita.ciclabiliKm >= 1 ? "tempo-crescita--bene" : ""}>🚲 +{num(r.crescita.ciclabiliKm)} km ciclabili</span>
+        </div>
+        <ol className="tempo-cronaca" aria-label="Cronaca" aria-live="polite">
+          {momento.cronaca.slice(-2).reverse().map((v) => (
+            <li key={v.anno + v.descrizione}><b>{v.anno}</b> {v.descrizione}</li>
+          ))}
+          {!momento.cronaca.length && <li className="tempo-cronaca--vuota">Premi ▶: anno dopo anno compariranno le nuove opere.</li>}
+        </ol>
         <p className="tempo-ipotesi">
           Proiezione illustrativa · PM10 {piano.trendPm10PctAnno > 0 ? "+" : ""}{num(piano.trendPm10PctAnno, 1)}% l'anno
           {piano.obiettivi.pctFV > 0 && <> · al {piano.annoFine}: fotovoltaico {piano.obiettivi.pctFV}%, senza gas {piano.obiettivi.pctSenzaGas}%, isolamento buono {piano.obiettivi.pctIsolamentoBuono}% delle case</>}
-          {" "}· modello semplificato
+          {" "}· crescita: {num(piano.crescita.industrieAnno, 1)} capannoni, {num(piano.crescita.stradeAnno, 1)} strade, {num(piano.crescita.parchiAnno, 1)} parchi, {num(piano.crescita.ciclabiliAnno, 1)} ciclabili e +{num(piano.crescita.casePctAnno, 1)}% case l'anno · modello semplificato
         </p>
       </section>
     </>
