@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { punteggioCasa } from "./index"
-import type { Dotazioni } from "../types"
+import { classeAuto, punteggioCasa } from "./index"
+import type { Auto, Dotazioni } from "../types"
 
 const nulla: Dotazioni = {
   fotovoltaico: false,
@@ -87,5 +87,50 @@ describe("punteggioCasa - mancanti", () => {
     expect(punti).toEqual([...punti].sort((a, b) => b - a))
     expect(m.find((x) => x.dotazione === "fotovoltaico")?.punti).toBe(22)
     expect(m.find((x) => x.dotazione === "cottura")?.punti).toBe(9)
+  })
+})
+
+describe("punteggioCasa - auto", () => {
+  const conAuto = (d: Dotazioni, alimentazione: Auto["alimentazione"], euro: Auto["euro"] = 6): Dotazioni => ({
+    ...d,
+    auto: { alimentazione, euro },
+  })
+
+  it("senza auto (assente o null) il punteggio resta quello della sola casa", () => {
+    expect(punteggioCasa({ ...nulla, auto: null })).toEqual(punteggioCasa(nulla))
+    expect(punteggioCasa({ ...perfetta, auto: null }).punteggio).toBe(100)
+  })
+  it("casa perfetta con auto elettrica resta a 100, con un vecchio diesel scende", () => {
+    expect(punteggioCasa(conAuto(perfetta, "elettrico")).punteggio).toBe(100)
+    expect(punteggioCasa(conAuto(perfetta, "diesel", 0)).punteggio).toBeLessThan(100)
+  })
+  it("a parità di Euro, l'alimentazione ordina elettrico > ibrido > GPL > benzina > diesel", () => {
+    const p = (["elettrico", "ibrido", "gpl", "benzina", "diesel"] as const).map(
+      (a) => punteggioCasa(conAuto(perfetta, a, 4)).punteggio,
+    )
+    expect(p).toEqual([...p].sort((a, b) => b - a))
+    expect(new Set(p).size).toBe(5)
+  })
+  it("a parità di alimentazione, una categoria Euro più alta non abbassa mai il punteggio", () => {
+    const p = ([0, 1, 2, 3, 4, 5, 6] as const).map((e) => punteggioCasa(conAuto(perfetta, "benzina", e)).punteggio)
+    expect(p).toEqual([...p].sort((a, b) => a - b))
+    expect(p[6]).toBeGreaterThan(p[0]!)
+  })
+  it("per l'elettrica la categoria Euro è indifferente", () => {
+    expect(punteggioCasa(conAuto(perfetta, "elettrico", 0))).toEqual(punteggioCasa(conAuto(perfetta, "elettrico", 6)))
+  })
+  it("un'auto inquinante compare tra le cose da migliorare, un'elettrica no", () => {
+    expect(punteggioCasa(conAuto(perfetta, "diesel", 3)).mancanti.map((m) => m.dotazione)).toEqual(["auto"])
+    expect(punteggioCasa(conAuto(perfetta, "elettrico")).mancanti).toEqual([])
+  })
+})
+
+describe("classeAuto", () => {
+  it("va da A per l'elettrica a G per un diesel Euro 0", () => {
+    expect(classeAuto({ alimentazione: "elettrico", euro: 0 })).toBe("A")
+    expect(classeAuto({ alimentazione: "diesel", euro: 0 })).toBe("G")
+  })
+  it("un'ibrida recente è migliore di una benzina vecchia", () => {
+    expect(classeAuto({ alimentazione: "ibrido", euro: 6 }) < classeAuto({ alimentazione: "benzina", euro: 2 })).toBe(true)
   })
 })

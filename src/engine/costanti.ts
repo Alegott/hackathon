@@ -21,6 +21,14 @@ export const PESO_MASSIMO =
   PESI.infissi +
   PESI.colonninaEV
 
+// Auto: alimentazione + categoria Euro. L'elettrica prende sempre il massimo (zero emissioni allo
+// scarico), quindi per lei la categoria Euro non conta.
+export const PESI_AUTO = {
+  alimentazione: { elettrico: 6, ibrido: 4, gpl: 3, benzina: 2, diesel: 0 },
+  euro: [0, 0, 1, 2, 3, 4, 6],
+} as const
+export const PESO_MASSIMO_AUTO = PESI_AUTO.alimentazione.elettrico + PESI_AUTO.euro[6]
+
 export const DELTA_INFRA: Record<TipoInfra, number> = {
   parco: 5,
   ciclabile: 3,

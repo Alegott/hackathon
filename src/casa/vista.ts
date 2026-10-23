@@ -1,4 +1,5 @@
-import type { Dotazioni } from "../types"
+import { classeAuto } from "../engine"
+import type { Alimentazione, Classe, Dotazioni } from "../types"
 
 // Cosa mostra il modello 3D della casa: una descrizione piatta, senza dettagli di rendering.
 export type VistaCasa = {
@@ -9,6 +10,8 @@ export type VistaCasa = {
   rivestimento: "mattone" | "intonaco" | "cappotto"
   vetri: "semplici" | "doppi"
   colonnina: boolean
+  // L'aspetto dell'auto dipende dalla sua classe (A elettrica e moderna … G vecchia e fumosa).
+  auto: { classe: Classe; alimentazione: Alimentazione } | null
 }
 
 const IMPIANTO = {
@@ -28,10 +31,11 @@ export function descriviCasa(d: Dotazioni): VistaCasa {
     rivestimento: RIVESTIMENTO[d.isolamento],
     vetri: d.infissi ? "doppi" : "semplici",
     colonnina: d.colonninaEV,
+    auto: d.auto ? { classe: classeAuto(d.auto), alimentazione: d.auto.alimentazione } : null,
   }
 }
 
 export function elementiCambiati(prima: Dotazioni, dopo: Dotazioni): (keyof VistaCasa)[] {
   const a = descriviCasa(prima), b = descriviCasa(dopo)
-  return (Object.keys(a) as (keyof VistaCasa)[]).filter((k) => a[k] !== b[k])
+  return (Object.keys(a) as (keyof VistaCasa)[]).filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]))
 }

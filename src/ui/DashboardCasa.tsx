@@ -25,6 +25,7 @@ const ETICHETTA_DOTAZIONE_MANCANTE: Record<string, string> = {
   isolamento: "🧱 Miglioramento isolamento termico a livello buono (cappotto)",
   infissi: "🪟 Sostituzione infissi con doppio/triplo vetro",
   colonninaEV: "🔌 Installazione colonnina di ricarica EV domestica",
+  auto: "🚗 Passaggio a un'auto elettrica",
 }
 
 export const DashboardCasa: React.FC<{

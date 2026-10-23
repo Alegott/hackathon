@@ -140,3 +140,14 @@
   .casa-v2 .cl-riga { grid-template-columns: 28px 1fr 34px 30px; }
   .casa-v2 .cl-barra, .casa-v2 .cl-icone { display: none; }
 }
+
+/* Scheda auto */
+.casa-v2 .auto-testa { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.casa-v2 .auto-testa h3 { margin: 0; }
+.casa-v2 .auto-classe { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.casa-v2 .auto-scelte { display: flex; flex-wrap: wrap; gap: 6px; }
+.casa-v2 .auto-scelte button { flex: 1 1 auto; min-height: 38px; padding: 0 12px; border: 1px solid var(--c-bordo); border-radius: 10px; background: var(--c-card); color: var(--c-testo); font: inherit; font-size: 13.5px; cursor: pointer; transition: border-color .15s, background .15s; }
+.casa-v2 .auto-scelte button:hover { border-color: var(--bordo-campo); }
+.casa-v2 .auto-scelte button[aria-pressed="true"] { border-color: var(--c-acc); background: var(--c-acc-bg); color: var(--c-acc-testo); font-weight: 650; }
+.casa-v2 .auto-scelte--euro button { flex: 1 1 0; min-width: 34px; padding: 0; font-variant-numeric: tabular-nums; }
+.casa-v2 .auto-nota { font-size: 13px; }

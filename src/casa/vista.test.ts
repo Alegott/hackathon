@@ -15,13 +15,13 @@ describe("descriviCasa", () => {
   it("una casa senza dotazioni mostra mattoni, vetri semplici, caldaia tradizionale e nessun accessorio", () => {
     expect(descriviCasa(nulla)).toEqual({
       pannelliFV: false, collettoreSolare: false, impiantoTermico: "caldaia_tradizionale",
-      cottura: "gas", rivestimento: "mattone", vetri: "semplici", colonnina: false,
+      cottura: "gas", rivestimento: "mattone", vetri: "semplici", colonnina: false, auto: null,
     })
   })
   it("una casa con tutto mostra pannelli, pompa di calore, cappotto, doppi vetri e colonnina", () => {
     expect(descriviCasa(perfetta)).toEqual({
       pannelliFV: true, collettoreSolare: true, impiantoTermico: "pompa_calore",
-      cottura: "induzione", rivestimento: "cappotto", vetri: "doppi", colonnina: true,
+      cottura: "induzione", rivestimento: "cappotto", vetri: "doppi", colonnina: true, auto: null,
     })
   })
   it("riscaldamento e isolamento hanno una rappresentazione per ciascun valore", () => {
@@ -32,9 +32,10 @@ describe("descriviCasa", () => {
     const alternative: { [K in keyof Dotazioni]: Dotazioni[K][] } = {
       fotovoltaico: [true], solareTermico: [true], riscaldamento: ["condensazione", "pompa_calore"],
       cottura: ["induzione"], isolamento: ["medio", "buono"], infissi: [true], colonninaEV: [true],
+      auto: [{ alimentazione: "diesel", euro: 3 }, { alimentazione: "elettrico", euro: 6 }],
     }
     for (const chiave of Object.keys(alternative) as (keyof Dotazioni)[]) {
-      for (const valore of alternative[chiave]) {
+      for (const valore of alternative[chiave] ?? []) {
         expect(descriviCasa({ ...nulla, [chiave]: valore })).not.toEqual(descriviCasa(nulla))
       }
     }
@@ -57,5 +58,19 @@ describe("elementiCambiati (per animare solo ciò che cambia)", () => {
   })
   it("funziona anche in rimozione", () => {
     expect(elementiCambiati(perfetta, { ...perfetta, colonninaEV: false })).toEqual(["colonnina"])
+  })
+})
+
+describe("auto nella vista", () => {
+  it("senza auto non c'è nessuna macchina sul modello", () => {
+    expect(descriviCasa({ ...nulla, auto: null }).auto).toBeNull()
+  })
+  it("l'aspetto segue la classe dell'auto: elettrica in A, vecchio diesel in G", () => {
+    expect(descriviCasa({ ...nulla, auto: { alimentazione: "elettrico", euro: 6 } }).auto).toEqual({ classe: "A", alimentazione: "elettrico" })
+    expect(descriviCasa({ ...nulla, auto: { alimentazione: "diesel", euro: 0 } }).auto).toEqual({ classe: "G", alimentazione: "diesel" })
+  })
+  it("cambiare categoria Euro cambia l'auto anche se resta lo stesso oggetto per forma", () => {
+    expect(elementiCambiati({ ...nulla, auto: { alimentazione: "benzina", euro: 1 } }, { ...nulla, auto: { alimentazione: "benzina", euro: 6 } })).toEqual(["auto"])
+    expect(elementiCambiati({ ...nulla, auto: { alimentazione: "benzina", euro: 6 } }, { ...nulla, auto: { alimentazione: "benzina", euro: 6 } })).toEqual([])
   })
 })

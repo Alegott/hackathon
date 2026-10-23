@@ -12,7 +12,9 @@ export type Oggetto = (typeof OGGETTI)[number]
 
 export const èOggetto = (x: unknown): x is Oggetto => typeof x === "string" && (OGGETTI as readonly string[]).includes(x)
 
-type Effetto = { [K in keyof Dotazioni]: { chiave: K; valore: Dotazioni[K]; peggiore: Dotazioni[K] } }[keyof Dotazioni]
+// L'auto ha una sua scheda (alimentazione + Euro), non è un oggetto della palette.
+type ChiaveOggetto = Exclude<keyof Dotazioni, "auto">
+type Effetto = { [K in ChiaveOggetto]: { chiave: K; valore: Dotazioni[K]; peggiore: Dotazioni[K] } }[ChiaveOggetto]
 
 const EFFETTI: Record<Oggetto, Effetto> = {
   fotovoltaico: { chiave: "fotovoltaico", valore: true, peggiore: false },
