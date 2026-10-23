@@ -19,7 +19,14 @@ export type Evento = {
   descrizione?: string // solo per gli eventi da mostrare nella cronaca
   aggiunta?: Aggiunta
   casa?: Casa
+  // Solo per la mappa: un gruppetto di case nuove (non pesa sul motore, le case contano già da sé).
+  edificato?: Edificato
 }
+
+export type Edificato = { id: string; comune: string; posizione: [number, number] }
+
+// Ogni CASE_PER_GRUPPO case nuove compare un gruppetto di villette sulla mappa, nel comune dell'ultima.
+export const CASE_PER_GRUPPO = 4
 
 // Ogni CASE_PER_QUARTIERE case nuove nasce un quartiere con la sua strada (consumo di suolo).
 export const CASE_PER_QUARTIERE = 25
@@ -146,6 +153,8 @@ export function generaCrescita(ds: Dataset, ritmi: RitmiCrescita, annoInizio: nu
         },
       },
     })
+    if ((nuove + 1) % CASE_PER_GRUPPO === 0)
+      eventi.push({ anno, edificato: { id: id("edificato"), comune: c.istat, posizione: puntoNelComune(c, rnd) } })
     if (++nuove % CASE_PER_QUARTIERE === 0) {
       const tracciato = segmento(puntoNelComune(c, rnd), 0.8, rnd)
       eventi.push({

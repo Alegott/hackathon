@@ -8,7 +8,8 @@ import { renderCondiviso } from "./renderCondiviso"
 
 export type OggettoScenario = {
   id: string
-  tipo: TipoInfra
+  // "case" = gruppetto di case nuove della macchina del tempo (solo visivo).
+  tipo: TipoInfra | "case"
   lonlat: [number, number]
   // Percorso in lon/lat per strade e piste ciclabili tracciate.
   linea?: { stile: StileLinea; punti: [number, number][] }
@@ -83,7 +84,26 @@ function alberoParco(rand: () => number, x: number, z: number) {
   return g
 }
 
-function modello(tipo: TipoInfra, id: string, fumi: Fumo[], industria: TipoIndustria = "meccanica"): { y: THREE.Group; piano: THREE.Object3D[] } {
+// Villetta a energia quasi zero: corpo chiaro, tetto in coppi a quattro falde, pannelli solari.
+function villetta(rand: () => number, x: number, z: number) {
+  const g = new THREE.Group()
+  const w = 9 + rand() * 4, d = 8 + rand() * 3, h = 6 + rand() * 3
+  const intonaci = ["#f3ead8", "#efe2c6", "#e9d8c0", "#f6f1e7", "#eadfcf"]
+  g.add(scatola(w, h, d, intonaci[Math.floor(rand() * intonaci.length)]!, 0, 0, 0))
+  const tetto = new THREE.Mesh(new THREE.ConeGeometry(Math.hypot(w, d) / 2 + 0.6, 4, 4).rotateY(Math.PI / 4), materiale("#b5563b"))
+  tetto.scale.set(1, 1, d / w)
+  tetto.position.y = h + 2
+  g.add(tetto)
+  const pannello = scatola(w * 0.55, 0.3, d * 0.3, "#1e3a8a", 0, h + 1.4, d * 0.18, { emissive: new THREE.Color("#1d4ed8"), emissiveIntensity: 0.25 })
+  pannello.rotation.x = 0.42
+  g.add(pannello)
+  g.add(scatola(1.6, 2.6, 0.3, "#6b4a2f", w * 0.15, 0, -d / 2 - 0.1))
+  g.position.set(x, 0, z)
+  g.rotation.y = rand() * Math.PI
+  return g
+}
+
+function modello(tipo: TipoInfra | "case", id: string, fumi: Fumo[], industria: TipoIndustria = "meccanica"): { y: THREE.Group; piano: THREE.Object3D[] } {
   const y = new THREE.Group()
   const piano: THREE.Object3D[] = []
   const rand = casuale(id)
@@ -116,6 +136,13 @@ function modello(tipo: TipoInfra, id: string, fumi: Fumo[], industria: TipoIndus
       y.add(scatola(7, 2.4, 3.6, i % 2 ? "#3b6ea8" : "#d6d9dc", x, 0.8, 5))
       y.add(scatola(4, 1.6, 3.2, i % 2 ? "#3b6ea8" : "#d6d9dc", x, 3.2, 5))
     }
+  } else if (tipo === "case") {
+    const prato = new THREE.Mesh(new THREE.CircleGeometry(34, 18).rotateX(-Math.PI / 2), materiale("#a6d48f"))
+    prato.position.y = 0.3
+    y.add(prato)
+    const posti: [number, number][] = [[-14, -8], [10, -12], [-6, 12], [16, 8]]
+    for (const [x, z] of posti) y.add(villetta(rand, x + (rand() - 0.5) * 4, z + (rand() - 0.5) * 4))
+    for (let i = 0; i < 3; i++) y.add(alberoParco(rand, (rand() - 0.5) * 50, (rand() - 0.5) * 50))
   } else if (tipo === "industria") {
     const fumo = (x: number, z: number, colore: string, alt = 34) =>
       fumi.push({ mesh: new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), materiale(colore, { transparent: true })),
@@ -187,7 +214,7 @@ export class ScenarioLayer implements CustomLayerInterface {
   private elenco: OggettoScenario[] = []
   private bozza: BozzaTracciato | null = null
   private radici: THREE.Group[] = []
-  private evidenziate: { radice: THREE.Group; inizio: number; onda: THREE.Mesh }[] = []
+  private evidenziate: { radice: THREE.Group; inizio: number; onda: THREE.Mesh | null }[] = []
   // Primo istante in cui ogni opera evidenziata è apparsa: l'animazione non riparte a ogni ridisegno.
   private comparse = new globalThis.Map<string, number>()
   private fumi: Fumo[] = []
@@ -248,8 +275,14 @@ export class ScenarioLayer implements CustomLayerInterface {
       this.oggetti.add(radice)
       if (o.evidenza) {
         if (!this.comparse.has(o.id)) this.comparse.set(o.id, ora)
+        // L'onda accompagna solo la comparsa: per le opere già presenti non serve.
+        if (ora - this.comparse.get(o.id)! > 1600) {
+          this.evidenziate.push({ radice, inizio: this.comparse.get(o.id)!, onda: null })
+          continue
+        }
         // Onda a terra del colore dell'impatto: rossa per l'industria, verde per il verde.
-        const colore = o.tipo === "industria" ? "#f97316" : o.tipo === "parco" || o.tipo === "ciclabile" ? "#22c55e" : "#38bdf8"
+        const colore = o.tipo === "industria" ? "#f97316" : o.tipo === "parco" || o.tipo === "ciclabile" ? "#22c55e"
+          : o.tipo === "case" ? "#facc15" : "#38bdf8"
         const onda = new THREE.Mesh(new THREE.RingGeometry(30, 38, 40),
           new THREE.MeshBasicMaterial({ color: colore, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }))
         onda.position.z = 1
@@ -340,8 +373,10 @@ export class ScenarioLayer implements CustomLayerInterface {
       const rimbalzo = 1 + 2.70158 * (p - 1) ** 3 + 1.70158 * (p - 1) ** 2
       e.radice.scale.setScalar(2 * kPedine * Math.max(0.001, rimbalzo))
       const q = this.riduciMovimento ? 1 : Math.min(1, (ora - e.inizio) / 1600)
-      e.onda.scale.setScalar(1 + q * 4)
-      ;(e.onda.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - q)
+      if (e.onda) {
+        e.onda.scale.setScalar(1 + q * 4)
+        ;(e.onda.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - q)
+      }
       if (q < 1) inCorso = true
     }
     if (Math.abs(kr - this.kStrade) > 0.05 * this.kStrade || !this.kStrade) {

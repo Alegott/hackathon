@@ -561,7 +561,8 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       // Le infrastrutture reali si vedono nel comune aperto; quelle aggiunte ovunque, insieme alle opere
       // costruite fino all'anno mostrato dalla macchina del tempo.
       const t = storeTempo.getState()
-      const opereTempo = t.attivo ? t.fotogrammi[Math.floor(t.anno + 1e-6) - t.piano.annoInizio]?.aggiunte ?? [] : []
+      const fotogramma = t.attivo ? t.fotogrammi[Math.floor(t.anno + 1e-6) - t.piano.annoInizio] : undefined
+      const opereTempo = fotogramma?.aggiunte ?? []
       const infra = [...dataset.infrastrutture.filter((i) => !rimosse.has(i.id) && i.comune === st.comuneSelezionato),
         ...(inScenario ? st.scenario.aggiunte : []), ...opereTempo]
       const idsTempo = new Set(opereTempo.map((o) => o.id))
@@ -575,6 +576,8 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
           ...(x.industria ? { industria: x.industria } : {}),
           ...(idsTempo.has(i.id) ? { evidenza: true } : {}) }
       })
+      const caseNuove: OggettoScenario[] = (fotogramma?.edificati ?? []).map((e) => ({
+        id: e.id, tipo: "case", lonlat: aCoordinateGeografiche(e.posizione), evidenza: true }))
       const features: FeatureCollection["features"] = oggetti.map((o) => ({
         type: "Feature", properties: { id: o.id, tipo: o.tipo },
         geometry: o.linea ? { type: "LineString", coordinates: o.linea.punti }
@@ -584,7 +587,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       ecosistema.current?.setStrade(oggetti.filter((o) => o.linea && (inScenario || t.attivo)).map((o) => ({
         punti: o.linea!.punti, semi: (o.linea!.stile === "ciclabile" ? 5 : STRADE[o.linea!.stile].larghezza) / 2 })))
       const stile = st.strumento === "strada" ? st.tipoStrada : st.strumento
-      scenarioLayer.current?.imposta(oggetti, inScenario && èTracciabile(st.strumento) && st.bozzaStrada.length && stile
+      scenarioLayer.current?.imposta([...oggetti, ...caseNuove], inScenario && èTracciabile(st.strumento) && st.bozzaStrada.length && stile
         ? { stile: stile as BozzaTracciato["stile"], punti: st.bozzaStrada.map(aCoordinateGeografiche) } : null)
     }
     aggiornaScenario.current()

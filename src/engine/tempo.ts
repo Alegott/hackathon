@@ -1,6 +1,6 @@
 import type { Aggiunta, Casa, Dataset, Fascia, Scenario, StatoComune } from "../types"
 import { lunghezzaKm } from "./costanti"
-import { generaCrescita, type Evento, type RitmiCrescita } from "./crescita"
+import { generaCrescita, type Edificato, type Evento, type RitmiCrescita } from "./crescita"
 import { applicaMacro, inAmbito } from "./macro"
 import { fasciaDa, statoTerritorio } from "./territorio"
 
@@ -39,6 +39,7 @@ export type Fotogramma = {
   riepilogo: Riepilogo
   // Opere costruite dall'inizio fino a quest'anno e cronaca dei fatti principali.
   aggiunte: Aggiunta[]
+  edificati: Edificato[]
   cronaca: Voce[]
 }
 
@@ -185,7 +186,8 @@ export function fotogrammi(ds: Dataset, piano: PianoTemporale, base: Scenario, c
     const indici = statoTerritorio(dsAnno, s, casaUtente)
     const cronaca = [...meteoFinoA(piano, anno), ...eventi.flatMap((e) => (e.descrizione ? [{ anno: e.anno, descrizione: e.descrizione }] : []))]
       .sort((a, b) => a.anno - b.anno)
-    out.push({ anno, indici, riepilogo: riepilogo(dsAnno, s, indici, eventi), aggiunte, cronaca })
+    const edificati = eventi.flatMap((e) => (e.edificato ? [e.edificato] : []))
+    out.push({ anno, indici, riepilogo: riepilogo(dsAnno, s, indici, eventi), aggiunte, edificati, cronaca })
   }
   return out
 }
@@ -227,6 +229,7 @@ export function interpola(fot: Fotogramma[], anno: number): Omit<Fotogramma, "an
       crescita: ra.crescita,
     },
     aggiunte: a.aggiunte,
+    edificati: a.edificati,
     cronaca: a.cronaca,
   }
 }
