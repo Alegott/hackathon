@@ -1,6 +1,6 @@
 import type { Aggiunta, Casa, Dataset, Fascia, Scenario, StatoComune } from "../types"
 import { lunghezzaKm } from "./costanti"
-import { generaCrescita, type Evento, type Quartiere, type RitmiCrescita } from "./crescita"
+import { generaCrescita, puntoStabile, type Evento, type Quartiere, type RitmiCrescita } from "./crescita"
 import { applicaMacro, inAmbito } from "./macro"
 import { fasciaDa, statoTerritorio } from "./territorio"
 
@@ -39,6 +39,8 @@ export type Riepilogo = {
   auto: number
 }
 export type QuartiereAnno = Quartiere & { case: number }
+// Case esistenti di un comune che fino a quest'anno hanno installato fotovoltaico, pompa di calore o isolamento.
+export type Rinnovi = { id: string; comune: string; posizione: [number, number]; case: number }
 export type Voce = { anno: number; descrizione: string }
 export type Fotogramma = {
   anno: number
@@ -47,6 +49,7 @@ export type Fotogramma = {
   // Opere costruite dall'inizio fino a quest'anno e cronaca dei fatti principali.
   aggiunte: Aggiunta[]
   quartieri: QuartiereAnno[]
+  rinnovi: Rinnovi[]
   cronaca: Voce[]
 }
 
@@ -171,6 +174,21 @@ function riepilogo(ds: Dataset, s: Scenario, indici: Record<string, StatoComune>
   }
 }
 
+function rinnoviAnno(ds: Dataset, s: Scenario): Rinnovi[] {
+  if (!s.macro) return []
+  const perComune = new Map<string, Casa[]>()
+  for (const c of ds.caseSeed) perComune.set(c.comune, [...(perComune.get(c.comune) ?? []), c])
+  const out: Rinnovi[] = []
+  for (const c of ds.comuni) {
+    const case_ = perComune.get(c.istat)
+    if (!case_ || !inAmbito(s.macro, c.istat)) continue
+    // applicaMacro restituisce lo stesso oggetto per le case che non cambiano.
+    const n = applicaMacro(case_, s.macro).filter((m, i) => m !== case_[i]).length
+    if (n > 0) out.push({ id: `rinnovi-${c.istat}`, comune: c.istat, posizione: puntoStabile(c, "rinnovi"), case: n })
+  }
+  return out
+}
+
 // Gli anni con un meteo fuori dal comune entrano nella cronaca.
 function meteoFinoA(piano: PianoTemporale, anno: number): Voce[] {
   const out: Voce[] = []
@@ -207,7 +225,8 @@ export function fotogrammi(ds: Dataset, piano: PianoTemporale, base: Scenario, c
     // Le auto crescono con le famiglie e con la motorizzazione del piano.
     const anni = anno - piano.annoInizio
     const auto = AUTO_INIZIALI * (dsAnno.caseSeed.length / ds.caseSeed.length) * (1 + piano.motorizzazionePctAnno / 100) ** anni
-    out.push({ anno, indici, riepilogo: riepilogo(dsAnno, s, indici, eventi, auto), aggiunte, quartieri: [...quartieri.values()], cronaca })
+    out.push({ anno, indici, riepilogo: riepilogo(dsAnno, s, indici, eventi, auto), aggiunte, quartieri: [...quartieri.values()],
+      rinnovi: rinnoviAnno(dsAnno, s), cronaca })
   }
   return out
 }
@@ -251,6 +270,7 @@ export function interpola(fot: Fotogramma[], anno: number): Omit<Fotogramma, "an
     },
     aggiunte: a.aggiunte,
     quartieri: a.quartieri,
+    rinnovi: a.rinnovi,
     cronaca: a.cronaca,
   }
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
+import { avviaTuo2040 } from "../app/tuo2040"
 import { store, useApp } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import { COMUNI_VICENZA_114 } from "../data/comuni114"
@@ -239,6 +240,14 @@ export const SezioneCasa: React.FC = () => {
         />
 
         <aside className="casa-lato">
+          <section className="scheda scheda--tuo2040">
+            <h3>Il tuo 2040</h3>
+            <p>E se tutta la provincia vivesse come te? Guarda il futuro che costruirebbero le tue scelte.</p>
+            <button type="button" className="tuo2040-btn" onClick={() => avviaTuo2040(casa, "come-te")}>
+              🕰 E se tutti facessero come me?
+            </button>
+          </section>
+
           <section className="scheda">
             <h3>Dotazioni</h3>
             <Palette

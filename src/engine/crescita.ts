@@ -68,6 +68,9 @@ function puntoNelComune(c: Comune, rnd: () => number): [number, number] {
   return c.centroide
 }
 
+// Punto del comune sempre uguale per lo stesso seme (es. dove si vedono le ristrutturazioni).
+export const puntoStabile = (c: Comune, seme: string) => puntoNelComune(c, generatore(hash(seme + c.istat)))
+
 function segmento(da: [number, number], km: number, rnd: () => number): [number, number][] {
   const ang = rnd() * Math.PI * 2
   const passi = 4

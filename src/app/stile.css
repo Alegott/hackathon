@@ -691,3 +691,13 @@ input[type="checkbox"][switch]:focus-visible {
 @keyframes tempo-voce { from { opacity: 0; transform: translateY(6px); } }
 .tempo-finale dd { text-align: right; }
 @media (prefers-reduced-motion: reduce) { .tempo-cronaca li { animation: none; } }
+.tempo-piani .tempo-piano--tuo { border-color: #facc15aa; color: #fde68a; }
+.tempo-piani .tempo-piano--tuo[aria-checked="true"] { background: #facc15; border-color: #facc15; color: #1c1917; }
+.tempo-finale__tu { margin: -4px 0 10px; font-size: 13.5px; color: #3f4f47; }
+.tempo-finale h3::first-letter { text-transform: uppercase; }
+.scheda--tuo2040 { background: linear-gradient(135deg, #0f3d32, #1f6b55); color: #eef7f2; border-color: transparent; }
+.scheda--tuo2040 h3 { color: #fde68a; }
+.scheda--tuo2040 p { margin: 4px 0 10px; font-size: 13px; color: #cfe6da; }
+.tuo2040-btn { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 999px; border: 0; background: #facc15; color: #1c1917; cursor: pointer; box-shadow: 0 4px 16px #0003; }
+.tuo2040-btn:hover { background: #fde047; }
+.tuo2040-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }

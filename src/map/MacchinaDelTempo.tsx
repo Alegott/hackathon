@@ -1,7 +1,11 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { dataset } from "../data/dataset"
 import { scenarioVuoto } from "../engine"
-import { PIANI, type Riepilogo } from "../engine/tempo"
+import { fotogrammi, PIANI, type Riepilogo } from "../engine/tempo"
+import { duePassi, èPersonale, pianoPersonale } from "../engine/personale"
+import { avviaTuo2040 } from "../app/tuo2040"
+import { CASA_DEMO_DEFAULT } from "../ui/SezioneCasa"
+import type { StatoComune } from "../types"
 import { store, storeTempo, useApp, useMomento, useTempo } from "../app/useApp"
 
 // Durata di un anno in riproduzione: 2025 → 2040 in circa 12 secondi.
@@ -11,6 +15,7 @@ const PASSO = 0.2
 
 const num = (n: number, decimali = 0) => n.toLocaleString("it-IT", { minimumFractionDigits: decimali, maximumFractionDigits: decimali })
 const buoni = (r: Riepilogo) => r.perFascia.ottima
+const fascia = (s: StatoComune | undefined) => (s ? `${s.fascia} (${num(s.totale)}/100)` : "—")
 
 function baseCorrente() {
   const st = store.getState()
@@ -39,6 +44,16 @@ export function MacchinaDelTempo() {
   const fot = useTempo((s) => s.fotogrammi)
   const momento = useMomento()
   const sezione = useApp((s) => s.sezione)
+  // La casa della sezione Casa: base del "tuo 2040".
+  const casa = useApp((s) => s.casaUtente) ?? CASA_DEMO_DEFAULT
+  const nomeComune = dataset.comuni.find((c) => c.istat === casa.comune)?.nome ?? "il tuo comune"
+  const personale = èPersonale(piano)
+  // Nel confronto "+ 2 passi" serve anche dove saresti arrivato restando come sei.
+  const comeTe = useMemo(() => {
+    if (piano.id !== "due-passi" || !concluso) return null
+    const { base, casa: c } = baseCorrente()
+    return fotogrammi(dataset, pianoPersonale(casa, "come-te").piano, base, c).at(-1)!.indici[casa.comune]
+  }, [piano.id, concluso, casa])
 
   // Riproduzione: l'anno avanza con il tempo reale, a passi discreti.
   useEffect(() => {
@@ -100,11 +115,23 @@ export function MacchinaDelTempo() {
       {concluso && (
         <section className="tempo-finale" aria-labelledby="tempo-finale-titolo">
           <span className="tempo-finale__eyebrow">{piano.nome} · {piano.annoInizio} → {piano.annoFine}</span>
-          <h3 id="tempo-finale-titolo">
-            {fine.indiceMedio < inizio.indiceMedio
-              ? `L'indice medio scende da ${num(inizio.indiceMedio)} a ${num(fine.indiceMedio)}`
-              : `${buoni(fine)} comuni su 114 in fascia ottima`}
-          </h3>
+          {personale ? <>
+            <h3 id="tempo-finale-titolo">
+              {piano.id === "come-te"
+                ? `Se tutti vivessero come te, nel ${piano.annoFine} ${nomeComune} sarebbe in fascia ${fascia(fot.at(-1)!.indici[casa.comune])}`
+                : `Con ${duePassi(casa.dotazioni).passi.join(" e ") || "le tue scelte"}, ${nomeComune} arriverebbe in fascia ${fascia(fot.at(-1)!.indici[casa.comune])}`}
+            </h3>
+            <p className="tempo-finale__tu">
+              Oggi {nomeComune} è in fascia {fascia(fot[0]!.indici[casa.comune])}.
+              {comeTe && <> Restando come sei: fascia {fascia(comeTe)}.</>}
+            </p>
+          </> : (
+            <h3 id="tempo-finale-titolo">
+              {fine.indiceMedio < inizio.indiceMedio
+                ? `L'indice medio scende da ${num(inizio.indiceMedio)} a ${num(fine.indiceMedio)}`
+                : `${buoni(fine)} comuni su 114 in fascia ottima`}
+            </h3>
+          )}
           <dl>
             <div><dt>PM10 medio</dt><dd>{num(inizio.pm10Medio, 1)} → <b>{num(fine.pm10Medio, 1)}</b> µg/m³</dd></div>
             <div><dt>Case con fotovoltaico</dt><dd>{num(inizio.pctFV)}% → <b>{num(fine.pctFV)}%</b></dd></div>
@@ -113,7 +140,11 @@ export function MacchinaDelTempo() {
             <div><dt>Indice ambientale medio</dt><dd>{num(inizio.indiceMedio)} → <b>{num(fine.indiceMedio)}</b></dd></div>
           </dl>
           <div className="tempo-finale__azioni">
-            <button type="button" onClick={() => st.play()}>↺ Rivedi</button>
+            {piano.id === "come-te" && duePassi(casa.dotazioni).passi.length > 0 && (
+              <button type="button" onClick={() => avviaTuo2040(casa, "due-passi")}>👣 E se facessi 2 passi?</button>
+            )}
+            {piano.id === "due-passi" && <button type="button" onClick={() => avviaTuo2040(casa, "come-te")}>↺ Rivedi "Tutti come te"</button>}
+            {!personale && <button type="button" onClick={() => st.play()}>↺ Rivedi</button>}
             <button type="button" onClick={() => st.chiudi()}>Torna al presente</button>
           </div>
         </section>
@@ -142,6 +173,14 @@ export function MacchinaDelTempo() {
               {p.nome}
             </button>
           ))}
+          <button type="button" role="radio" aria-checked={piano.id === "come-te"} className="tempo-piano--tuo"
+            title="La tua casa (sezione Casa) moltiplicata per tutta la provincia" onClick={() => avviaTuo2040(casa, "come-te")}>
+            👤 Tutti come te
+          </button>
+          <button type="button" role="radio" aria-checked={piano.id === "due-passi"} className="tempo-piano--tuo"
+            title="Come te, più i due interventi che ti fanno salire di più" onClick={() => avviaTuo2040(casa, "due-passi")}>
+            👣 + 2 passi
+          </button>
         </div>
         <div className="tempo-contatori">
           <Contatore etichetta="Comuni in fascia ottima" valore={r.perFascia.ottima} unita="/114" partenza={inizio.perFascia.ottima} />

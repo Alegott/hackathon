@@ -7,6 +7,8 @@ import { store, storeTempo, useApp, useTempo } from "./useApp"
 import { PIANI } from "../engine/tempo"
 import { scenarioVuoto } from "../engine"
 import { MacchinaDelTempo } from "../map/MacchinaDelTempo"
+import { avviaTuo2040 } from "./tuo2040"
+import { CASA_DEMO_DEFAULT } from "../ui/SezioneCasa"
 import { useTema, type Tema } from "./tema"
 import { PannelloComune } from "../ui/PannelloComune"
 import { SezioneCasa } from "../ui/SezioneCasa"
@@ -111,6 +113,9 @@ export function App() {
           </button>
           <button type="button" onClick={() => eseguiPassoDemo(3)} title="3. Macchina del tempo fino al 2040">
             3. 2040
+          </button>
+          <button type="button" onClick={() => avviaTuo2040(store.getState().casaUtente ?? CASA_DEMO_DEFAULT)} title="4. E se tutti vivessero come la tua casa?">
+            4. Tu nel 2040
           </button>
         </div>
 

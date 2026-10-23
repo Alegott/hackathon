@@ -578,6 +578,8 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       })
       const caseNuove: OggettoScenario[] = (fotogramma?.quartieri ?? []).map((q) => ({
         id: q.id, tipo: "case", lonlat: aCoordinateGeografiche(q.posizione), evidenza: true, numero: q.case }))
+      const rinnovi: OggettoScenario[] = (fotogramma?.rinnovi ?? []).map((r) => ({
+        id: r.id, tipo: "rinnovi", lonlat: aCoordinateGeografiche(r.posizione), evidenza: true, numero: r.case }))
       // Densità del traffico rispetto a oggi: guida le auto sulle strade nuove e quelle in città.
       const densita = fotogramma ? fotogramma.riepilogo.auto / (t.fotogrammi[0]?.riepilogo.auto ?? fotogramma.riepilogo.auto) : 1
       scenarioLayer.current?.setDensitaAuto(densita)
@@ -591,7 +593,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       ecosistema.current?.setStrade(oggetti.filter((o) => o.linea && (inScenario || t.attivo)).map((o) => ({
         punti: o.linea!.punti, semi: (o.linea!.stile === "ciclabile" ? 5 : STRADE[o.linea!.stile].larghezza) / 2 })))
       const stile = st.strumento === "strada" ? st.tipoStrada : st.strumento
-      scenarioLayer.current?.imposta([...oggetti, ...caseNuove], inScenario && èTracciabile(st.strumento) && st.bozzaStrada.length && stile
+      scenarioLayer.current?.imposta([...oggetti, ...caseNuove, ...rinnovi], inScenario && èTracciabile(st.strumento) && st.bozzaStrada.length && stile
         ? { stile: stile as BozzaTracciato["stile"], punti: st.bozzaStrada.map(aCoordinateGeografiche) } : null)
     }
     aggiornaScenario.current()
