@@ -15,6 +15,8 @@ export type OggettoScenario = {
   // Contorno in lon/lat per i parchi disegnati.
   area?: [number, number][]
   industria?: TipoIndustria
+  // Opere comparse nella macchina del tempo: ingrandite a vista provincia, con animazione d'ingresso.
+  evidenza?: boolean
 }
 export type StileLinea = TipoStrada | "ciclabile"
 export type BozzaTracciato = { stile: StileLinea | "parco"; punti: [number, number][] }
@@ -185,6 +187,9 @@ export class ScenarioLayer implements CustomLayerInterface {
   private elenco: OggettoScenario[] = []
   private bozza: BozzaTracciato | null = null
   private radici: THREE.Group[] = []
+  private evidenziate: { radice: THREE.Group; inizio: number; onda: THREE.Mesh }[] = []
+  // Primo istante in cui ogni opera evidenziata è apparsa: l'animazione non riparte a ogni ridisegno.
+  private comparse = new globalThis.Map<string, number>()
   private fumi: Fumo[] = []
   private kStrade = 0
 
@@ -226,7 +231,11 @@ export class ScenarioLayer implements CustomLayerInterface {
   private ricostruisci() {
     this.svuota(this.oggetti)
     this.radici = []
+    this.evidenziate = []
     this.fumi = []
+    const ora = performance.now()
+    const presenti = new Set(this.elenco.filter((o) => o.evidenza).map((o) => o.id))
+    for (const id of [...this.comparse.keys()]) if (!presenti.has(id)) this.comparse.delete(id)
     for (const o of this.elenco) {
       if (o.linea || o.area) continue
       const radice = new THREE.Group()
@@ -237,7 +246,16 @@ export class ScenarioLayer implements CustomLayerInterface {
       radice.add(modelloY, ...piano)
       for (const f of this.fumi.filter((f) => !f.mesh.parent)) modelloY.add(f.mesh)
       this.oggetti.add(radice)
-      this.radici.push(radice)
+      if (o.evidenza) {
+        if (!this.comparse.has(o.id)) this.comparse.set(o.id, ora)
+        // Onda a terra del colore dell'impatto: rossa per l'industria, verde per il verde.
+        const colore = o.tipo === "industria" ? "#f97316" : o.tipo === "parco" || o.tipo === "ciclabile" ? "#22c55e" : "#38bdf8"
+        const onda = new THREE.Mesh(new THREE.RingGeometry(30, 38, 40),
+          new THREE.MeshBasicMaterial({ color: colore, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }))
+        onda.position.z = 1
+        radice.add(onda)
+        this.evidenziate.push({ radice, inizio: this.comparse.get(o.id)!, onda })
+      } else this.radici.push(radice)
     }
   }
 
@@ -312,6 +330,20 @@ export class ScenarioLayer implements CustomLayerInterface {
     // Le strutture mantengono la stessa impronta geografica e si rimpiccioliscono con la mappa.
     const kr = Math.min(12, Math.max(1, 2 ** (15.5 - zoom)))
     for (const r of this.radici) r.scale.setScalar(2)
+    // Le opere della macchina del tempo crescono come pedine su un plastico quando ci si allontana,
+    // entrano con un rimbalzo e lanciano un'onda a terra.
+    const kPedine = Math.min(28, Math.max(1, 2 ** (14.5 - zoom)))
+    const ora = performance.now()
+    let inCorso = false
+    for (const e of this.evidenziate) {
+      const p = this.riduciMovimento ? 1 : Math.min(1, (ora - e.inizio) / 700)
+      const rimbalzo = 1 + 2.70158 * (p - 1) ** 3 + 1.70158 * (p - 1) ** 2
+      e.radice.scale.setScalar(2 * kPedine * Math.max(0.001, rimbalzo))
+      const q = this.riduciMovimento ? 1 : Math.min(1, (ora - e.inizio) / 1600)
+      e.onda.scale.setScalar(1 + q * 4)
+      ;(e.onda.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - q)
+      if (q < 1) inCorso = true
+    }
     if (Math.abs(kr - this.kStrade) > 0.05 * this.kStrade || !this.kStrade) {
       this.kStrade = kr
       this.ricostruisciStrade(kr)
@@ -327,7 +359,7 @@ export class ScenarioLayer implements CustomLayerInterface {
     this.camera.projectionMatrix = this.matrix.fromArray(args.defaultProjectionData.mainMatrix).multiply(locale)
     const renderer = this.renderer
     renderCondiviso(_gl, renderer, () => renderer.render(this.scene, this.camera))
-    if (this.fumi.length && !this.riduciMovimento && !document.hidden) this.map.triggerRepaint()
+    if ((this.fumi.length || inCorso) && !this.riduciMovimento && !document.hidden) this.map.triggerRepaint()
   }
 
   onRemove() {

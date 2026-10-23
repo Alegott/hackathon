@@ -6,7 +6,8 @@ import { fasciaDa, statoTerritorio } from "./territorio"
 
 // Macchina del tempo: proiezione illustrativa anno per anno. Tre ipotesi dichiarate in UI:
 // 1. le quote di case virtuose crescono verso un obiettivo lungo una curva di adozione;
-// 2. il PM10 di ogni comune segue una tendenza percentuale annua;
+// 2. il PM10 di ogni comune segue una tendenza di fondo annua, più la variabilità del meteo
+//    (inverni secchi e stabili alzano lo smog, anni piovosi e ventosi lo abbassano);
 // 3. il territorio cresce: case nuove, capannoni, strade, parchi e ciclabili (vedi crescita.ts).
 // Il motore non cambia: ogni anno è statoTerritorio su un dataset e uno scenario derivati.
 
@@ -51,19 +52,19 @@ export const PIANI: PianoTemporale[] = [
   {
     id: "inerzia", nome: "Inerzia", descrizione: "Si continua come oggi: si costruisce e si rinnova poco",
     annoInizio: 2025, annoFine: 2040, ambito: "provincia",
-    obiettivi: { pctFV: 30, pctSenzaGas: 20, pctIsolamentoBuono: 30 }, curva: "lineare", trendPm10PctAnno: -0.5,
+    obiettivi: { pctFV: 30, pctSenzaGas: 20, pctIsolamentoBuono: 30 }, curva: "lineare", trendPm10PctAnno: 0,
     crescita: { casePctAnno: 0.6, industrieAnno: 0.8, stradeAnno: 1, parchiAnno: 0.2, ciclabiliAnno: 0.4 },
   },
   {
     id: "piano-clima", nome: "Piano clima", descrizione: "Si costruisce meno, metà delle case si rinnova, più parchi e ciclabili",
     annoInizio: 2025, annoFine: 2040, ambito: "provincia",
-    obiettivi: { pctFV: 50, pctSenzaGas: 40, pctIsolamentoBuono: 50 }, curva: "s", trendPm10PctAnno: -2,
+    obiettivi: { pctFV: 50, pctSenzaGas: 40, pctIsolamentoBuono: 50 }, curva: "s", trendPm10PctAnno: -1.2,
     crescita: { casePctAnno: 0.5, industrieAnno: 0.6, stradeAnno: 0.4, parchiAnno: 0.8, ciclabiliAnno: 1.2 },
   },
   {
     id: "tutti-a-bordo", nome: "Tutti a bordo", descrizione: "Quasi ogni famiglia fa la sua parte e il verde cresce ovunque",
     annoInizio: 2025, annoFine: 2040, ambito: "provincia",
-    obiettivi: { pctFV: 80, pctSenzaGas: 70, pctIsolamentoBuono: 75 }, curva: "s", trendPm10PctAnno: -3,
+    obiettivi: { pctFV: 80, pctSenzaGas: 70, pctIsolamentoBuono: 75 }, curva: "s", trendPm10PctAnno: -1.8,
     crescita: { casePctAnno: 0.5, industrieAnno: 0.5, stradeAnno: 0.2, parchiAnno: 1.2, ciclabiliAnno: 2 },
   },
 ]
@@ -92,11 +93,16 @@ export function avanzamento(curva: Curva, t: number): number {
 // Stessa normalizzazione del dataset: 15 µg/m³ → 100, 50 → 0.
 const normPm10 = (pm10: number) => Math.min(100, Math.max(0, ((50 - pm10) / 35) * 100))
 
+// Scarto del PM10 dovuto al meteo di un anno (es. +0,09 = inverno secco, +9%). Uguale per tutti
+// i piani, così i confronti restano equi; zero nell'anno di partenza, che è quello dei dati reali.
+const METEO = [0, 0.06, -0.04, 0.11, -0.07, 0.02, -0.09, 0.08, 0.03, -0.05, 0.1, -0.03, -0.08, 0.05, 0.09, -0.02]
+export const meteoAnno = (anni: number) => (anni <= 0 ? 0 : 0.7 * METEO[anni % METEO.length]!)
+
 // Dataset con il PM10 di `anni` anni dopo. L'aria cambia di quanto cambia la normalizzazione,
 // così all'anno zero il dataset resta identico all'originale.
-export function datasetAnno(ds: Dataset, anni: number, trendPm10PctAnno: number): Dataset {
-  if (anni <= 0 || trendPm10PctAnno === 0) return ds
-  const fattore = (1 + trendPm10PctAnno / 100) ** anni
+export function datasetAnno(ds: Dataset, anni: number, trendPm10PctAnno: number, meteo = 0): Dataset {
+  if (anni <= 0 || (trendPm10PctAnno === 0 && meteo === 0)) return ds
+  const fattore = (1 + trendPm10PctAnno / 100) ** anni * (1 + meteo)
   return {
     ...ds,
     comuni: ds.comuni.map((c) => {
@@ -151,6 +157,18 @@ function riepilogo(ds: Dataset, s: Scenario, indici: Record<string, StatoComune>
   }
 }
 
+// Gli anni con un meteo fuori dal comune entrano nella cronaca.
+function meteoFinoA(piano: PianoTemporale, anno: number): Voce[] {
+  const out: Voce[] = []
+  for (let a = piano.annoInizio + 1; a <= anno; a++) {
+    const m = meteoAnno(a - piano.annoInizio)
+    const pct = `${m > 0 ? "+" : "−"}${Math.round(Math.abs(m) * 100)}%`
+    if (m >= 0.05) out.push({ anno: a, descrizione: `Inverno secco e senza vento: lo smog ristagna (PM10 ${pct})` })
+    else if (m <= -0.05) out.push({ anno: a, descrizione: `Anno piovoso e ventoso: aria più pulita (PM10 ${pct})` })
+  }
+  return out
+}
+
 // Un fotogramma per anno, dall'anno iniziale al finale compresi.
 export function fotogrammi(ds: Dataset, piano: PianoTemporale, base: Scenario, casaUtente?: Casa): Fotogramma[] {
   const attuali = quoteAttuali(ds, piano.ambito)
@@ -160,12 +178,13 @@ export function fotogrammi(ds: Dataset, piano: PianoTemporale, base: Scenario, c
     const eventi = tutti.filter((e) => e.anno <= anno)
     const aggiunte = eventi.flatMap((e) => (e.aggiunta ? [e.aggiunta] : []))
     const nuoveCase = eventi.flatMap((e) => (e.casa ? [e.casa] : []))
-    const conPm10 = datasetAnno(ds, anno - piano.annoInizio, piano.trendPm10PctAnno)
+    const conPm10 = datasetAnno(ds, anno - piano.annoInizio, piano.trendPm10PctAnno, meteoAnno(anno - piano.annoInizio))
     const dsAnno = nuoveCase.length ? { ...conPm10, caseSeed: [...conPm10.caseSeed, ...nuoveCase] } : conPm10
     const s0 = scenarioAnno(piano, anno, base, attuali)
     const s = aggiunte.length ? { ...s0, aggiunte: [...s0.aggiunte, ...aggiunte] } : s0
     const indici = statoTerritorio(dsAnno, s, casaUtente)
-    const cronaca = eventi.flatMap((e) => (e.descrizione ? [{ anno: e.anno, descrizione: e.descrizione }] : []))
+    const cronaca = [...meteoFinoA(piano, anno), ...eventi.flatMap((e) => (e.descrizione ? [{ anno: e.anno, descrizione: e.descrizione }] : []))]
+      .sort((a, b) => a.anno - b.anno)
     out.push({ anno, indici, riepilogo: riepilogo(dsAnno, s, indici, eventi), aggiunte, cronaca })
   }
   return out

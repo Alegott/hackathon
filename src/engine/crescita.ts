@@ -1,6 +1,6 @@
 import { puntoInPoligono } from "../diorama/geometria"
 import type { Aggiunta, Casa, Comune, Dataset, TipoIndustria, TipoStrada } from "../types"
-import { impattoCiclabile, impattoParco, impattoStrada, INDUSTRIE } from "./costanti"
+import { DELTA_INFRA, impattoCiclabile, impattoStrada, INDUSTRIE } from "./costanti"
 
 // Crescita del territorio nella macchina del tempo: nel frattempo si costruiscono case,
 // capannoni e strade (e, nei piani virtuosi, parchi e ciclabili). Gli eventi sono deterministici
@@ -116,12 +116,9 @@ export function generaCrescita(ds: Dataset, ritmi: RitmiCrescita, annoInizio: nu
   // Parchi e ciclabili: dove abita la gente.
   for (const anno of anniEventi(ritmi.parchiAnno, annoInizio, annoFine)) {
     const c = scegliPesato(comuni, abitato, rnd())
-    const [x, y] = puntoNelComune(c, rnd)
-    const lato = 150 + rnd() * 150
-    const contorno: [number, number][] = [[x, y], [x + lato, y], [x + lato, y + lato], [x, y + lato]]
     eventi.push({
-      anno, descrizione: `Nuovo parco a ${c.nome} (+${km(impattoParco(contorno))})`,
-      aggiunta: { id: id("parco"), comune: c.istat, tipo: "parco", posizione: [x, y], parco: { contorno } },
+      anno, descrizione: `Nuovo parco a ${c.nome} (+${DELTA_INFRA.parco})`,
+      aggiunta: { id: id("parco"), comune: c.istat, tipo: "parco", posizione: puntoNelComune(c, rnd) },
     })
   }
   for (const anno of anniEventi(ritmi.ciclabiliAnno, annoInizio, annoFine)) {

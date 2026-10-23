@@ -564,6 +564,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       const opereTempo = t.attivo ? t.fotogrammi[Math.floor(t.anno + 1e-6) - t.piano.annoInizio]?.aggiunte ?? [] : []
       const infra = [...dataset.infrastrutture.filter((i) => !rimosse.has(i.id) && i.comune === st.comuneSelezionato),
         ...(inScenario ? st.scenario.aggiunte : []), ...opereTempo]
+      const idsTempo = new Set(opereTempo.map((o) => o.id))
       const oggetti: OggettoScenario[] = infra.map((i) => {
         const x = i as Partial<Aggiunta>
         return { id: i.id, tipo: i.tipo,
@@ -571,7 +572,8 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
           ...(x.strada ? { linea: { stile: x.strada.tipo, punti: x.strada.tracciato.map(aCoordinateGeografiche) } } : {}),
           ...(x.ciclabile ? { linea: { stile: "ciclabile" as const, punti: x.ciclabile.tracciato.map(aCoordinateGeografiche) } } : {}),
           ...(x.parco ? { area: x.parco.contorno.map(aCoordinateGeografiche) } : {}),
-          ...(x.industria ? { industria: x.industria } : {}) }
+          ...(x.industria ? { industria: x.industria } : {}),
+          ...(idsTempo.has(i.id) ? { evidenza: true } : {}) }
       })
       const features: FeatureCollection["features"] = oggetti.map((o) => ({
         type: "Feature", properties: { id: o.id, tipo: o.tipo },
