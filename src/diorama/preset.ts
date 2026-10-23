@@ -22,6 +22,22 @@ const PRESET: Record<Fascia, PresetVisivo> = {
 
 export const presetFascia = (fascia: Fascia): PresetVisivo => PRESET[fascia]
 
+// L'atmosfera segue l'aria, indipendentemente dai bonus di case e infrastrutture.
+// Interpolazione continua tra i riferimenti visivi, non soglie sanitarie.
+export function presetAria(aria: number): Pick<PresetVisivo, "cielo" | "nebbia" | "nuvole"> {
+  const v = Math.min(90, Math.max(10, Number.isFinite(aria) ? aria : 50))
+  const fasce: Fascia[] = ["pessima", "scarsa", "media", "buona", "ottima"]
+  const i = Math.min(3, Math.floor((v - 10) / 20))
+  const a = PRESET[fasce[i]!]!, b = PRESET[fasce[i + 1]!]!
+  const t = (v - (10 + i * 20)) / 20
+  const mix = (x: number, y: number) => x + (y - x) * t
+  return {
+    cielo: [mix(a.cielo[0], b.cielo[0]), mix(a.cielo[1], b.cielo[1]), mix(a.cielo[2], b.cielo[2])],
+    nebbia: mix(a.nebbia, b.nebbia),
+    nuvole: { quantita: mix(a.nuvole.quantita, b.nuvole.quantita), grigio: mix(a.nuvole.grigio, b.nuvole.grigio) },
+  }
+}
+
 // Aspetto della provincia vista dall'alto, senza diorama.
 export const PRESET_PROVINCIA: PresetVisivo = {
   cielo: [0.875, 0.918, 0.949],

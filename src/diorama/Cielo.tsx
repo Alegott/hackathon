@@ -5,15 +5,15 @@ import type { PresetVisivo } from "./preset"
 
 const NUVOLE_MAX = 9
 const BIANCO = new THREE.Color("#ffffff")
-const SCURO = new THREE.Color("#4b4d50")
+const SCURO = new THREE.Color("#080808")
 const NERO = new THREE.Color("#000000")
-const BOLLE: [number, number, number, number][] = [[-1, 0, 0, 1], [0, 0.35, 0, 1.3], [1.1, 0, 0.2, 0.9]]
+const BOLLE: [number, number, number, number][] = [[-1, 0, 0, 1], [0, 0.35, 0, 1.3], [1.1, 0, 0.2, 0.9], [-.45, .7, .2, .8], [.5, .2, -.6, .85]]
 
 export function Nuvole({ centro, dimensione, y, preset }: {
   centro: [number, number]; dimensione: number; y: number; preset: { current: PresetVisivo }
 }) {
   const gruppi = useRef<(THREE.Group | null)[]>([])
-  const materiale = useMemo(() => new THREE.MeshStandardMaterial({ flatShading: true, transparent: true, opacity: 0.92, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.45 }), [])
+  const materiale = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 1, transparent: true, opacity: 0.88, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.12 }), [])
   useEffect(() => () => materiale.dispose(), [materiale])
   const nuvole = useMemo(
     () => Array.from({ length: NUVOLE_MAX }, (_, i) => {
@@ -44,7 +44,7 @@ export function Nuvole({ centro, dimensione, y, preset }: {
         <group key={i} ref={(g) => { gruppi.current[i] = g }} visible={false}>
           {BOLLE.map(([x, yy, z, k], j) => (
             <mesh key={j} position={[x * s, yy * s, z * s]} scale={[1.4, 0.7, 1]} material={materiale}>
-              <icosahedronGeometry args={[s * k, 0]} />
+              <sphereGeometry args={[s * k, 20, 12]} />
             </mesh>
           ))}
         </group>

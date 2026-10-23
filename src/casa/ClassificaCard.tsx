@@ -6,6 +6,7 @@ import type { Casa, Classe, Dotazioni } from "../types"
 import { preparaClassifica, type Medaglia, type RigaPrivata, type RigaPubblica } from "./classificaView"
 import { Icona } from "./icone"
 import { oggettiAttivi } from "./oggetti"
+import { RichiediAmicizia } from "../social/RichiediAmicizia"
 
 const RIGHE_INIZIALI = 6
 // Prima lettera della prima e dell'ultima parola: "Casa demo 9" → "C9", "Casa Mia" → "CM".
@@ -51,6 +52,7 @@ function Podio({ righe }: { righe: RigaPubblica[] }) {
             <div className="cl-punti">{r.punteggio}<small> pt</small></div>
             <PillClasse classe={r.classe} />
             <Icone d={r.dotazioni} max={4} />
+            {!r.mia && <RichiediAmicizia casaId={r.id} nome={r.nome} />}
           </div>
         ) : <div key={i} className="cl-gradino cl-gradino--vuoto" />,
       )}
@@ -71,6 +73,7 @@ function Riga({ r }: { r: RigaPubblica }) {
       <span className="cl-valore">{r.punteggio}</span>
       <PillClasse classe={r.classe} />
       <Icone d={r.dotazioni} />
+      {!r.mia && <RichiediAmicizia casaId={r.id} nome={r.nome} />}
     </li>
   )
 }

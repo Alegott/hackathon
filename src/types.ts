@@ -8,6 +8,12 @@ export type TipoIndustria = "artigianale" | "logistica" | "meccanica" | "conciar
 
 export type TipoStrada = "urbana" | "provinciale" | "tangenziale" | "autostrada"
 
+export type Alimentazione = "benzina" | "diesel" | "gpl" | "ibrido" | "elettrico"
+export type CategoriaEuro = 0 | 1 | 2 | 3 | 4 | 5 | 6
+export type Auto = { alimentazione: Alimentazione; euro: CategoriaEuro }
+export type TipoAlbero = "latifoglia" | "conifera" | "frutto" | "ulivo"
+export type Giardino = { alberi: Partial<Record<TipoAlbero, number>> }
+
 export type Dotazioni = {
   fotovoltaico: boolean
   solareTermico: boolean
@@ -16,6 +22,10 @@ export type Dotazioni = {
   isolamento: "buono" | "medio" | "scarso"
   infissi: boolean
   colonninaEV: boolean
+  // Assente o null = nessuna auto: in quel caso l'auto non pesa sul punteggio.
+  auto?: Auto | null
+  // null = nessun giardino; assente = non indicato (si mostra il giardino standard). Non pesa sul punteggio.
+  giardino?: Giardino | null
 }
 
 export type Casa = {

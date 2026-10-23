@@ -4,7 +4,7 @@ import { dataset } from "../data/dataset"
 import { useApp, useIndici } from "../app/useApp"
 import { COMUNI_VICENZA_114 } from "../data/comuni114"
 import { META_CLASSI } from "./DashboardCasa"
-import type { Dotazioni } from "../types"
+import type { Alimentazione, Dotazioni, TipoAlbero } from "../types"
 
 export function etichetteDotazioni(d: Dotazioni): string[] {
   const out: string[] = []
@@ -23,6 +23,29 @@ export function etichetteDotazioni(d: Dotazioni): string[] {
 
   if (d.infissi) out.push("🪟 Infissi doppio/triplo vetro")
   if (d.colonninaEV) out.push("🔌 Colonnina EV")
+  const alimentazioni: Record<Alimentazione, string> = {
+    benzina: "benzina", diesel: "diesel", gpl: "GPL", ibrido: "ibrida", elettrico: "elettrica",
+  }
+  if (d.auto) {
+    out.push(`🚗 Auto ${alimentazioni[d.auto.alimentazione]}${d.auto.alimentazione === "elettrico" ? "" : ` · Euro ${d.auto.euro}`}`)
+  } else out.push("🚗 Nessuna auto")
+
+  if (d.giardino === undefined) out.push("🌱 Giardino non indicato")
+  else if (d.giardino === null) out.push("🌱 Nessun giardino")
+  else {
+    out.push("🌱 Giardino con prato")
+    const alberi: { tipo: TipoAlbero; nome: string }[] = [
+      { tipo: "latifoglia", nome: "Latifoglie" },
+      { tipo: "conifera", nome: "Conifere" },
+      { tipo: "frutto", nome: "Alberi da frutto" },
+      { tipo: "ulivo", nome: "Ulivi" },
+    ]
+    for (const { tipo, nome } of alberi) {
+      const numero = d.giardino.alberi[tipo] ?? 0
+      if (numero > 0) out.push(`🌳 ${nome}: ${numero}`)
+    }
+    if (!alberi.some(({ tipo }) => (d.giardino!.alberi[tipo] ?? 0) > 0)) out.push("🌳 Nessun albero")
+  }
   return out
 }
 

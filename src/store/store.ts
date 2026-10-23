@@ -3,7 +3,7 @@ import { scenarioVuoto } from "../engine"
 import { caricaCasa, salvaCasa } from "./persistenza"
 import type { Aggiunta, Casa, Scenario, TipoIndustria, TipoInfra, TipoStrada } from "../types"
 
-export type Sezione = "mappa" | "casa" | "simulazione"
+export type Sezione = "mappa" | "casa" | "simulazione" | "amici"
 
 export type Stato = {
   vista: "provincia" | "comune"

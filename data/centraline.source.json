@@ -1,6 +1,6 @@
 {
   "provider": "ARPAV",
-  "retrievedAt": "2026-10-22T13:20:55.302110+00:00",
+  "retrievedAt": "2026-10-23T06:49:50.070762+00:00",
   "crs": "EPSG:4326",
   "geometryType": "Point",
   "joinKey": "EOI station code",
@@ -8,7 +8,7 @@
   "source": {
     "path": "data\\raw\\arpav-stations.json",
     "url": "https://gaia.arpa.veneto.it/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:v_rete_aria&outputFormat=application/json&srsName=EPSG:4326",
-    "sha256": "305794ecf8eb8b1badf636b3b8b643455ca533fd41004887f48054fdce52f8b0"
+    "sha256": "3f8791021cd9fbd2be3578b86bf9b241b4cc316c1d7b3ab9b98e2337b9d93813"
   },
   "note": "Current official station registry; historic relocation not independently assessed."
 }

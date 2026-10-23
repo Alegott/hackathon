@@ -1,7 +1,7 @@
 import proj4 from "proj4"
 import type { FeatureCollection, MultiPolygon } from "geojson"
 import type { Comune, StatoComune } from "../types"
-import { coloreFascia } from "./fasce"
+import { colorePunteggio } from "./fasce"
 
 const utm32 = "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs"
 
@@ -49,7 +49,7 @@ export function estensioneGeografica(confini: FeatureCollection<MultiPolygon>): 
 }
 
 export function coloreIndice(stato: StatoComune | undefined): string {
-  return stato ? coloreFascia(stato.fascia) : "#91bba3"
+  return stato ? colorePunteggio(stato.totale) : "#94a3b8"
 }
 
 // Gerarchia editoriale dei centri di riferimento; le posizioni arrivano dai place OSM.

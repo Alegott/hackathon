@@ -1,0 +1,2129 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vicenza Sostenibile — Presentazione Interattiva · Hackathon di Schio 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-obsidian: #07110d;
+      --bg-chassis: #0d1d17;
+      --bg-bay: #132920;
+      --bg-keycap: #183328;
+      --bg-keycap-hover: #214537;
+
+      --limestone-bg: #efece4;
+      --limestone-surface: #e4dfd3;
+      --limestone-ink: #0a1c15;
+      --limestone-secondary: #1e4233;
+      --limestone-border: rgba(10, 28, 21, 0.16);
+
+      --ink-primary: #f2f9f5;
+      --ink-secondary: #bce3cf;
+      --signal-emerald: #10b981;
+      --signal-bright: #34d399;
+      --signal-lime: #a7f3d0;
+      --signal-amber: #fbbf24;
+      --signal-coral: #fb7185;
+
+      --border-hairline: rgba(188, 227, 207, 0.14);
+      --border-active: rgba(110, 231, 183, 0.45);
+      --keycap-ledge: #091712;
+      --keycap-ledge-active: #059669;
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+      --radius-panel: 16px;
+      --radius-key: 12px;
+
+      color-scheme: dark;
+      scrollbar-color: #264d3d #07110d;
+      scrollbar-width: thin;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    ::selection {
+      background: rgba(52, 211, 153, 0.3);
+      color: #ffffff;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-obsidian);
+      color: var(--ink-primary);
+      font-family: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      caret-color: var(--signal-bright);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: inherit;
+      text-underline-offset: 0.22em;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--signal-bright);
+      outline-offset: 3px;
+    }
+
+    /* Typography Hierarchy (>1.25x steps) */
+    h1, h2, h3 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
+      color: inherit;
+    }
+
+    h1 {
+      font-size: clamp(2.6rem, 4.2vw, 3.85rem);
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+    }
+
+    h2 {
+      font-size: clamp(2rem, 3vw, 2.65rem);
+      line-height: 1.08;
+    }
+
+    h3 {
+      font-size: 1.35rem;
+      line-height: 1.22;
+    }
+
+    p {
+      font-size: 1rem;
+      line-height: 1.55;
+      color: var(--ink-secondary);
+      text-wrap: pretty;
+      max-width: 64ch;
+    }
+
+    .mono {
+      font-family: "Azeret Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .icon-svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.85;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+
+    /* =================================================================
+       DECK SHELL: TOP BAR + SLIDE VIEWPORT + BOTTOM CONTROLLER
+       ================================================================= */
+    .deck-shell {
+      display: grid;
+      grid-template-rows: 60px 1fr 58px;
+      width: 100vw;
+      height: 100dvh;
+    }
+
+    .top-rail {
+      background: rgba(7, 17, 13, 0.94);
+      border-bottom: 1px solid var(--border-hairline);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 50;
+    }
+
+    .rail-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-weight: 700;
+      font-size: 1.08rem;
+      color: var(--ink-primary);
+      text-decoration: none;
+    }
+
+    .status-beacon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--signal-bright);
+    }
+
+    .slide-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      list-style: none;
+    }
+
+    .slide-tab-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--ink-secondary);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out);
+    }
+
+    .slide-tab-btn:hover {
+      background: var(--bg-bay);
+      color: var(--ink-primary);
+    }
+
+    .slide-tab-btn[aria-current="step"] {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--signal-lime);
+      font-weight: 600;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .key-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: var(--signal-bright);
+      color: #051610;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      border: 1px solid var(--signal-lime);
+      border-bottom: 3px solid #059669;
+      cursor: pointer;
+      transition: transform 100ms var(--ease-spring), background-color 140ms var(--ease-out);
+    }
+
+    .key-action:hover {
+      background: var(--signal-lime);
+    }
+
+    .key-action:active {
+      transform: translateY(2px);
+    }
+
+    .key-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 13px;
+      border-radius: 10px;
+      background: var(--bg-keycap);
+      color: var(--ink-primary);
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 0.88rem;
+      border: 1px solid var(--border-hairline);
+      border-bottom: 3px solid var(--keycap-ledge);
+      cursor: pointer;
+      transition: transform 100ms var(--ease-spring), border-color 140ms var(--ease-out), background-color 140ms var(--ease-out);
+    }
+
+    .key-secondary:hover {
+      background: var(--bg-keycap-hover);
+      border-color: var(--border-active);
+    }
+
+    .key-secondary:active {
+      transform: translateY(2px);
+    }
+
+    /* =================================================================
+       HORIZONTAL SLIDE VIEWPORT & TRACK
+       ================================================================= */
+    .deck-viewport {
+      width: 100vw;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .deck-track {
+      display: flex;
+      width: 700vw;
+      height: 100%;
+      transition: transform 460ms var(--ease-spring);
+      will-change: transform;
+    }
+
+    .slide {
+      width: 100vw;
+      height: 100%;
+      flex-shrink: 0;
+      overflow-y: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 32px;
+    }
+
+    .slide-inner {
+      width: 100%;
+      max-width: 1260px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .slide-limestone {
+      background-color: var(--limestone-bg);
+      color: var(--limestone-ink);
+    }
+
+    .slide-limestone p {
+      color: var(--limestone-secondary);
+    }
+
+    .slide-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 28px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-hairline);
+      flex-wrap: wrap;
+    }
+
+    .slide-limestone .slide-head {
+      border-bottom-color: var(--limestone-border);
+    }
+
+    /* =================================================================
+       BOTTOM SLIDE CONTROLLER BAR
+       ================================================================= */
+    .bottom-rail {
+      background: rgba(7, 17, 13, 0.94);
+      border-top: 1px solid var(--border-hairline);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 50;
+    }
+
+    .progress-dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot-btn {
+      width: 28px;
+      height: 8px;
+      border-radius: 999px;
+      border: none;
+      background: var(--bg-keycap);
+      cursor: pointer;
+      transition: width 220ms var(--ease-spring), background-color 180ms var(--ease-out);
+    }
+
+    .dot-btn[aria-current="true"] {
+      width: 48px;
+      background: var(--signal-bright);
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* =================================================================
+       SHARED CHASSIS & INTERACTIVE WIDGETS
+       ================================================================= */
+    .console-chassis {
+      position: relative;
+      background: var(--bg-chassis);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-panel);
+      overflow: hidden;
+      transition: border-color 200ms var(--ease-out);
+    }
+
+    .console-chassis::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        520px circle at var(--mouse-x, -600px) var(--mouse-y, -600px),
+        rgba(52, 211, 153, 0.08),
+        transparent 45%
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .console-chassis > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* SLIDE 1: VISION & HERO */
+    .s1-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .s1-left {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .s1-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding-top: 8px;
+    }
+
+    .pillar-box {
+      padding: 16px;
+      border-radius: var(--radius-key);
+      background: var(--bg-chassis);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .pillar-box strong {
+      display: block;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.5rem;
+      color: var(--signal-lime);
+      margin-bottom: 2px;
+    }
+
+    .pillar-box span {
+      font-size: 0.9rem;
+      color: var(--ink-secondary);
+    }
+
+    .s1-stage {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .s1-img-wrap {
+      border-radius: var(--radius-key);
+      overflow: hidden;
+      aspect-ratio: 16 / 9.5;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .s1-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .s1-dock {
+      padding: 14px 18px;
+      border-radius: var(--radius-key);
+      background: var(--bg-bay);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* SLIDE 2: LIMESTONE PROBLEM & SOLUTION */
+    .persona-tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 5px;
+      border-radius: var(--radius-key);
+      background: var(--limestone-surface);
+      border: 1px solid var(--limestone-border);
+      align-self: flex-start;
+    }
+
+    .persona-tab {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--limestone-secondary);
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 0.98rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .persona-tab[aria-selected="true"] {
+      background: var(--limestone-ink);
+      color: var(--limestone-bg);
+    }
+
+    .decoder-bridge {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .limestone-plate {
+      padding: 26px;
+      border-radius: var(--radius-panel);
+      background: var(--limestone-surface);
+      border: 1px solid var(--limestone-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .limestone-plate-dark {
+      padding: 26px;
+      border-radius: var(--radius-panel);
+      background: var(--limestone-ink);
+      color: var(--ink-primary);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .limestone-plate-dark p {
+      color: var(--ink-secondary);
+    }
+
+    .outcome-pill {
+      padding: 13px 16px;
+      border-radius: var(--radius-key);
+      background: rgba(10, 28, 21, 0.08);
+      border: 1px solid var(--limestone-border);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--limestone-ink);
+    }
+
+    .outcome-pill-bright {
+      padding: 13px 16px;
+      border-radius: var(--radius-key);
+      background: var(--bg-bay);
+      border: 1px solid var(--border-active);
+      color: var(--signal-lime);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .formula-banner {
+      padding: 14px 20px;
+      border-radius: var(--radius-key);
+      background: var(--limestone-surface);
+      border: 1px solid var(--limestone-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.92rem;
+      color: var(--limestone-ink);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* SLIDE 3: SANDBOX SCHIO */
+    .telemetry-bank {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .tube-bay {
+      padding: 14px 18px;
+      background: var(--bg-chassis);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-key);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tube-bay-active {
+      background: var(--bg-bay);
+      border-color: var(--border-active);
+    }
+
+    .tube-label {
+      font-size: 0.875rem;
+      color: var(--ink-secondary);
+    }
+
+    .tube-digits {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--ink-primary);
+    }
+
+    .panorama-workbench {
+      display: grid;
+      grid-template-columns: 1.28fr 0.72fr;
+      gap: 20px;
+    }
+
+    .diorama-viewport {
+      padding: 14px;
+    }
+
+    .diorama-canvas {
+      position: relative;
+      border-radius: var(--radius-key);
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      background: #06100c;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .diorama-canvas img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .spatial-pin {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(7, 17, 13, 0.9);
+      border: 1px solid var(--signal-bright);
+      color: var(--ink-primary);
+      font-family: "Azeret Mono", monospace;
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: transform 150ms var(--ease-spring), background-color 150ms var(--ease-out);
+    }
+
+    .spatial-pin:hover,
+    .spatial-pin[aria-pressed="true"] {
+      background: var(--signal-bright);
+      color: #051610;
+      border-color: #ffffff;
+      transform: translate(-50%, -50%) scale(1.06);
+    }
+
+    .pin-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .keycap-deck {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .hardware-keys-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hw-key {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: var(--radius-key);
+      background: var(--bg-keycap);
+      border: 1px solid var(--border-hairline);
+      border-bottom: 3px solid var(--keycap-ledge);
+      color: var(--ink-primary);
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 100ms var(--ease-spring), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out);
+    }
+
+    .hw-key:hover {
+      background: var(--bg-keycap-hover);
+      border-color: var(--border-active);
+    }
+
+    .hw-key:active {
+      transform: translateY(2px);
+    }
+
+    .hw-key[aria-pressed="true"] {
+      background: rgba(16, 185, 129, 0.24);
+      border-color: var(--signal-bright);
+      border-bottom-color: var(--keycap-ledge-active);
+    }
+
+    .hw-key-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .hw-legend {
+      padding: 3px 9px;
+      border-radius: 8px;
+      background: rgba(7, 17, 13, 0.65);
+      color: var(--signal-lime);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .rotary-scrubber-bay {
+      padding: 13px 15px;
+      border-radius: var(--radius-key);
+      background: var(--bg-bay);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--signal-bright);
+      cursor: pointer;
+      height: 6px;
+    }
+
+    /* SLIDE 4: SPILLOVER 50% */
+    .spillover-workbench {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+    }
+
+    .radar-stage {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .preset-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      background: var(--bg-keycap);
+      border: 1px solid var(--border-hairline);
+      color: var(--ink-primary);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .preset-btn[aria-pressed="true"] {
+      background: var(--signal-bright);
+      color: #051610;
+      border-color: var(--signal-lime);
+    }
+
+    .carto-svg-frame {
+      padding: 14px;
+      border-radius: var(--radius-key);
+      background: #06100c;
+      border: 1px solid var(--border-hairline);
+      height: 310px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .carto-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .muni-node {
+      cursor: pointer;
+    }
+
+    .muni- inspector {
+      padding: 22px;
+    }
+
+    .muni-inspector {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .inspector-card {
+      padding: 18px;
+      border-radius: var(--radius-key);
+      background: var(--bg-bay);
+      border: 1px solid var(--border-active);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .inspector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-hairline);
+    }
+
+    .fauna-ladder {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .fauna-rung {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--bg-bay);
+      border: 1px solid var(--border-hairline);
+      font-size: 0.88rem;
+      color: var(--ink-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .fauna-rung[data-unlocked="true"] {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: var(--signal-bright);
+      color: var(--ink-primary);
+    }
+
+    /* SLIDE 5: PALCO CASA 3D */
+    .casa-workbench {
+      display: grid;
+      grid-template-columns: 1.04fr 0.96fr;
+      gap: 22px;
+    }
+
+    .casa-stage-panel {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .casa-isometric-box {
+      position: relative;
+      border-radius: var(--radius-key);
+      overflow: hidden;
+      aspect-ratio: 16 / 9.2;
+      background: #f4f7f4;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .casa-isometric-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .house-pin {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: rgba(7, 17, 13, 0.88);
+      color: var(--ink-primary);
+      border: 1.5px solid var(--border-hairline);
+      font-family: "Azeret Mono", monospace;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .house-pin[data-on="true"] {
+      background: var(--signal-emerald);
+      color: #04140e;
+      border-color: #ffffff;
+    }
+
+    .energy-scale-bar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .grade-pill {
+      padding: 6px 0;
+      text-align: center;
+      border-radius: 8px;
+      background: var(--bg-bay);
+      color: var(--ink-secondary);
+      font-weight: 700;
+      font-size: 0.9rem;
+      border: 1px solid transparent;
+    }
+
+    .grade-pill[data-current="true"] {
+      background: var(--signal-bright);
+      color: #051610;
+      border-color: #ffffff;
+    }
+
+    .roi-ledger-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .roi-cell {
+      padding: 12px 14px;
+      border-radius: var(--radius-key);
+      background: var(--bg-bay);
+    }
+
+    .roi-cell span {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--ink-secondary);
+    }
+
+    .roi-cell strong {
+      font-size: 1.25rem;
+      color: var(--signal-lime);
+    }
+
+    .casa-controls-panel {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .dotazioni-keygrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .advisor-callout {
+      padding: 14px 16px;
+      border-radius: var(--radius-key);
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      color: #fef08a;
+      font-size: 0.92rem;
+    }
+
+    /* SLIDE 6: DATI ARPAV & SCALABILITÀ */
+    .architecture-grid {
+      display: grid;
+      grid-template-columns: 1.12fr 0.88fr;
+      gap: 22px;
+    }
+
+    .arpav-panel,
+    .whitelabel-panel {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .pollutant-tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      background: var(--bg-obsidian);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .pol-btn {
+      padding: 6px 13px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--ink-secondary);
+      font-family: "Azeret Mono", monospace;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .pol-btn[aria-pressed="true"] {
+      background: var(--signal-bright);
+      color: #051610;
+    }
+
+    .station-table {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .station-row {
+      display: grid;
+      grid-template-columns: 150px 1fr 120px;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+    }
+
+    .station-bar-bg {
+      height: 11px;
+      border-radius: 999px;
+      background: var(--bg-bay);
+      overflow: hidden;
+    }
+
+    .station-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 320ms var(--ease-out);
+    }
+
+    .prov-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .prov-btn {
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--bg-keycap);
+      border: 1px solid var(--border-hairline);
+      color: var(--ink-primary);
+      text-align: left;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .prov-btn[aria-pressed="true"] {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--signal-bright);
+    }
+
+    /* SLIDE 7: TEAM & DEV 1-6 */
+    .team-roster-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .dev-member-plate {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--border-active);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--signal-lime);
+      flex-shrink: 0;
+    }
+
+    .workflow-steps-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .wf-card {
+      padding: 14px 16px;
+      border-radius: var(--radius-key);
+      background: var(--bg-chassis);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .wf-card strong {
+      display: block;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.08rem;
+      color: var(--signal-lime);
+      margin-bottom: 2px;
+    }
+
+    .wf-card span {
+      font-size: 0.88rem;
+      color: var(--ink-secondary);
+    }
+
+    .dev-streams-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stream-tile {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stream-tag {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--signal-bright);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .s1-grid,
+      .decoder-bridge,
+      .panorama-workbench,
+      .spillover-workbench,
+      .casa-workbench,
+      .architecture-grid {
+        grid-template-columns: 1fr;
+      }
+      .telemetry-bank,
+      .team-roster-grid,
+      .workflow-steps-strip,
+      .dev-streams-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .slide-tabs {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-shell">
+    <!-- TOP BAR -->
+    <header class="top-rail">
+      <a href="#slide-0" class="rail-brand" id="brand-home">
+        <span class="status-beacon"></span>
+        <span>Vicenza Sostenibile</span>
+      </a>
+
+      <nav aria-label="Slide della presentazione">
+        <ul class="slide-tabs">
+          <li><button type="button" class="slide-tab-btn" data-goto="0" aria-current="step">1. Visione</button></li>
+          <li><button type="button" class="slide-tab-btn" data-goto="1">2. Problema &amp; Soluzione</button></li>
+          <li><button type="button" class="slide-tab-btn" data-goto="2">3. Sandbox Schio</button></li>
+          <li><button type="button" class="slide-tab-btn" data-goto="3">4. Spillover 50%</button></li>
+          <li><button type="button" class="slide-tab-btn" data-goto="4">5. Casa 3D</button></li>
+          <li><button type="button" class="slide-tab-btn" data-goto="5">6. Dati ARPAV</button></li>
+          <li><button type="button" class="slide-tab-btn" data-goto="6">7. Team &amp; AI</button></li>
+        </ul>
+      </nav>
+
+      <div class="top-actions">
+        <button type="button" class="key-secondary" id="btn-fullscreen" title="Schermo Intero (Tasto F)">
+          <span>Schermo Intero</span>
+        </button>
+        <a href="http://localhost:5173/" target="_blank" rel="noopener noreferrer" class="key-action">
+          <span>Apri App 3D Live</span>
+          <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+        </a>
+      </div>
+    </header>
+
+    <!-- SLIDE DECK VIEWPORT -->
+    <main class="deck-viewport" id="deck-viewport">
+      <div class="deck-track" id="deck-track">
+
+        <!-- =============================================================
+             SLIDE 1: VISIONE & HOOK (Schio 2026)
+             ============================================================= -->
+        <section class="slide" aria-label="Slide 1: Visione">
+          <div class="slide-inner">
+            <div class="s1-grid">
+              <div class="s1-left">
+                <h1 id="slide-heading-0" tabindex="-1">
+                  Il territorio non è una tabella. <span style="color:var(--signal-bright)">Respira.</span>
+                </h1>
+                <p>
+                  Hackathon di Schio 2026 · <strong>"La mia sostenibilità"</strong>: abbiamo trasformato i dati aperti di Aria, Suolo, Biodiversità ed Energia in un <strong>Gemello Digitale 3D vivo</strong> dei 114 Comuni vicentini e della singola abitazione.
+                </p>
+
+                <div class="s1-pillars">
+                  <div class="pillar-box">
+                    <strong class="mono">114 Comuni</strong>
+                    <span>Mappa 3D su dati reali ARPAV e confini ISTAT</span>
+                  </div>
+                  <div class="pillar-box">
+                    <strong class="mono">50% Spillover</strong>
+                    <span>Ogni scelta locale migliora anche i comuni vicini</span>
+                  </div>
+                  <div class="pillar-box">
+                    <strong class="mono">Classe A–G</strong>
+                    <span>Spaccato Casa 3D e consigli AI in totale privacy</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="console-chassis s1-stage">
+                <div class="s1-img-wrap">
+                  <img src="public/pitch/hero_diorama.jpg" alt="Diorama 3D di Schio con correnti d'aria pulita e aquila reale" fetchpriority="high" />
+                </div>
+                <div class="s1-dock mono">
+                  <div>
+                    <strong style="color:var(--ink-primary);display:block">Comune di Schio · Stazione ARPAV IT0663A</strong>
+                    <span style="font-size:0.875rem;color:var(--ink-secondary)">PM10 medio: 21.1 µg/m³ · Fauna bio-indicatrice attiva</span>
+                  </div>
+                  <span style="font-size:1.5rem;font-weight:700;color:var(--signal-lime)">83 / 100</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 2: PROBLEMA & SOLUZIONE (Tavola Limestone)
+             ============================================================= -->
+        <section class="slide slide-limestone" aria-label="Slide 2: Problema e Soluzione">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-1" tabindex="-1">Dati complessi. Scelte semplici.</h2>
+              <p>I dati ambientali esistono già, ma sono chiusi in PDF tecnici. Li traduciamo in decisioni immediate per 3 attori:</p>
+            </div>
+
+            <div class="persona-tabs" role="tablist" aria-label="Seleziona destinatario">
+              <button type="button" class="persona-tab" role="tab" aria-selected="true" data-persona="sindaco">1. Comuni &amp; Sindaci</button>
+              <button type="button" class="persona-tab" role="tab" aria-selected="false" data-persona="cittadino">2. Cittadini &amp; Famiglie</button>
+              <button type="button" class="persona-tab" role="tab" aria-selected="false" data-persona="scuola">3. Scuole &amp; Studenti</button>
+            </div>
+
+            <div class="decoder-bridge">
+              <div class="limestone-plate">
+                <div>
+                  <h3 id="persona-pain-title">Prima: PDF Stagnanti e Confini Ciechi</h3>
+                  <p id="persona-pain-desc" style="margin-top:8px">
+                    Un assessore legge tabelle annuali in µg/m³ divise per centralina, senza sapere quanto vale un nuovo parco urbano o una ciclabile sull'indice di Schio e della vallata.
+                  </p>
+                </div>
+                <div class="outcome-pill mono" id="persona-raw-sample">
+                  Dato grezzo: PM10 21.1 µg/m³ · Nessuna simulazione preventiva
+                </div>
+              </div>
+
+              <div class="limestone-plate-dark">
+                <div>
+                  <h3 id="persona-sol-title">Con Vicenza Sostenibile: Simulazione What-If in 3D</h3>
+                  <p id="persona-sol-desc" style="margin-top:8px">
+                    Il Comune testa gli interventi sulla mappa 3D senza sovrascrivere i dati storici, vedendo all'istante il salto di punteggio locale e il beneficio condiviso coi comuni confinanti.
+                  </p>
+                </div>
+                <div class="outcome-pill-bright mono" id="persona-action-sample">
+                  Risultato: Schio +15 pt (100%) · 6 Comuni vicini +7.5 pt (Spillover 50%)
+                </div>
+              </div>
+            </div>
+
+            <div class="formula-banner mono">
+              <strong>Formula Trasparente del Motore Puro:</strong>
+              <span>Indice = 0.55 · Aria ARPAV + 0.30 · Infrastrutture OSM + 0.15 · Case + ΔScenario</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 3: SANDBOX TERRITORIALE LIVE SU SCHIO
+             ============================================================= -->
+        <section class="slide" aria-label="Slide 3: Sandbox Schio">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-2" tabindex="-1">Simulatore Territoriale su Schio.</h2>
+              <p>Partiamo dal dato reale (83/100): attiva gli interventi sulla mappa o sulla tastiera per simulare il futuro.</p>
+            </div>
+
+            <div class="telemetry-bank mono" aria-live="polite">
+              <div class="tube-bay tube-bay-active">
+                <span class="tube-label">Indice Schio</span>
+                <div class="tube-digits" style="color:var(--signal-lime)" id="top-schio-score">83 / 100</div>
+              </div>
+              <div class="tube-bay">
+                <span class="tube-label">Spillover Confinanti</span>
+                <div class="tube-digits" id="top-spill-readout">+0.0 pt</div>
+              </div>
+              <div class="tube-bay">
+                <span class="tube-label">CO₂ Evitata</span>
+                <div class="tube-digits" id="top-co2-readout">0 t/a</div>
+              </div>
+              <div class="tube-bay">
+                <span class="tube-label">Fauna 3D Attiva</span>
+                <div class="tube-digits" id="top-fauna-readout">86%</div>
+              </div>
+            </div>
+
+            <div class="panorama-workbench">
+              <div class="console-chassis diorama-viewport">
+                <div class="diorama-canvas">
+                  <img src="public/pitch/hero_diorama.jpg" alt="Plastico 3D di Schio con interventi attivabili" />
+                  <button type="button" class="spatial-pin" data-policy="industria" aria-pressed="false" style="top: 38%; left: 26%;">
+                    <span class="pin-dot"></span><span>− Industria +12</span>
+                  </button>
+                  <button type="button" class="spatial-pin" data-policy="traffico" aria-pressed="false" style="top: 66%; left: 48%;">
+                    <span class="pin-dot"></span><span>− Traffico +8</span>
+                  </button>
+                  <button type="button" class="spatial-pin" data-policy="parco" aria-pressed="false" style="top: 28%; left: 68%;">
+                    <span class="pin-dot"></span><span>+ Parco +5</span>
+                  </button>
+                  <button type="button" class="spatial-pin" data-policy="ciclabile" aria-pressed="false" style="top: 76%; left: 24%;">
+                    <span class="pin-dot"></span><span>+ Ciclabile +3</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="console-chassis keycap-deck">
+                <h3>Leve Politiche Comunali</h3>
+                <div class="hardware-keys-list">
+                  <button type="button" class="hw-key" data-policy="industria" data-delta="12" data-co2="420" aria-pressed="false">
+                    <span class="hw-key-left">
+                      <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V8l5 4V8l5 4V4h4v17"/></svg>
+                      <span>Riconverti Industria</span>
+                    </span>
+                    <span class="hw-legend mono">+12</span>
+                  </button>
+                  <button type="button" class="hw-key" data-policy="traffico" data-delta="8" data-co2="290" aria-pressed="false">
+                    <span class="hw-key-left">
+                      <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19L8 5m12 14L16 5M12 6v3m0 4v3m0 4v1"/></svg>
+                      <span>Riduci Traffico</span>
+                    </span>
+                    <span class="hw-legend mono">+8</span>
+                  </button>
+                  <button type="button" class="hw-key" data-policy="parco" data-delta="5" data-co2="165" aria-pressed="false">
+                    <span class="hw-key-left">
+                      <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22v-6m0 0a5 5 0 0 1-4-8 4 4 0 0 1 8 0 5 5 0 0 1-4 8z"/></svg>
+                      <span>Nuovo Parco Urbano</span>
+                    </span>
+                    <span class="hw-legend mono">+5</span>
+                  </button>
+                  <button type="button" class="hw-key" data-policy="ciclabile" data-delta="3" data-co2="95" aria-pressed="false">
+                    <span class="hw-key-left">
+                      <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-7h5l3 7M10 10L8 7h3"/></svg>
+                      <span>Nuova Pista Ciclabile</span>
+                    </span>
+                    <span class="hw-legend mono">+3</span>
+                  </button>
+                </div>
+
+                <div class="rotary-scrubber-bay">
+                  <div style="display:flex;justify-content:space-between;font-size:0.9rem">
+                    <span>Case con Fotovoltaico</span>
+                    <strong class="mono" id="fv-console-label" style="color:var(--signal-lime)">0% (+0 pt)</strong>
+                  </div>
+                  <input type="range" id="fv-console-slider" min="0" max="100" step="10" value="0" aria-label="Percentuale case con fotovoltaico" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 4: RETE SPILLOVER 50% SUI COMUNI CONFINANTI
+             ============================================================= -->
+        <section class="slide" aria-label="Slide 4: Spillover 50%">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-3" tabindex="-1">L'aria non si ferma al confine comunale.</h2>
+              <p>Ogni azione su <strong>Schio</strong> propaga il <strong>50% del beneficio</strong> ai 6 Comuni confinanti dell'Alto Vicentino.</p>
+            </div>
+
+            <div class="spillover-workbench">
+              <div class="console-chassis radar-stage">
+                <div class="preset-group" role="group" aria-label="Scenari">
+                  <button type="button" class="preset-btn" id="preset-realta" aria-pressed="true">Dato Reale ARPAV</button>
+                  <button type="button" class="preset-btn" id="preset-green" aria-pressed="false">Scenario Vallata Verde</button>
+                  <button type="button" class="preset-btn" id="preset-full" aria-pressed="false">Scenario 100% Sostenibile</button>
+                </div>
+
+                <div class="carto-svg-frame">
+                  <svg class="carto-svg" viewBox="0 0 680 310" role="img" aria-label="Grafo di Schio e dei 6 comuni confinanti">
+                    <circle cx="340" cy="155" r="85" fill="none" stroke="rgba(188,227,207,0.08)" stroke-width="1" />
+                    <circle cx="340" cy="155" r="145" fill="none" stroke="rgba(188,227,207,0.06)" stroke-width="1" />
+
+                    <line class="spill-vec" x1="340" y1="155" x2="155" y2="68" stroke="rgba(52,211,153,0.35)" stroke-width="2.5" stroke-dasharray="6 5" />
+                    <line class="spill-vec" x1="340" y1="155" x2="340" y2="38" stroke="rgba(52,211,153,0.35)" stroke-width="2.5" stroke-dasharray="6 5" />
+                    <line class="spill-vec" x1="340" y1="155" x2="525" y2="68" stroke="rgba(52,211,153,0.35)" stroke-width="2.5" stroke-dasharray="6 5" />
+                    <line class="spill-vec" x1="340" y1="155" x2="140" y2="238" stroke="rgba(52,211,153,0.35)" stroke-width="2.5" stroke-dasharray="6 5" />
+                    <line class="spill-vec" x1="340" y1="155" x2="340" y2="272" stroke="rgba(52,211,153,0.35)" stroke-width="2.5" stroke-dasharray="6 5" />
+                    <line class="spill-vec" x1="340" y1="155" x2="540" y2="238" stroke="rgba(52,211,153,0.35)" stroke-width="2.5" stroke-dasharray="6 5" />
+
+                    <g class="muni-node" data-muni="Torrebelvicino" data-base="81" data-pop="5.812 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="155" cy="68" r="29" fill="#13382a" stroke="#34d399" stroke-width="1.75" />
+                      <text x="155" y="64" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">Torrebelvicino</text>
+                      <text x="155" y="80" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n0">81 pt</text>
+                    </g>
+                    <g class="muni-node" data-muni="Santorso" data-base="82" data-pop="5.640 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="340" cy="38" r="27" fill="#13382a" stroke="#34d399" stroke-width="1.75" />
+                      <text x="340" y="34" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">Santorso</text>
+                      <text x="340" y="50" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n1">82 pt</text>
+                    </g>
+                    <g class="muni-node" data-muni="Marano Vicentino" data-base="78" data-pop="9.280 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="525" cy="68" r="29" fill="#13382a" stroke="#34d399" stroke-width="1.75" />
+                      <text x="525" y="64" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">Marano Vic.</text>
+                      <text x="525" y="80" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n2">78 pt</text>
+                    </g>
+                    <g class="muni-node" data-muni="Valdagno" data-base="79" data-pop="25.690 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="140" cy="238" r="29" fill="#13382a" stroke="#34d399" stroke-width="1.75" />
+                      <text x="140" y="234" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">Valdagno</text>
+                      <text x="140" y="250" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n3">79 pt</text>
+                    </g>
+                    <g class="muni-node" data-muni="Monte di Malo" data-base="80" data-pop="2.815 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="340" cy="272" r="27" fill="#13382a" stroke="#34d399" stroke-width="1.75" />
+                      <text x="340" y="268" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">Monte di Malo</text>
+                      <text x="340" y="284" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n4">80 pt</text>
+                    </g>
+                    <g class="muni-node" data-muni="San Vito di Leguzzano" data-base="79" data-pop="3.560 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="540" cy="238" r="29" fill="#13382a" stroke="#34d399" stroke-width="1.75" />
+                      <text x="540" y="234" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">San Vito Leg.</text>
+                      <text x="540" y="250" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n5">79 pt</text>
+                    </g>
+                    <g class="muni-node" data-muni="Schio" data-base="83" data-pop="38.780 ab." tabindex="0" role="button">
+                      <circle class="muni-circle" cx="340" cy="155" r="46" fill="#059669" stroke="#ffffff" stroke-width="2.5" />
+                      <text x="340" y="148" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700">SCHIO</text>
+                      <text x="340" y="168" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="700" class="mono" id="radar-schio-txt">83/100</text>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="console-chassis muni-inspector">
+                <div class="inspector-card">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline">
+                    <h3 id="insp-name">Schio</h3>
+                    <span class="mono" id="insp-pop" style="font-size:0.875rem;color:var(--signal-lime)">38.780 ab.</span>
+                  </div>
+                  <p id="insp-role" style="font-size:0.92rem">Hub centrale · Riceve il 100% degli interventi locali.</p>
+                  <div class="inspector-grid mono">
+                    <div>
+                      <span style="font-size:0.875rem;color:var(--ink-secondary);display:block">Punteggio</span>
+                      <strong id="insp-score" style="font-size:1.55rem;color:var(--signal-lime)">83 / 100</strong>
+                    </div>
+                    <div>
+                      <span style="font-size:0.875rem;color:var(--ink-secondary);display:block">Variazione</span>
+                      <strong id="insp-delta" style="font-size:1.55rem;color:var(--ink-primary)">+0.0 pt</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style="font-size:1.15rem;margin-bottom:10px">Soglie Fauna Bio-Indicatrice 3D</h3>
+                  <div class="fauna-ladder mono">
+                    <div class="fauna-rung" data-unlocked="true"><span>Caprioli</span><span>≥ 50</span></div>
+                    <div class="fauna-rung" data-unlocked="true"><span>Volpi</span><span>≥ 65</span></div>
+                    <div class="fauna-rung" data-unlocked="true"><span>Aquila Reale</span><span>≥ 75</span></div>
+                    <div class="fauna-rung" id="rung-cervo" data-unlocked="false"><span>Cervi &amp; Lince</span><span>≥ 90</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 5: PALCO CASA 3D & PRIVACY-FIRST ADVISOR
+             ============================================================= -->
+        <section class="slide" aria-label="Slide 5: Palco Casa 3D">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-4" tabindex="-1">Palco Casa 3D: dalla Classe E alla Classe A.</h2>
+              <p>Configura le dotazioni domestiche in totale anonimato e scopri quale intervento rende di più.</p>
+            </div>
+
+            <div class="casa-workbench">
+              <div class="console-chassis casa-stage-panel">
+                <div class="casa-isometric-box">
+                  <img src="public/pitch/casa_3d.jpg" alt="Spaccato Casa 3D interattiva" />
+                  <button type="button" class="house-pin" data-dot="fv" data-on="false" style="top: 24%; left: 48%;">Fotovoltaico +22</button>
+                  <button type="button" class="house-pin" data-dot="pdc" data-on="false" style="top: 66%; left: 26%;">Pompa Calore +22</button>
+                  <button type="button" class="house-pin" data-dot="cappotto" data-on="true" style="top: 46%; left: 72%;">Cappotto +16</button>
+                  <button type="button" class="house-pin" data-dot="ev" data-on="false" style="top: 78%; left: 66%;">Colonnina EV +11</button>
+                </div>
+
+                <div class="energy-scale-bar mono" aria-label="Classe Energetica">
+                  <div class="grade-pill" data-g="G">G</div>
+                  <div class="grade-pill" data-g="F">F</div>
+                  <div class="grade-pill" data-g="E" data-current="true">E</div>
+                  <div class="grade-pill" data-g="D">D</div>
+                  <div class="grade-pill" data-g="C">C</div>
+                  <div class="grade-pill" data-g="B">B</div>
+                  <div class="grade-pill" data-g="A">A</div>
+                </div>
+
+                <div class="roi-ledger-strip mono">
+                  <div class="roi-cell"><span>Classe</span><strong id="casa-tot-readout">Classe E (26)</strong></div>
+                  <div class="roi-cell"><span>Risparmio 10 Anni</span><strong id="casa-roi-10y">4.200 €</strong></div>
+                  <div class="roi-cell"><span>Taglio CO₂</span><strong id="casa-co2-cut">−680 kg/a</strong></div>
+                </div>
+              </div>
+
+              <div class="console-chassis casa-controls-panel">
+                <div>
+                  <h3 style="margin-bottom:12px">Seleziona gli Impianti (Pesi 0–100)</h3>
+                  <div class="dotazioni-keygrid">
+                    <button type="button" class="hw-key dot-key" data-dot="fv" data-pts="22" data-euro="680" data-co2="1150" data-label="Fotovoltaico 6 kWp" aria-pressed="false">
+                      <span>Fotovoltaico 6 kWp</span><span class="hw-legend mono">+22</span>
+                    </button>
+                    <button type="button" class="hw-key dot-key" data-dot="pdc" data-pts="22" data-euro="640" data-co2="1280" data-label="Pompa di Calore" aria-pressed="false">
+                      <span>Pompa di Calore</span><span class="hw-legend mono">+22</span>
+                    </button>
+                    <button type="button" class="hw-key dot-key" data-dot="cappotto" data-pts="16" data-euro="260" data-co2="420" data-label="Cappotto Termico" aria-pressed="true">
+                      <span>Cappotto Termico</span><span class="hw-legend mono">+16</span>
+                    </button>
+                    <button type="button" class="hw-key dot-key" data-dot="solare" data-pts="11" data-euro="210" data-co2="340" data-label="Solare Termico" aria-pressed="false">
+                      <span>Solare Termico</span><span class="hw-legend mono">+11</span>
+                    </button>
+                    <button type="button" class="hw-key dot-key" data-dot="ev" data-pts="11" data-euro="390" data-co2="620" data-label="Colonnina EV" aria-pressed="false">
+                      <span>Colonnina EV</span><span class="hw-legend mono">+11</span>
+                    </button>
+                    <button type="button" class="hw-key dot-key" data-dot="infissi" data-pts="10" data-euro="160" data-co2="260" data-label="Infissi Triplo Vetro" aria-pressed="true">
+                      <span>Infissi Triplo Vetro</span><span class="hw-legend mono">+10</span>
+                    </button>
+                    <button type="button" class="hw-key dot-key" data-dot="induzione" data-pts="8" data-euro="120" data-co2="190" data-label="Piano a Induzione" aria-pressed="false" style="grid-column: span 2;">
+                      <span>Piano Cottura a Induzione (Zero Gas)</span><span class="hw-legend mono">+8</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="advisor-callout">
+                  <strong>AI Next-Best-Action:</strong>
+                  <span id="casa-advisor-msg">Aggiungi Fotovoltaico 6 kWp (+22 pt) per salire subito in Classe D.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 6: OPEN DATA ARPAV & SCALABILITÀ WHITE-LABEL
+             ============================================================= -->
+        <section class="slide" aria-label="Slide 6: Dati ARPAV e Scalabilità">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-5" tabindex="-1">Dati reali ARPAV. Pronto per tutta Italia.</h2>
+              <p>Interpolazione spaziale IDW sui 114 Comuni e architettura White-Label replicabile a costo licenza zero.</p>
+            </div>
+
+            <div class="architecture-grid">
+              <div class="console-chassis arpav-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                  <h3>Stazioni Ufficiali ARPAV 2025</h3>
+                  <div class="pollutant-tabs" role="group" aria-label="Inquinante">
+                    <button type="button" class="pol-btn" data-pol="pm10" aria-pressed="true">PM10</button>
+                    <button type="button" class="pol-btn" data-pol="pm25" aria-pressed="false">PM2.5</button>
+                    <button type="button" class="pol-btn" data-pol="no2" aria-pressed="false">NO₂</button>
+                  </div>
+                </div>
+
+                <div class="station-table mono">
+                  <div class="station-row">
+                    <span style="color:var(--signal-lime)">Target OMS</span>
+                    <div class="station-bar-bg"><div class="station-bar-fill" id="bar-oms" style="width:30%;background:#10b981"></div></div>
+                    <span id="val-oms" style="text-align:right;color:var(--signal-lime)">15 µg/m³ · 100</span>
+                  </div>
+                  <div class="station-row">
+                    <span>Bassano (IT1065A)</span>
+                    <div class="station-bar-bg"><div class="station-bar-fill" id="bar-bas" style="width:45%;background:#14b8a6"></div></div>
+                    <span id="val-bas" style="text-align:right">20 µg/m³ · 86</span>
+                  </div>
+                  <div class="station-row">
+                    <span style="font-weight:700;color:var(--ink-primary)">Schio (IT0663A)</span>
+                    <div class="station-bar-bg"><div class="station-bar-fill" id="bar-sch" style="width:48%;background:#34d399"></div></div>
+                    <span id="val-sch" style="text-align:right;color:var(--signal-lime);font-weight:700">21 µg/m³ · 83</span>
+                  </div>
+                  <div class="station-row">
+                    <span>VI Quartiere Italia</span>
+                    <div class="station-bar-bg"><div class="station-bar-fill" id="bar-viq" style="width:72%;background:#fbbf24"></div></div>
+                    <span id="val-viq" style="text-align:right;color:#fef08a">27 µg/m³ · 66</span>
+                  </div>
+                  <div class="station-row">
+                    <span>VI S. Felice / Ferr.</span>
+                    <div class="station-bar-bg"><div class="station-bar-fill" id="bar-vis" style="width:78%;background:#fb7185"></div></div>
+                    <span id="val-vis" style="text-align:right;color:#fecdd3">28 µg/m³ · 63</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="console-chassis whitelabel-panel">
+                <div>
+                  <h3>Portabilità Nazionale White-Label</h3>
+                  <p style="font-size:0.92rem;margin-top:4px">Basta cambiare il codice provincia ISTAT per rigenerare qualsiasi territorio italiano.</p>
+                </div>
+                <div class="prov-selector-grid">
+                  <button type="button" class="prov-btn" data-name="Vicenza" data-comuni="114" data-seed="1.368" aria-pressed="true">
+                    Vicenza · 114 Comuni
+                  </button>
+                  <button type="button" class="prov-btn" data-name="Padova" data-comuni="101" data-seed="1.212" aria-pressed="false">
+                    Padova · 101 Comuni
+                  </button>
+                  <button type="button" class="prov-btn" data-name="Verona" data-comuni="98" data-seed="1.176" aria-pressed="false">
+                    Verona · 98 Comuni
+                  </button>
+                  <button type="button" class="prov-btn" data-name="Treviso" data-comuni="94" data-seed="1.128" aria-pressed="false">
+                    Treviso · 94 Comuni
+                  </button>
+                </div>
+                <div class="mono" id="whitelabel-output" style="padding:12px 16px;border-radius:10px;background:var(--bg-bay);color:var(--signal-lime);font-size:0.88rem">
+                  Attivo: Provincia di Vicenza · 114 Poligoni ISTAT · 1.368 Case Seed
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 7: IL TEAM (5 SVILUPPATORI) & WORKFLOW DEV 1-6
+             ============================================================= -->
+        <section class="slide" aria-label="Slide 7: Team e Sviluppo Parallelo">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-6" tabindex="-1">5 Sviluppatori. 6 Stream. Agenti AI in Parallelo.</h2>
+              <p>Dal brainstorming al repository GitHub condiviso: sviluppo parallelo <code>Dev 1 → Dev 6</code> con agenti AI e merge finale.</p>
+            </div>
+
+            <div class="team-roster-grid">
+              <div class="console-chassis dev-member-plate">
+                <div class="avatar-badge mono">AG</div>
+                <h3 style="font-size:1.05rem">Alessandro Gottardelli</h3>
+              </div>
+              <div class="console-chassis dev-member-plate">
+                <div class="avatar-badge mono">IG</div>
+                <h3 style="font-size:1.05rem">Ivan Granata</h3>
+              </div>
+              <div class="console-chassis dev-member-plate">
+                <div class="avatar-badge mono">LB</div>
+                <h3 style="font-size:1.05rem">Leonardo Bellaro</h3>
+              </div>
+              <div class="console-chassis dev-member-plate">
+                <div class="avatar-badge mono">SC</div>
+                <h3 style="font-size:1.05rem">Samuele Cella</h3>
+              </div>
+              <div class="console-chassis dev-member-plate">
+                <div class="avatar-badge mono">SN</div>
+                <h3 style="font-size:1.05rem">Singh Navdeep</h3>
+              </div>
+            </div>
+
+            <div class="workflow-steps-strip">
+              <div class="wf-card">
+                <strong>1. Brainstorming</strong>
+                <span>Ideazione del doppio binario: Mappa 3D + Casa 3D.</span>
+              </div>
+              <div class="wf-card">
+                <strong>2. Git &amp; Contratti</strong>
+                <span>Repo GitHub e 3 interfacce TypeScript condivise.</span>
+              </div>
+              <div class="wf-card">
+                <strong>3. Dev 1 → Dev 6 con AI</strong>
+                <span>Sviluppo autonomo in parallelo coi propri agenti AI.</span>
+              </div>
+              <div class="wf-card">
+                <strong>4. Merge &amp; Test</strong>
+                <span>Integrazione su main, 12 suite Vitest e rifinitura 60 fps.</span>
+              </div>
+            </div>
+
+            <div class="dev-streams-grid">
+              <div class="console-chassis stream-tile">
+                <span class="stream-tag mono">Dev 1 · Data &amp; GIS</span>
+                <h3>ARPAV 2025 &amp; Confini ISTAT</h3>
+                <p style="font-size:0.88rem">Pipeline Python SHA-256, proiezione EPSG:32632 e interpolazione IDW.</p>
+              </div>
+              <div class="console-chassis stream-tile">
+                <span class="stream-tag mono">Dev 2 · OSM &amp; Seed</span>
+                <h3>Infrastrutture &amp; 1.368 Case</h3>
+                <p style="font-size:0.88rem">Parchi, ciclabili, colonnine EV, industrie e abitazioni dimostrative.</p>
+              </div>
+              <div class="console-chassis stream-tile">
+                <span class="stream-tag mono">Dev 3 · Core Engine</span>
+                <h3>Motore Puro &amp; Spillover</h3>
+                <p style="font-size:0.88rem">Calcolo deterministico punteggi, classi A–G e propagazione 50%.</p>
+              </div>
+              <div class="console-chassis stream-tile">
+                <span class="stream-tag mono">Dev 4 · App &amp; Map 3D</span>
+                <h3>Store Zustand &amp; MapLibre</h3>
+                <p style="font-size:0.88rem">Cartografia 3D provinciale, ritaglio edifici e coordinamento merge.</p>
+              </div>
+              <div class="console-chassis stream-tile">
+                <span class="stream-tag mono">Dev 5 · WebGL 3D</span>
+                <h3>Fauna glTF &amp; Build Mode</h3>
+                <p style="font-size:0.88rem">Depth buffer condiviso Three.js, alberi instanziati e animali 3D.</p>
+              </div>
+              <div class="console-chassis stream-tile">
+                <span class="stream-tag mono">Dev 6 · Casa 3D &amp; UX</span>
+                <h3>Palco Casa &amp; Interfaccia</h3>
+                <p style="font-size:0.88rem">Spaccato domestico drag &amp; drop, simulatori e classifica privacy.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- BOTTOM SLIDE CONTROLLER -->
+    <footer class="bottom-rail">
+      <div class="mono" style="font-size:0.88rem;color:var(--ink-secondary)">
+        Slide <strong id="slide-counter" style="color:var(--signal-lime)">1 / 7</strong> · Usa le frecce <kbd class="mono">←</kbd> <kbd class="mono">→</kbd> per scorrere
+      </div>
+
+      <div class="progress-dots" role="tablist" aria-label="Selettore rapido slide">
+        <button type="button" class="dot-btn" data-goto="0" aria-current="true" aria-label="Slide 1"></button>
+        <button type="button" class="dot-btn" data-goto="1" aria-current="false" aria-label="Slide 2"></button>
+        <button type="button" class="dot-btn" data-goto="2" aria-current="false" aria-label="Slide 3"></button>
+        <button type="button" class="dot-btn" data-goto="3" aria-current="false" aria-label="Slide 4"></button>
+        <button type="button" class="dot-btn" data-goto="4" aria-current="false" aria-label="Slide 5"></button>
+        <button type="button" class="dot-btn" data-goto="5" aria-current="false" aria-label="Slide 6"></button>
+        <button type="button" class="dot-btn" data-goto="6" aria-current="false" aria-label="Slide 7"></button>
+      </div>
+
+      <div class="nav-controls">
+        <button type="button" class="key-secondary" id="btn-prev">← Precedente</button>
+        <button type="button" class="key-action" id="btn-next">Successiva →</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // 1. Spotlight surface cursor tracking
+    document.querySelectorAll(".console-chassis").forEach((card) => {
+      card.addEventListener("pointermove", (e) => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+        card.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
+      });
+    });
+
+    // 2. Slide Deck Navigation Engine + View Transitions Focus Management (same-document-transitions)
+    const totalSlides = 7;
+    let currentSlide = 0;
+    const track = document.getElementById("deck-track");
+    const counter = document.getElementById("slide-counter");
+    const tabBtns = document.querySelectorAll(".slide-tab-btn");
+    const dotBtns = document.querySelectorAll(".dot-btn");
+
+    function goToSlide(index) {
+      const next = Math.max(0, Math.min(totalSlides - 1, index));
+      if (next === currentSlide) return;
+      currentSlide = next;
+
+      const updateDOM = () => {
+        track.style.transform = `translate3d(-${currentSlide * 100}vw, 0, 0)`;
+        counter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        tabBtns.forEach((b, i) => {
+          if (i === currentSlide) b.setAttribute("aria-current", "step");
+          else b.removeAttribute("aria-current");
+        });
+        dotBtns.forEach((d, i) => {
+          d.setAttribute("aria-current", String(i === currentSlide));
+        });
+      };
+
+      updateDOM();
+      const heading = document.getElementById(`slide-heading-${currentSlide}`);
+      heading?.focus({ preventScroll: true });
+    }
+
+    document.querySelectorAll("[data-goto]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        goToSlide(Number(btn.getAttribute("data-goto") || 0));
+      });
+    });
+
+    document.getElementById("brand-home").addEventListener("click", (e) => {
+      e.preventDefault();
+      goToSlide(0);
+    });
+
+    document.getElementById("btn-prev").addEventListener("click", () => goToSlide(currentSlide - 1));
+    document.getElementById("btn-next").addEventListener("click", () => goToSlide(currentSlide + 1));
+
+    window.addEventListener("keydown", (e) => {
+      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON")) {
+        if (e.key === "ArrowRight" && e.target.tagName !== "INPUT") {
+          e.preventDefault();
+          goToSlide(currentSlide + 1);
+        } else if (e.key === "ArrowLeft" && e.target.tagName !== "INPUT") {
+          e.preventDefault();
+          goToSlide(currentSlide - 1);
+        }
+        return;
+      }
+      if (e.key === "ArrowRight" || e.key === "PageDown") {
+        e.preventDefault();
+        goToSlide(currentSlide + 1);
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        goToSlide(currentSlide - 1);
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullScreen();
+      }
+    });
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+    }
+    document.getElementById("btn-fullscreen").addEventListener("click", toggleFullScreen);
+
+    // 3. Slide 2: Persona Tabs
+    const personaData = {
+      sindaco: {
+        painTitle: "Prima: PDF Stagnanti e Confini Ciechi",
+        painDesc: "Un assessore legge tabelle annuali in µg/m³ divise per centralina, senza sapere quanto vale un nuovo parco urbano o una ciclabile sull'indice di Schio e della vallata.",
+        raw: "Dato grezzo: PM10 21.1 µg/m³ · Nessuna simulazione preventiva",
+        solTitle: "Con Vicenza Sostenibile: Simulazione What-If in 3D",
+        solDesc: "Il Comune testa gli interventi sulla mappa 3D senza sovrascrivere i dati storici, vedendo all'istante il salto di punteggio locale e il beneficio condiviso coi comuni confinanti.",
+        action: "Risultato: Schio +15 pt (100%) · 6 Comuni vicini +7.5 pt (Spillover 50%)"
+      },
+      cittadino: {
+        painTitle: "Prima: Preventivi Confusi e Zero Privacy",
+        painDesc: "Una famiglia non sa se conviene partire da fotovoltaico, pompa di calore o cappotto, e deve cedere indirizzo e contatti personali ai portali commerciali.",
+        raw: "Classe E · Nessun ordine di priorità sugli investimenti",
+        solTitle: "Con Vicenza Sostenibile: Palco Casa 3D Anonimo",
+        solDesc: "Senza inserire l'indirizzo civico, il cittadino accende le dotazioni sulla Casa 3D, legge il risparmio decennale e riceve dall'AI la prossima azione a massimo impatto.",
+        action: "Salto Classe E → Classe A · Risparmio stimato: 13.200 € in 10 anni"
+      },
+      scuola: {
+        painTitle: "Prima: Numeri Chimici Scollegati dalla Realtà",
+        painDesc: "Per gli studenti è difficile collegare una concentrazione chimica di PM2.5 alla salute dei boschi prealpini e della fauna del territorio.",
+        raw: "Dati tecnici astratti · Nessun feedback visivo sull'ecosistema",
+        solTitle: "Con Vicenza Sostenibile: Bio-Feedback Vivo in 3D",
+        solDesc: "Al crescere dell'indice ecologico, la mappa 3D si popola di nuove alberature e sblocca caprioli, volpi, aquile reali e linci animate.",
+        action: "+35% Alberi 3D · Sblocco Fauna Alpina sopra quota 90 pt"
+      }
+    };
+
+    document.querySelectorAll(".persona-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const key = tab.getAttribute("data-persona");
+        const d = personaData[key];
+        if (!d) return;
+        document.querySelectorAll(".persona-tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+        document.getElementById("persona-pain-title").textContent = d.painTitle;
+        document.getElementById("persona-pain-desc").textContent = d.painDesc;
+        document.getElementById("persona-raw-sample").textContent = d.raw;
+        document.getElementById("persona-sol-title").textContent = d.solTitle;
+        document.getElementById("persona-sol-desc").textContent = d.solDesc;
+        document.getElementById("persona-action-sample").textContent = d.action;
+      });
+    });
+
+    // 4. Slides 3 & 4: Unified Territory State
+    const schioBase = 83;
+    const neighborBases = [81, 82, 78, 79, 80, 79];
+    const policyState = {
+      industria: { active: false, delta: 12, co2: 420 },
+      traffico: { active: false, delta: 8, co2: 290 },
+      parco: { active: false, delta: 5, co2: 165 },
+      ciclabile: { active: false, delta: 3, co2: 95 }
+    };
+    let fvMacroPct = 0;
+    let selectedMuni = { name: "Schio", base: 83, pop: "38.780 ab.", isCenter: true };
+
+    function syncTerritoryUI() {
+      let localDelta = 0;
+      let co2Saved = 0;
+      Object.entries(policyState).forEach(([key, val]) => {
+        if (val.active) {
+          localDelta += val.delta;
+          co2Saved += val.co2;
+        }
+        document.querySelectorAll(`[data-policy="${key}"]`).forEach((el) => {
+          el.setAttribute("aria-pressed", String(val.active));
+        });
+      });
+
+      const macroDelta = Math.round((fvMacroPct / 100) * 10);
+      co2Saved += Math.round(fvMacroPct * 6.5);
+      const totalSchioDelta = localDelta + macroDelta;
+      const schioScore = Math.min(100, schioBase + totalSchioDelta);
+      const neighborDelta = +(localDelta * 0.5 + macroDelta).toFixed(1);
+
+      document.getElementById("top-schio-score").textContent = `${schioScore} / 100`;
+      document.getElementById("top-spill-readout").textContent = `+${neighborDelta} pt`;
+      document.getElementById("top-co2-readout").textContent = `${co2Saved} t/a`;
+
+      const spawnPct = Math.min(100, Math.round(schioScore * 1.04));
+      document.getElementById("top-fauna-readout").textContent = `${spawnPct}%`;
+
+      document.getElementById("radar-schio-txt").textContent = `${schioScore}/100`;
+      neighborBases.forEach((b, idx) => {
+        const nScore = Math.min(100, Math.round(b + neighborDelta));
+        const el = document.getElementById(`radar-n${idx}`);
+        if (el) el.textContent = `${nScore} pt`;
+      });
+
+      document.querySelectorAll(".spill-vec").forEach((line) => {
+        line.setAttribute("stroke", totalSchioDelta > 0 ? "#6ee7b7" : "rgba(52,211,153,0.35)");
+        line.setAttribute("stroke-width", totalSchioDelta > 0 ? "3.5" : "2.5");
+      });
+
+      document.getElementById("rung-cervo").setAttribute("data-unlocked", String(schioScore >= 90));
+
+      const activeDelta = selectedMuni.isCenter ? totalSchioDelta : neighborDelta;
+      const activeScore = Math.min(100, Math.round(selectedMuni.base + activeDelta));
+      document.getElementById("insp-name").textContent = selectedMuni.name;
+      document.getElementById("insp-pop").textContent = selectedMuni.pop;
+      document.getElementById("insp-role").textContent = selectedMuni.isCenter
+        ? "Hub centrale · Riceve il 100% degli interventi locali."
+        : "Comune confinante · Riceve il 50% di spillover da Schio.";
+      document.getElementById("insp-score").textContent = `${activeScore} / 100`;
+      document.getElementById("insp-delta").textContent = `+${activeDelta} pt`;
+    }
+
+    document.querySelectorAll("[data-policy]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-policy");
+        if (!key || !policyState[key]) return;
+        policyState[key].active = !policyState[key].active;
+        syncTerritoryUI();
+      });
+    });
+
+    document.getElementById("fv-console-slider").addEventListener("input", (e) => {
+      fvMacroPct = Number(e.target.value);
+      const pts = Math.round((fvMacroPct / 100) * 10);
+      document.getElementById("fv-console-label").textContent = `${fvMacroPct}% (+${pts} pt)`;
+      syncTerritoryUI();
+    });
+
+    document.getElementById("preset-realta").addEventListener("click", () => {
+      Object.keys(policyState).forEach((k) => { policyState[k].active = false; });
+      fvMacroPct = 0;
+      document.getElementById("fv-console-slider").value = "0";
+      document.getElementById("fv-console-label").textContent = "0% (+0 pt)";
+      document.getElementById("preset-realta").setAttribute("aria-pressed", "true");
+      document.getElementById("preset-green").setAttribute("aria-pressed", "false");
+      document.getElementById("preset-full").setAttribute("aria-pressed", "false");
+      syncTerritoryUI();
+    });
+
+    document.getElementById("preset-green").addEventListener("click", () => {
+      policyState.industria.active = true;
+      policyState.traffico.active = false;
+      policyState.parco.active = true;
+      policyState.ciclabile.active = true;
+      fvMacroPct = 40;
+      document.getElementById("fv-console-slider").value = "40";
+      document.getElementById("fv-console-label").textContent = "40% (+4 pt)";
+      document.getElementById("preset-realta").setAttribute("aria-pressed", "false");
+      document.getElementById("preset-green").setAttribute("aria-pressed", "true");
+      document.getElementById("preset-full").setAttribute("aria-pressed", "false");
+      syncTerritoryUI();
+    });
+
+    document.getElementById("preset-full").addEventListener("click", () => {
+      Object.keys(policyState).forEach((k) => { policyState[k].active = true; });
+      fvMacroPct = 100;
+      document.getElementById("fv-console-slider").value = "100";
+      document.getElementById("fv-console-label").textContent = "100% (+10 pt)";
+      document.getElementById("preset-realta").setAttribute("aria-pressed", "false");
+      document.getElementById("preset-green").setAttribute("aria-pressed", "false");
+      document.getElementById("preset-full").setAttribute("aria-pressed", "true");
+      syncTerritoryUI();
+    });
+
+    document.querySelectorAll(".muni-node").forEach((node) => {
+      node.addEventListener("click", () => {
+        const name = node.getAttribute("data-muni") || "Schio";
+        const base = Number(node.getAttribute("data-base") || 83);
+        const pop = node.getAttribute("data-pop") || "38.780 ab.";
+        selectedMuni = { name, base, pop, isCenter: name === "Schio" };
+        syncTerritoryUI();
+      });
+    });
+
+    // 5. Slide 5: Palco Casa 3D
+    const dotKeys = document.querySelectorAll(".dot-key");
+    const housePins = document.querySelectorAll(".house-pin");
+    const gradePills = document.querySelectorAll(".grade-pill");
+
+    function syncCasa3D() {
+      let score = 0;
+      let euroPerYear = 0;
+      let co2PerYear = 0;
+      const missing = [];
+
+      dotKeys.forEach((btn) => {
+        const id = btn.getAttribute("data-dot");
+        const on = btn.getAttribute("aria-pressed") === "true";
+        const pts = Number(btn.getAttribute("data-pts") || 0);
+        const euro = Number(btn.getAttribute("data-euro") || 0);
+        const co2 = Number(btn.getAttribute("data-co2") || 0);
+        const label = btn.getAttribute("data-label") || "";
+
+        if (on) {
+          score += pts;
+          euroPerYear += euro;
+          co2PerYear += co2;
+        } else {
+          missing.push({ label, pts });
+        }
+
+        housePins.forEach((pin) => {
+          if (pin.getAttribute("data-dot") === id) {
+            pin.setAttribute("data-on", String(on));
+          }
+        });
+      });
+
+      score = Math.min(100, score);
+      let grade = "G";
+      if (score >= 85) grade = "A";
+      else if (score >= 70) grade = "B";
+      else if (score >= 55) grade = "C";
+      else if (score >= 40) grade = "D";
+      else if (score >= 25) grade = "E";
+      else if (score >= 12) grade = "F";
+
+      document.getElementById("casa-tot-readout").textContent = `Classe ${grade} (${score})`;
+      document.getElementById("casa-roi-10y").textContent = `${(euroPerYear * 10).toLocaleString("it-IT")} €`;
+      document.getElementById("casa-co2-cut").textContent = `−${co2PerYear} kg/a`;
+
+      gradePills.forEach((pill) => {
+        pill.setAttribute("data-current", String(pill.getAttribute("data-g") === grade));
+      });
+
+      missing.sort((a, b) => b.pts - a.pts);
+      const advisorMsg = document.getElementById("casa-advisor-msg");
+      if (missing.length === 0) {
+        advisorMsg.textContent = "Casa al 100% in Classe A: massima efficienza energetica raggiunta.";
+      } else {
+        advisorMsg.textContent = `Aggiungi ${missing[0].label} (+${missing[0].pts} pt) per salire subito di classe.`;
+      }
+    }
+
+    dotKeys.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const on = btn.getAttribute("aria-pressed") === "true";
+        btn.setAttribute("aria-pressed", String(!on));
+        syncCasa3D();
+      });
+    });
+
+    housePins.forEach((pin) => {
+      pin.addEventListener("click", () => {
+        const id = pin.getAttribute("data-dot");
+        const targetBtn = document.querySelector(`.dot-key[data-dot="${id}"]`);
+        if (targetBtn) {
+          const on = targetBtn.getAttribute("aria-pressed") === "true";
+          targetBtn.setAttribute("aria-pressed", String(!on));
+          syncCasa3D();
+        }
+      });
+    });
+
+    // 6. Slide 6: Pollutant Switcher & White-Label
+    const pollutantSets = {
+      pm10: {
+        oms: { w: "30%", txt: "15 µg/m³ · 100" },
+        bas: { w: "45%", txt: "20 µg/m³ · 86" },
+        sch: { w: "48%", txt: "21 µg/m³ · 83" },
+        viq: { w: "72%", txt: "27 µg/m³ · 66" },
+        vis: { w: "78%", txt: "28 µg/m³ · 63" }
+      },
+      pm25: {
+        oms: { w: "24%", txt: "5 µg/m³ · 100" },
+        bas: { w: "48%", txt: "11 µg/m³ · 84" },
+        sch: { w: "52%", txt: "12 µg/m³ · 81" },
+        viq: { w: "76%", txt: "17 µg/m³ · 62" },
+        vis: { w: "82%", txt: "18 µg/m³ · 59" }
+      },
+      no2: {
+        oms: { w: "28%", txt: "10 µg/m³ · 100" },
+        bas: { w: "44%", txt: "16 µg/m³ · 85" },
+        sch: { w: "46%", txt: "17 µg/m³ · 83" },
+        viq: { w: "74%", txt: "29 µg/m³ · 64" },
+        vis: { w: "80%", txt: "32 µg/m³ · 60" }
+      }
+    };
+
+    document.querySelectorAll(".pol-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const pol = btn.getAttribute("data-pol");
+        const set = pollutantSets[pol];
+        if (!set) return;
+        document.querySelectorAll(".pol-btn").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        ["oms", "bas", "sch", "viq", "vis"].forEach((k) => {
+          document.getElementById(`bar-${k}`).style.width = set[k].w;
+          document.getElementById(`val-${k}`).textContent = set[k].txt;
+        });
+      });
+    });
+
+    document.querySelectorAll(".prov-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".prov-btn").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        const name = btn.getAttribute("data-name");
+        const comuni = btn.getAttribute("data-comuni");
+        const seed = btn.getAttribute("data-seed");
+        document.getElementById("whitelabel-output").textContent =
+          `Attivo: Provincia di ${name} · ${comuni} Poligoni ISTAT · ${seed} Case Seed`;
+      });
+    });
+
+    syncTerritoryUI();
+    syncCasa3D();
+  </script>
+</body>
+</html>
