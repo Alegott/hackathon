@@ -701,3 +701,10 @@ input[type="checkbox"][switch]:focus-visible {
 .tuo2040-btn { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 999px; border: 0; background: #facc15; color: #1c1917; cursor: pointer; box-shadow: 0 4px 16px #0003; }
 .tuo2040-btn:hover { background: #fde047; }
 .tuo2040-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+/* Scheda finale compatta: deve restare sopra la barra anche sugli schermi da 900 px. */
+.tempo-finale { top: 76px; padding: 14px 18px; }
+.tempo-finale h3 { font-size: 19px; margin: 2px 0 6px; }
+.tempo-finale dl { gap: 3px; }
+.tempo-finale dl div { font-size: 12.5px; padding-top: 4px; }
+.tempo-finale__tu { margin: 0 0 6px; font-size: 12.5px; }
+.tempo-finale__azioni { margin-top: 8px; }

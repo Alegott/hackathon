@@ -279,7 +279,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 32px;
+      padding: 14px 32px;
     }
 
     .slide-inner {
@@ -287,7 +287,7 @@
       max-width: 1260px;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 18px;
     }
 
     .slide-limestone {
@@ -853,7 +853,7 @@
       position: relative;
       border-radius: var(--radius-key);
       overflow: hidden;
-      aspect-ratio: 16 / 9.2;
+      aspect-ratio: 16 / 8.4;
       background: #f4f7f4;
       border: 1px solid var(--border-hairline);
     }
@@ -1147,6 +1147,109 @@
         display: none;
       }
     }
+
+    /* =================================================================
+       MACCHINA DEL TEMPO
+       ================================================================= */
+    .tm-grid { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 20px; align-items: stretch; }
+    .tm-compare { display: flex; flex-direction: column; }
+    .tm-frame { position: relative; flex: 1; min-height: 340px; overflow: hidden; border-radius: var(--radius-panel) var(--radius-panel) 0 0; background: #e3ebe4; }
+    .tm-img { position: absolute; width: 205%; max-width: none; left: -62%; top: -4%; user-select: none; pointer-events: none; }
+    .tm-top { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
+    .tm-handle { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 18px rgba(0,0,0,.35); pointer-events: none; }
+    .tm-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #0a1c15; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+    .tm-tag { position: absolute; top: 14px; padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; color: #fff; pointer-events: none; }
+    .tm-tag-l { left: 14px; background: rgba(225, 29, 72, 0.92); }
+    .tm-tag-r { right: 14px; background: rgba(37, 99, 235, 0.92); }
+    .tm-range { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+    .tm-caption { padding: 10px 16px; font-size: 0.8rem; color: var(--ink-secondary); border-top: 1px solid var(--border-hairline); }
+    .tm-panel { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .tm-plans { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tm-plan { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border-hairline); background: var(--bg-bay); color: var(--ink-secondary); font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+    .tm-plan i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .tm-plan[aria-checked="true"] { background: var(--ink-primary); color: var(--bg-obsidian); border-color: var(--ink-primary); }
+    .tm-year-row { display: flex; align-items: center; gap: 14px; }
+    .tm-play { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--signal-bright); color: #052e22; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 0 0 6px rgba(52,211,153,.18); flex: none; }
+    .tm-year { font-size: 2.2rem; font-weight: 700; line-height: 1; color: var(--ink-primary); min-width: 4ch; }
+    #tm-slider { flex: 1; accent-color: var(--signal-bright); }
+    .tm-chart { width: 100%; height: auto; display: block; cursor: crosshair; }
+    .tm-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .tm-stats div { padding: 9px 10px; border-radius: 10px; background: var(--bg-bay); }
+    .tm-stats span { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-secondary); }
+    .tm-stats strong { font-size: 1.25rem; color: var(--ink-primary); white-space: nowrap; }
+    .tm-growth { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.82rem; color: var(--ink-secondary); }
+    .tm-growth b { color: var(--ink-primary); font-weight: 600; }
+    .tm-news { min-height: 1.5em; font-size: 0.88rem; color: var(--ink-primary); }
+    .tm-news b { color: var(--signal-bright); margin-right: 6px; }
+
+    /* =================================================================
+       IL TUO 2040
+       ================================================================= */
+    .tu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+    .tu-left { display: flex; flex-direction: column; gap: 12px; }
+    .tu-profile { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; }
+    .tu-eyebrow { display: block; font-size: 0.72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-secondary); }
+    .tu-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tu-chips span { padding: 4px 10px; border-radius: 999px; background: var(--bg-bay); font-size: 0.8rem; color: var(--ink-secondary); }
+    .tu-class { display: grid; place-items: center; width: 82px; height: 82px; border-radius: 16px; background: #c2410c; color: #fff; flex: none; }
+    .tu-class strong { font-size: 2.2rem; line-height: 1; }
+    .tu-class span { font-size: 0.75rem; opacity: .9; }
+    .tu-outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .tu-out { text-align: left; padding: 16px; font: inherit; color: var(--ink-primary); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .tu-out[aria-pressed="true"] { border-color: currentColor; }
+    .tu-out-bad { color: #fda4af; }
+    .tu-out-good { color: #6ee7b7; }
+    .tu-out .tu-eyebrow { color: inherit; }
+    .tu-big { font-size: 2.3rem; font-weight: 700; line-height: 1.1; }
+    .tu-sub { color: var(--ink-primary); font-size: 0.95rem; }
+    .tu-out ul { list-style: none; margin-top: 6px; display: grid; gap: 2px; font-size: 0.8rem; color: var(--ink-secondary); }
+    .tu-delta { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: var(--radius-panel); background: linear-gradient(135deg, #facc15, #f59e0b); color: #1c1917; }
+    .tu-delta strong { font-size: 2rem; white-space: nowrap; }
+    .tu-delta span { font-size: 0.95rem; line-height: 1.35; }
+    .tu-shot { display: flex; flex-direction: column; }
+    .tu-shot img { width: 100%; flex: 1; object-fit: cover; object-position: 60% 40%; min-height: 0; display: block; transition: opacity 260ms var(--ease-out); }
+    .tu-quote { max-width: none; padding: 14px 18px; font-family: "Bricolage Grotesque", sans-serif; font-size: 1.15rem; color: var(--ink-primary); border-top: 1px solid var(--border-hairline); }
+
+    /* =================================================================
+       AI × CLIMA
+       ================================================================= */
+    .ai-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .ai-card { padding: 22px; border-radius: var(--radius-panel); background: var(--limestone-surface); border: 1px solid var(--limestone-border); display: flex; flex-direction: column; gap: 10px; }
+    .ai-card p { font-size: 0.95rem; }
+    .ai-card-dark { background: var(--limestone-ink); color: var(--ink-primary); }
+    .ai-card-dark p { color: var(--ink-secondary); }
+    .ai-num { font-size: 0.85rem; font-weight: 700; color: var(--signal-emerald); }
+    .ai-pill { margin-top: auto; align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: rgba(5, 150, 105, 0.14); color: #065f46; font-size: 0.8rem; font-weight: 700; }
+    .ai-card-dark .ai-pill { background: rgba(52, 211, 153, 0.18); color: var(--signal-lime); }
+    .ai-roadmap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 14px 18px; border-radius: var(--radius-panel); border: 1px dashed var(--limestone-border); font-size: 0.92rem; }
+    .ai-roadmap strong { font-family: "Bricolage Grotesque", sans-serif; }
+
+    /* =================================================================
+       CHIUSURA
+       ================================================================= */
+    .slide-fine { background: radial-gradient(1200px 600px at 50% 0%, rgba(16, 185, 129, 0.22), transparent 60%), var(--bg-obsidian); }
+    .fine-inner { align-items: center; text-align: center; gap: 24px; }
+    .fine-eyebrow { font-size: 0.85rem; letter-spacing: .12em; text-transform: uppercase; color: var(--signal-bright); }
+    .fine-title { font-size: clamp(2.6rem, 5vw, 4.4rem); line-height: 1.04; }
+    .fine-title span { color: var(--signal-bright); }
+    .fine-sub { font-size: 1.2rem; max-width: 52ch; }
+    .fine-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; max-width: 900px; }
+    .fine-stats div { padding: 18px; border-radius: var(--radius-panel); background: var(--bg-chassis); border: 1px solid var(--border-hairline); }
+    .fine-stats strong { display: block; font-size: 2.4rem; color: var(--signal-lime); }
+    .fine-stats span { color: var(--ink-secondary); font-size: 0.95rem; }
+    .fine-road { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 980px; }
+    .fine-road span { padding: 7px 14px; border-radius: 999px; background: var(--bg-bay); color: var(--ink-secondary); font-size: 0.9rem; }
+    .fine-cta .key-action { font-size: 1.05rem; padding: 14px 26px; }
+
+    @media (max-width: 1024px) {
+      .tm-grid, .tu-grid, .ai-grid { grid-template-columns: 1fr; }
+      .tm-stats, .fine-stats { grid-template-columns: repeat(2, 1fr); }
+      .tm-frame { min-height: 320px; }
+    }
+
+    @media (max-width: 1560px) {
+      .slide-tab-btn { padding: 5px 7px; font-size: 0.78rem; }
+    }
   </style>
 </head>
 <body>
@@ -1160,15 +1263,7 @@
       </a>
 
       <nav aria-label="Slide della presentazione">
-        <ul class="slide-tabs">
-          <li><button type="button" class="slide-tab-btn" data-goto="0" aria-current="step">1. Visione</button></li>
-          <li><button type="button" class="slide-tab-btn" data-goto="1">2. Problema &amp; Soluzione</button></li>
-          <li><button type="button" class="slide-tab-btn" data-goto="2">3. Sandbox Schio</button></li>
-          <li><button type="button" class="slide-tab-btn" data-goto="3">4. Spillover 50%</button></li>
-          <li><button type="button" class="slide-tab-btn" data-goto="4">5. Casa 3D</button></li>
-          <li><button type="button" class="slide-tab-btn" data-goto="5">6. Dati ARPAV</button></li>
-          <li><button type="button" class="slide-tab-btn" data-goto="6">7. Team &amp; AI</button></li>
-        </ul>
+        <ul class="slide-tabs" id="slide-tabs"></ul>
       </nav>
 
       <div class="top-actions">
@@ -1189,7 +1284,7 @@
         <!-- =============================================================
              SLIDE 1: VISIONE & HOOK (Schio 2026)
              ============================================================= -->
-        <section class="slide" aria-label="Slide 1: Visione">
+        <section class="slide" aria-label="Visione" data-tab="Visione">
           <div class="slide-inner">
             <div class="s1-grid">
               <div class="s1-left">
@@ -1197,7 +1292,7 @@
                   Il territorio non è una tabella. <span style="color:var(--signal-bright)">Respira.</span>
                 </h1>
                 <p>
-                  Hackathon di Schio 2026 · <strong>"La mia sostenibilità"</strong>: abbiamo trasformato i dati aperti di Aria, Suolo, Biodiversità ed Energia in un <strong>Gemello Digitale 3D vivo</strong> dei 114 Comuni vicentini e della singola abitazione.
+                  Hackathon di Schio 2026 · <strong>"La mia sostenibilità"</strong>: abbiamo trasformato i dati aperti di aria, territorio ed energia in un <strong>gemello digitale 3D vivo</strong> dei 114 comuni vicentini, che viaggia fino al 2040 e mostra a ogni famiglia <strong>il futuro che le sue scelte costruiscono</strong>.
                 </p>
 
                 <div class="s1-pillars">
@@ -1206,12 +1301,12 @@
                     <span>Mappa 3D su dati reali ARPAV e confini ISTAT</span>
                   </div>
                   <div class="pillar-box">
-                    <strong class="mono">50% Spillover</strong>
-                    <span>Ogni scelta locale migliora anche i comuni vicini</span>
+                    <strong class="mono">2025 → 2040</strong>
+                    <span>Macchina del tempo: case, industrie, auto e meteo in 3D</span>
                   </div>
                   <div class="pillar-box">
-                    <strong class="mono">Classe A–G</strong>
-                    <span>Spaccato Casa 3D e consigli AI in totale privacy</span>
+                    <strong class="mono">Il tuo 2040</strong>
+                    <span>Le tue scelte moltiplicate per tutta la provincia</span>
                   </div>
                 </div>
               </div>
@@ -1223,9 +1318,9 @@
                 <div class="s1-dock mono">
                   <div>
                     <strong style="color:var(--ink-primary);display:block">Comune di Schio · Stazione ARPAV IT0663A</strong>
-                    <span style="font-size:0.875rem;color:var(--ink-secondary)">PM10 medio: 21.1 µg/m³ · Fauna bio-indicatrice attiva</span>
+                    <span style="font-size:0.875rem;color:var(--ink-secondary)">PM10 stimato: 21,1 µg/m³ · aria 82 · infrastrutture −5</span>
                   </div>
-                  <span style="font-size:1.5rem;font-weight:700;color:var(--signal-lime)">83 / 100</span>
+                  <span style="font-size:1.5rem;font-weight:700;color:var(--signal-lime);white-space:nowrap">77 / 100</span>
                 </div>
               </div>
             </div>
@@ -1235,7 +1330,7 @@
         <!-- =============================================================
              SLIDE 2: PROBLEMA & SOLUZIONE (Tavola Limestone)
              ============================================================= -->
-        <section class="slide slide-limestone" aria-label="Slide 2: Problema e Soluzione">
+        <section class="slide slide-limestone" aria-label="Problema" data-tab="Problema">
           <div class="slide-inner">
             <div class="slide-head">
               <h2 id="slide-heading-1" tabindex="-1">Dati complessi. Scelte semplici.</h2>
@@ -1276,7 +1371,7 @@
 
             <div class="formula-banner mono">
               <strong>Formula Trasparente del Motore Puro:</strong>
-              <span>Indice = 0.55 · Aria ARPAV + 0.30 · Infrastrutture OSM + 0.15 · Case + ΔScenario</span>
+              <span>Indice = Aria ARPAV (PM10 15→100, 50→0) + Infrastrutture OSM (±20) + Scenario (100% sul comune, 50% ai confinanti)</span>
             </div>
           </div>
         </section>
@@ -1284,17 +1379,17 @@
         <!-- =============================================================
              SLIDE 3: SANDBOX TERRITORIALE LIVE SU SCHIO
              ============================================================= -->
-        <section class="slide" aria-label="Slide 3: Sandbox Schio">
+        <section class="slide" aria-label="Sandbox" data-tab="Sandbox">
           <div class="slide-inner">
             <div class="slide-head">
               <h2 id="slide-heading-2" tabindex="-1">Simulatore Territoriale su Schio.</h2>
-              <p>Partiamo dal dato reale (83/100): attiva gli interventi sulla mappa o sulla tastiera per simulare il futuro.</p>
+              <p>Partiamo dal dato reale (77/100): attiva gli interventi sulla mappa o sulla tastiera per simulare il futuro.</p>
             </div>
 
             <div class="telemetry-bank mono" aria-live="polite">
               <div class="tube-bay tube-bay-active">
                 <span class="tube-label">Indice Schio</span>
-                <div class="tube-digits" style="color:var(--signal-lime)" id="top-schio-score">83 / 100</div>
+                <div class="tube-digits" style="color:var(--signal-lime)" id="top-schio-score">77 / 100</div>
               </div>
               <div class="tube-bay">
                 <span class="tube-label">Spillover Confinanti</span>
@@ -1377,7 +1472,7 @@
         <!-- =============================================================
              SLIDE 4: RETE SPILLOVER 50% SUI COMUNI CONFINANTI
              ============================================================= -->
-        <section class="slide" aria-label="Slide 4: Spillover 50%">
+        <section class="slide" aria-label="Spillover" data-tab="Spillover">
           <div class="slide-inner">
             <div class="slide-head">
               <h2 id="slide-heading-3" tabindex="-1">L'aria non si ferma al confine comunale.</h2>
@@ -1434,10 +1529,10 @@
                       <text x="540" y="234" text-anchor="middle" fill="#f2f9f5" font-size="11" font-weight="600">San Vito Leg.</text>
                       <text x="540" y="250" text-anchor="middle" fill="#a7f3d0" font-size="11" class="mono" id="radar-n5">79 pt</text>
                     </g>
-                    <g class="muni-node" data-muni="Schio" data-base="83" data-pop="38.780 ab." tabindex="0" role="button">
+                    <g class="muni-node" data-muni="Schio" data-base="77" data-pop="38.780 ab." tabindex="0" role="button">
                       <circle class="muni-circle" cx="340" cy="155" r="46" fill="#059669" stroke="#ffffff" stroke-width="2.5" />
                       <text x="340" y="148" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700">SCHIO</text>
-                      <text x="340" y="168" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="700" class="mono" id="radar-schio-txt">83/100</text>
+                      <text x="340" y="168" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="700" class="mono" id="radar-schio-txt">77/100</text>
                     </g>
                   </svg>
                 </div>
@@ -1453,7 +1548,7 @@
                   <div class="inspector-grid mono">
                     <div>
                       <span style="font-size:0.875rem;color:var(--ink-secondary);display:block">Punteggio</span>
-                      <strong id="insp-score" style="font-size:1.55rem;color:var(--signal-lime)">83 / 100</strong>
+                      <strong id="insp-score" style="font-size:1.55rem;color:var(--signal-lime)">77 / 100</strong>
                     </div>
                     <div>
                       <span style="font-size:0.875rem;color:var(--ink-secondary);display:block">Variazione</span>
@@ -1477,12 +1572,122 @@
         </section>
 
         <!-- =============================================================
-             SLIDE 5: PALCO CASA 3D & PRIVACY-FIRST ADVISOR
+             SLIDE: MACCHINA DEL TEMPO 2025 → 2040
              ============================================================= -->
-        <section class="slide" aria-label="Slide 5: Palco Casa 3D">
+        <section class="slide" aria-label="Macchina del tempo" data-tab="2040">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-4" tabindex="-1">Palco Casa 3D: dalla Classe E alla Classe A.</h2>
+              <h2 id="slide-heading-4" tabindex="-1">2025 → 2040: il futuro si costruisce anno per anno.</h2>
+              <p>Case, capannoni, strade, auto e meteo: la provincia cresce e ogni scelta appare in 3D. Numeri calcolati dal motore dell'app.</p>
+            </div>
+
+            <div class="tm-grid">
+              <div class="console-chassis tm-compare">
+                <div class="tm-frame" id="tm-frame" style="--pos: 50%">
+                  <img class="tm-img" src="public/pitch/tempo_tutti_a_bordo.png" alt="La provincia nel 2040 con il piano Tutti a bordo: comuni azzurri, parchi, ciclabili e un piccolo reattore" />
+                  <div class="tm-top">
+                    <img class="tm-img" src="public/pitch/tempo_passo_indietro.png" alt="La provincia nel 2040 con il piano Passo indietro: comuni arancioni, capannoni e quartieri" />
+                  </div>
+                  <div class="tm-handle" aria-hidden="true"><span>⟷</span></div>
+                  <span class="tm-tag tm-tag-l mono">Passo indietro · 52/100</span>
+                  <span class="tm-tag tm-tag-r mono">Tutti a bordo · 94/100</span>
+                  <input type="range" class="tm-range" id="tm-compare-range" min="0" max="100" value="50" aria-label="Confronta i due futuri del 2040" />
+                </div>
+                <p class="tm-caption mono">Stessa provincia, stesso 2040. Trascina per confrontare due futuri.</p>
+              </div>
+
+              <div class="console-chassis tm-panel">
+                <div class="tm-plans" role="radiogroup" aria-label="Piano">
+                  <button type="button" role="radio" class="tm-plan" data-plan="passo-indietro" aria-checked="false"><i style="background:#e11d48"></i>Passo indietro</button>
+                  <button type="button" role="radio" class="tm-plan" data-plan="inerzia" aria-checked="true"><i style="background:#d97706"></i>Inerzia</button>
+                  <button type="button" role="radio" class="tm-plan" data-plan="piano-clima" aria-checked="false"><i style="background:#059669"></i>Piano clima</button>
+                  <button type="button" role="radio" class="tm-plan" data-plan="tutti-a-bordo" aria-checked="false"><i style="background:#2563eb"></i>Tutti a bordo</button>
+                </div>
+
+                <div class="tm-year-row">
+                  <button type="button" class="tm-play" id="tm-play" aria-label="Avvia">▶</button>
+                  <span class="tm-year mono" id="tm-year">2025</span>
+                  <input type="range" id="tm-slider" min="2025" max="2040" step="1" value="2025" aria-label="Anno" />
+                </div>
+
+                <svg class="tm-chart" id="tm-chart" viewBox="0 0 560 190" role="img" aria-label="Indice ambientale medio della provincia dal 2025 al 2040 per i quattro piani"></svg>
+
+                <div class="tm-stats mono">
+                  <div><span>Indice medio</span><strong id="tm-indice">68</strong></div>
+                  <div><span>Comuni ottimi</span><strong id="tm-ottima">1</strong></div>
+                  <div><span>PM10 medio</span><strong id="tm-pm10">24,5</strong></div>
+                  <div><span>Auto (mila)</span><strong id="tm-auto">580</strong></div>
+                </div>
+                <div class="tm-growth mono" id="tm-growth"></div>
+                <div class="tm-news" id="tm-news" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE: IL TUO 2040
+             ============================================================= -->
+        <section class="slide" aria-label="Il tuo 2040" data-tab="Il tuo 2040">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-5" tabindex="-1">E se tutti vivessero <span style="color:#facc15">come te</span>?</h2>
+              <p>La sezione Casa diventa un futuro: le tue dotazioni, moltiplicate per 114 comuni e 15 anni. Poi i due passi che lo ribaltano.</p>
+            </div>
+
+            <div class="tu-grid">
+              <div class="tu-left">
+                <div class="console-chassis tu-profile">
+                  <div>
+                    <span class="tu-eyebrow mono">La casa inserita nell'app</span>
+                    <h3>Famiglia Rossi · Schio</h3>
+                    <div class="tu-chips">
+                      <span>🔥 Caldaia tradizionale</span><span>🚗 Diesel Euro 4</span><span>🧱 Isolamento medio</span><span>☀️ Niente fotovoltaico</span>
+                    </div>
+                  </div>
+                  <div class="tu-class mono"><strong>F</strong><span>18/100</span></div>
+                </div>
+
+                <div class="tu-outcomes">
+                  <button type="button" class="console-chassis tu-out tu-out-bad" data-tu="come-te" aria-pressed="true">
+                    <span class="tu-eyebrow mono">👤 Tutti come te</span>
+                    <strong class="tu-big mono">77 → 59</strong>
+                    <span class="tu-sub">Schio scende in <b>fascia media</b></span>
+                    <ul class="mono">
+                      <li>Provincia 68 → 47</li><li>34 comuni in fascia scarsa</li><li>PM10 24,5 → 31,2 µg/m³</li><li>Auto 580 → 712 mila</li>
+                    </ul>
+                  </button>
+                  <button type="button" class="console-chassis tu-out tu-out-good" data-tu="due-passi" aria-pressed="false">
+                    <span class="tu-eyebrow mono">👣 + 2 passi: fotovoltaico e pompa di calore</span>
+                    <strong class="tu-big mono">77 → 85</strong>
+                    <span class="tu-sub">Schio sale in <b>fascia ottima</b></span>
+                    <ul class="mono">
+                      <li>Provincia 68 → 75</li><li>0 comuni in fascia scarsa</li><li>PM10 24,5 → 22,4 µg/m³</li><li>Case con fotovoltaico 25% → 84%</li>
+                    </ul>
+                  </button>
+                </div>
+
+                <div class="tu-delta">
+                  <strong class="mono">+26 punti</strong>
+                  <span>per Schio nel 2040. La differenza tra i due futuri sono <b>due scelte di una famiglia</b>, moltiplicate per tutti.</span>
+                </div>
+              </div>
+
+              <div class="console-chassis tu-shot">
+                <img id="tu-img" src="public/pitch/tuo2040_come_te.png" alt="L'app: Se tutti vivessero come te, nel 2040 Schio sarebbe in fascia media (59/100)" />
+                <p class="tu-quote">«Non ti chiediamo di salvare il mondo. Ti mostriamo quello che stai già costruendo.»</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 5: PALCO CASA 3D & PRIVACY-FIRST ADVISOR
+             ============================================================= -->
+        <section class="slide" aria-label="Casa 3D" data-tab="Casa 3D">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-6" tabindex="-1">Palco Casa 3D: dalla Classe E alla Classe A.</h2>
               <p>Configura le dotazioni domestiche in totale anonimato e scopri quale intervento rende di più.</p>
             </div>
 
@@ -1551,12 +1756,52 @@
         </section>
 
         <!-- =============================================================
-             SLIDE 6: OPEN DATA ARPAV & SCALABILITÀ WHITE-LABEL
+             SLIDE: AI × CLIMA
              ============================================================= -->
-        <section class="slide" aria-label="Slide 6: Dati ARPAV e Scalabilità">
+        <section class="slide slide-limestone" aria-label="AI e clima" data-tab="AI × Clima">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-5" tabindex="-1">Dati reali ARPAV. Pronto per tutta Italia.</h2>
+              <h2 id="slide-heading-7" tabindex="-1">L'AI non salva il clima. Aiuta le persone a farlo.</h2>
+              <p>Il problema del clima non è la mancanza di dati: è che nessuno li sente propri. L'AI trasforma dati pubblici in una scelta personale.</p>
+            </div>
+
+            <div class="ai-grid">
+              <div class="ai-card">
+                <span class="ai-num mono">01</span>
+                <h3>AI che costruisce</h3>
+                <p>6 sviluppatori e i loro agenti AI in parallelo su contratti condivisi: motore, mappa 3D, casa 3D, macchina del tempo. In un hackathon, un gemello digitale che di solito richiede mesi.</p>
+                <div class="ai-pill mono">37 suite · 312 test automatici</div>
+              </div>
+              <div class="ai-card ai-card-dark">
+                <span class="ai-num mono">02</span>
+                <h3>AI che traduce</h3>
+                <p>Da PM10 ARPAV, confini ISTAT e infrastrutture OpenStreetMap a una frase che parla a te: <em>«Se tutti vivessero come te, Schio scenderebbe in fascia media.»</em> Su misura per ogni famiglia, a costo quasi zero.</p>
+                <div class="ai-pill mono">1 famiglia → 114 comuni → 15 anni</div>
+              </div>
+              <div class="ai-card">
+                <span class="ai-num mono">03</span>
+                <h3>AI responsabile</h3>
+                <p>I numeri li calcola un motore deterministico e testato, mai un modello linguistico: niente dati inventati. Ipotesi dichiarate a schermo. La casa resta sul tuo dispositivo.</p>
+                <div class="ai-pill mono">Zero allucinazioni sui numeri</div>
+              </div>
+            </div>
+
+            <div class="ai-roadmap">
+              <strong>Prossimi passi AI</strong>
+              <span>🎙️ <b>Chiedi alla mappa</b>: «e se Schio chiudesse un capannone?» e la mappa risponde</span>
+              <span>✉️ <b>Lettera dal 2040</b>: il tuo futuro ti scrive, con i tuoi numeri</span>
+              <span>👣 <b>Coach dei 2 passi</b>: incentivi, installatori, comunità energetiche</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 6: OPEN DATA ARPAV & SCALABILITÀ WHITE-LABEL
+             ============================================================= -->
+        <section class="slide" aria-label="Dati" data-tab="Dati">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-8" tabindex="-1">Dati reali ARPAV. Pronto per tutta Italia.</h2>
               <p>Interpolazione spaziale IDW sui 114 Comuni e architettura White-Label replicabile a costo licenza zero.</p>
             </div>
 
@@ -1630,10 +1875,10 @@
         <!-- =============================================================
              SLIDE 7: IL TEAM (6 SVILUPPATORI) & WORKFLOW DEV 1-6
              ============================================================= -->
-        <section class="slide" aria-label="Slide 7: Team e Sviluppo Parallelo">
+        <section class="slide" aria-label="Team" data-tab="Team">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-6" tabindex="-1">6 Sviluppatori. 6 Stream. Agenti AI in Parallelo.</h2>
+              <h2 id="slide-heading-9" tabindex="-1">6 Sviluppatori. 6 Stream. Agenti AI in Parallelo.</h2>
               <p>Dal brainstorming al repository GitHub condiviso: sviluppo parallelo <code>Dev 1 → Dev 6</code> con agenti AI e merge finale.</p>
             </div>
 
@@ -1679,7 +1924,7 @@
               </div>
               <div class="wf-card">
                 <strong>4. Merge &amp; Test</strong>
-                <span>Integrazione su main, 12 suite Vitest e rifinitura 60 fps.</span>
+                <span>Integrazione su main, 37 suite e 312 test Vitest.</span>
               </div>
             </div>
 
@@ -1718,24 +1963,45 @@
           </div>
         </section>
 
+        <!-- =============================================================
+             SLIDE: CHIUSURA
+             ============================================================= -->
+        <section class="slide slide-fine" aria-label="Chiusura" data-tab="Futuro">
+          <div class="slide-inner fine-inner">
+            <span class="fine-eyebrow mono">Vicenza Sostenibile · Hackathon Schio 2026</span>
+            <h2 id="slide-heading-10" tabindex="-1" class="fine-title">Il futuro di Vicenza non si prevede.<br /><span>Si sceglie.</span></h2>
+            <p class="fine-sub">Due scelte di una famiglia valgono +26 punti per il suo comune. Moltiplicate per 114 comuni, cambiano il 2040.</p>
+
+            <div class="fine-stats">
+              <div><strong class="mono">114</strong><span>comuni vivi in 3D su dati reali</span></div>
+              <div><strong class="mono">12 s</strong><span>per vedere 15 anni di futuro</span></div>
+              <div><strong class="mono">2 passi</strong><span>per ribaltare il tuo 2040</span></div>
+            </div>
+
+            <div class="fine-road">
+              <span>🤝 Amici, consigli e comunità energetiche</span>
+              <span>🏅 Missioni e badge tra comuni</span>
+              <span>🎙️ Assistente AI a voce</span>
+              <span>🏫 Percorsi per le scuole</span>
+              <span>🇮🇹 Tutte le 107 province</span>
+            </div>
+
+            <div class="fine-cta">
+              <a href="http://localhost:5173/" target="_blank" rel="noopener noreferrer" class="key-action">Apri l'app e scopri il tuo 2040 →</a>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
 
     <!-- BOTTOM SLIDE CONTROLLER -->
     <footer class="bottom-rail">
       <div class="mono" style="font-size:0.88rem;color:var(--ink-secondary)">
-        Slide <strong id="slide-counter" style="color:var(--signal-lime)">1 / 7</strong> · Usa le frecce <kbd class="mono">←</kbd> <kbd class="mono">→</kbd> per scorrere
+        Slide <strong id="slide-counter" style="color:var(--signal-lime)">1 / 11</strong> · Usa le frecce <kbd class="mono">←</kbd> <kbd class="mono">→</kbd> per scorrere
       </div>
 
-      <div class="progress-dots" role="tablist" aria-label="Selettore rapido slide">
-        <button type="button" class="dot-btn" data-goto="0" aria-current="true" aria-label="Slide 1"></button>
-        <button type="button" class="dot-btn" data-goto="1" aria-current="false" aria-label="Slide 2"></button>
-        <button type="button" class="dot-btn" data-goto="2" aria-current="false" aria-label="Slide 3"></button>
-        <button type="button" class="dot-btn" data-goto="3" aria-current="false" aria-label="Slide 4"></button>
-        <button type="button" class="dot-btn" data-goto="4" aria-current="false" aria-label="Slide 5"></button>
-        <button type="button" class="dot-btn" data-goto="5" aria-current="false" aria-label="Slide 6"></button>
-        <button type="button" class="dot-btn" data-goto="6" aria-current="false" aria-label="Slide 7"></button>
-      </div>
+      <div class="progress-dots" id="progress-dots" role="tablist" aria-label="Selettore rapido slide"></div>
 
       <div class="nav-controls">
         <button type="button" class="key-secondary" id="btn-prev">← Precedente</button>
@@ -1755,10 +2021,32 @@
     });
 
     // 2. Slide Deck Navigation Engine + View Transitions Focus Management (same-document-transitions)
-    const totalSlides = 7;
+    // Schede, pallini e larghezza della pista nascono dalle slide presenti: aggiungerne una basta.
+    const slides = [...document.querySelectorAll(".slide")];
+    const totalSlides = slides.length;
     let currentSlide = 0;
     const track = document.getElementById("deck-track");
     const counter = document.getElementById("slide-counter");
+    track.style.width = `${totalSlides * 100}vw`;
+    counter.textContent = `1 / ${totalSlides}`;
+    slides.forEach((slide, i) => {
+      const li = document.createElement("li");
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "slide-tab-btn";
+      tab.dataset.goto = String(i);
+      tab.textContent = slide.dataset.tab;
+      if (i === 0) tab.setAttribute("aria-current", "step");
+      li.append(tab);
+      document.getElementById("slide-tabs").append(li);
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "dot-btn";
+      dot.dataset.goto = String(i);
+      dot.setAttribute("aria-current", String(i === 0));
+      dot.setAttribute("aria-label", `Slide ${i + 1}: ${slide.dataset.tab}`);
+      document.getElementById("progress-dots").append(dot);
+    });
     const tabBtns = document.querySelectorAll(".slide-tab-btn");
     const dotBtns = document.querySelectorAll(".dot-btn");
 
@@ -1844,8 +2132,8 @@
         painDesc: "Una famiglia non sa se conviene partire da fotovoltaico, pompa di calore o cappotto, e deve cedere indirizzo e contatti personali ai portali commerciali.",
         raw: "Classe E · Nessun ordine di priorità sugli investimenti",
         solTitle: "Con Vicenza Sostenibile: Palco Casa 3D Anonimo",
-        solDesc: "Senza inserire l'indirizzo civico, il cittadino accende le dotazioni sulla Casa 3D, legge il risparmio decennale e riceve dall'AI la prossima azione a massimo impatto.",
-        action: "Salto Classe E → Classe A · Risparmio stimato: 13.200 € in 10 anni"
+        solDesc: "Senza inserire l'indirizzo, il cittadino accende le dotazioni sulla Casa 3D e scopre «Il tuo 2040»: la provincia se tutti vivessero come lui, e i due passi che la ribaltano.",
+        action: "Famiglia in Classe F a Schio · 2 passi = +26 punti per il comune nel 2040"
       },
       scuola: {
         painTitle: "Prima: Numeri Chimici Scollegati dalla Realtà",
@@ -1873,7 +2161,7 @@
     });
 
     // 4. Slides 3 & 4: Unified Territory State
-    const schioBase = 83;
+    const schioBase = 77;
     const neighborBases = [81, 82, 78, 79, 80, 79];
     const policyState = {
       industria: { active: false, delta: 12, co2: 420 },
@@ -1882,7 +2170,7 @@
       ciclabile: { active: false, delta: 3, co2: 95 }
     };
     let fvMacroPct = 0;
-    let selectedMuni = { name: "Schio", base: 83, pop: "38.780 ab.", isCenter: true };
+    let selectedMuni = { name: "Schio", base: 77, pop: "38.780 ab.", isCenter: true };
 
     function syncTerritoryUI() {
       let localDelta = 0;
@@ -2128,6 +2416,109 @@
 
     syncTerritoryUI();
     syncCasa3D();
+
+    // 7. Macchina del tempo: dati reali esportati dal motore dell'app (stessi numeri della demo).
+    const TM = {"passo-indietro":{"nome":"Passo indietro","descrizione":"Si costruisce tanto, il traffico cresce e le case non si rinnovano","trend":1,"s":[[2025,67.7,1,24.5,580,0,0,0,0,0,0,0,""],[2026,63.5,0,25.8,589,14,2,7,0,0,0,0,"Nuova tangenziale a Pojana Maggiore, 3 km (-3,6)"],[2027,67.4,1,24.3,597,27,3,14,0,0,0,0,"Completato un quartiere a Nove: 12 case e una strada (-0,3)"],[2028,58.8,0,27.2,606,41,5,21,0,0,0,0,"Nuova provinciale a Dueville, 3 km (-1,8)"],[2029,66.9,1,24.3,615,55,6,26,0,0,0,0,"Completato un quartiere a San Vito di Leguzzano: 12 case e una strada (-0,3)"],[2030,61.2,0,26.2,624,68,8,34,0,0,0,0,"Completato un quartiere a Montegaldella: 12 case e una strada (-0,3)"],[2031,65.8,0,24.4,633,82,9,41,0,0,0,0,"Completato un quartiere a Altissimo: 12 case e una strada (-0,3)"],[2032,55.8,0,27.8,643,96,11,47,0,0,0,0,"Nuova tangenziale a Montorso Vicentino, 3,9 km (-4,7)"],[2033,57.4,0,27.1,652,109,12,51,0,0,0,0,"Nuova provinciale a Rotzo, 2,5 km (-1,5)"],[2034,60.6,0,25.9,661,123,14,57,0,0,0,0,"Completato un quartiere a Pojana Maggiore: 12 case e una strada (-0,3)"],[2035,51.4,0,29,671,137,15,61,0,0,0,5,"Completato un quartiere a Sarcedo: 12 case e una strada (-0,3)"],[2036,57.4,0,26.8,680,150,17,65,0,0,0,0,"Completato un quartiere a Altavilla Vicentina: 12 case e una strada (-0,3)"],[2037,59,0,26.1,690,164,18,72,0,0,0,0,"Nuova provinciale a Montegalda, 3,8 km (-2,3)"],[2038,50.3,0,28.9,699,178,20,77,0,0,0,12,"Completato un quartiere a Vicenza: 12 case e una strada (-0,3)"],[2039,46.9,0,30,709,192,21,84,0,0,0,34,"Nuova provinciale a Agugliaro, 2,2 km (-1,3)"],[2040,52,0,28.1,719,205,22,89,0,0,0,6,"Completato un quartiere a Malo: 12 case e una strada (-0,3)"]]},"inerzia":{"nome":"Inerzia","descrizione":"Si continua come oggi: si costruisce e si rinnova poco","trend":0,"s":[[2025,67.7,1,24.5,580,0,0,0,0,0,0,0,""],[2026,64.6,0,25.6,585,8,1,2,0,0,0,0,"Nuova tangenziale a Posina, 1,6 km (-2)"],[2027,69.4,3,23.9,590,16,2,4,0,5,0,0,"Nuova pista ciclabile a Lugo di Vicenza, 5 km (+3)"],[2028,62.1,0,26.4,596,25,2,7,1,5,0,0,"Nuovo parco a Thiene (+5)"],[2029,70.8,5,23.3,601,33,3,10,1,9,0,0,"Nuova pista ciclabile a Roana, 4 km (+2,4)"],[2030,66.1,0,24.9,606,41,4,13,1,9,0,0,"Completato un quartiere a Valdastico: 12 case e una strada (-0,3)"],[2031,71.1,7,23,612,49,5,16,1,9,0,0,"Completato un quartiere a Creazzo: 12 case e una strada (-0,3)"],[2032,62.6,0,25.9,617,57,6,18,1,14,0,0,"Nuova pista ciclabile a Monticello Conte Otto, 4,6 km (+2,8)"],[2033,65.1,0,25.1,623,66,6,22,2,14,0,0,"Nuovo parco a Zovencedo (+5)"],[2034,68.9,2,23.7,628,74,7,25,2,18,0,0,"Completato un quartiere a Monte di Malo: 12 case e una strada (-0,3)"],[2035,61.4,0,26.3,633,82,8,27,2,18,0,0,"Nuova provinciale a Pove del Grappa, 2,1 km (-1,3)"],[2036,67.5,2,24,639,90,9,31,2,18,0,0,"Nuova provinciale a Sovizzo, 3,9 km (-2,3)"],[2037,69.7,4,23.2,644,98,10,33,2,22,0,0,"Completato un quartiere a Cassola: 12 case e una strada (-0,3)"],[2038,63.8,0,25.4,650,107,10,38,3,22,0,0,"Completato un quartiere a Santorso: 12 case e una strada (-0,3)"],[2039,61.6,0,26.1,656,115,11,41,3,24,0,0,"Nuova pista ciclabile a San Pietro Mussolino, 2,5 km (+1,5)"],[2040,66.8,0,24.2,661,123,12,45,3,24,0,0,"Completato un quartiere a Chiampo: 12 case e una strada (-0,3)"]]},"piano-clima":{"nome":"Piano clima","descrizione":"Si costruisce meno, metà delle case si rinnova, più parchi e ciclabili","trend":-1.2,"s":[[2025,67.7,1,24.5,580,0,0,0,0,0,0,0,""],[2026,65.7,0,25.3,579,7,1,0,1,2,0,0,"Nuova pista ciclabile a Altissimo, 2,1 km (+1,3)"],[2027,71.6,7,23.3,579,14,1,2,2,5,0,0,"Nuova pista ciclabile a Villaverla, 2,8 km (+1,7)"],[2028,65,0,25.5,578,21,2,2,2,11,0,0,"Nuova pista ciclabile a Piovene Rocchette, 2,5 km (+1,5)"],[2029,74.5,28,22.2,577,27,2,4,3,15,0,0,"Nuova pista ciclabile a Lonigo, 4,4 km (+2,7)"],[2030,71.8,11,23.4,577,34,3,4,4,18,0,0,"Nuova pista ciclabile a Bassano del Grappa, 2,9 km (+1,8)"],[2031,78,48,21.4,576,41,4,4,5,21,0,0,"Nuova pista ciclabile a San Vito di Leguzzano, 2,7 km (+1,7)"],[2032,71.3,15,23.8,576,48,4,6,6,25,0,0,"Nuova pista ciclabile a Pozzoleone, 4 km (+2,4)"],[2033,74.9,33,22.8,575,55,5,6,6,32,0,0,"Nuova pista ciclabile a Lugo di Vicenza, 4,2 km (+2,5)"],[2034,79.4,55,21.2,574,62,5,9,7,36,0,0,"Nuova pista ciclabile a Colceresa, 4,1 km (+2,5)"],[2035,73.7,27,23.3,573,68,6,9,8,39,0,0,"Nuova pista ciclabile a Caldogno, 2,9 km (+1,8)"],[2036,80.8,59,21,573,75,7,9,9,44,0,0,"Nuova pista ciclabile a Arzignano, 4,7 km (+2,8)"],[2037,85,93,20,572,82,7,12,10,46,1,0,"Entra in servizio un piccolo reattore modulare a Agugliaro (+10, energia pulita per la provincia)"],[2038,80.1,59,21.7,571,89,8,13,10,52,1,0,"Completato un quartiere a Mussolente: 12 case e una strada (-0,3)"],[2039,79.3,57,22,571,96,8,17,11,55,1,0,"Nuova pista ciclabile a Piovene Rocchette, 3,3 km (+2)"],[2040,84.6,86,20.2,569,102,9,17,12,57,1,0,"Nuova pista ciclabile a Sossano, 2,3 km (+1,4)"]]},"tutti-a-bordo":{"nome":"Tutti a bordo","descrizione":"Quasi ogni famiglia fa la sua parte e il verde cresce ovunque","trend":-1.8,"s":[[2025,67.7,1,24.5,580,0,0,0,0,0,0,0,""],[2026,66.4,0,25.1,575,7,1,0,1,8,0,0,"Nuova pista ciclabile a Foza, 4,6 km (+2,8)"],[2027,72.6,18,23,571,14,1,0,2,17,0,0,"Nuova pista ciclabile a Torri di Quartesolo, 3,8 km (+2,3)"],[2028,66.8,0,25,566,21,2,5,4,24,0,0,"Completato un quartiere a Torri di Quartesolo: 12 case e una strada (-0,3)"],[2029,77.6,47,21.7,561,27,2,5,5,32,0,0,"Nuova pista ciclabile a Dueville, 3,7 km (+2,2)"],[2030,74.8,26,22.7,557,34,3,5,6,39,0,0,"Nuova pista ciclabile a Creazzo, 4,8 km (+2,9)"],[2031,81.9,67,20.6,552,41,3,5,7,48,0,0,"Nuova pista ciclabile a Brogliano, 4,7 km (+2,8)"],[2032,76,30,22.8,548,48,4,5,8,56,0,0,"Nuova pista ciclabile a San Pietro Mussolino, 4,8 km (+2,9)"],[2033,80.4,60,21.7,543,55,4,9,10,65,0,0,"Nuova pista ciclabile a Marostica, 4,4 km (+2,7)"],[2034,85.6,89,20.1,539,62,5,9,11,73,0,0,"Nuova pista ciclabile a Cassola, 2,4 km (+1,4)"],[2035,82.2,74,21.9,534,68,5,9,12,81,1,0,"Entra in servizio un piccolo reattore modulare a Agugliaro (+10, energia pulita per la provincia)"],[2036,89.4,106,19.7,530,75,6,9,13,89,1,0,"Nuova pista ciclabile a Carrè, 3,2 km (+1,9)"],[2037,92.7,111,18.6,525,82,6,10,14,97,1,0,"Completato un quartiere a Salcedo: 12 case e una strada (-0,3)"],[2038,89.1,108,20.1,521,89,7,13,16,104,1,0,"Completato un quartiere a Bolzano Vicentino: 12 case e una strada (-0,3)"],[2039,89.1,108,20.2,517,96,7,13,17,110,1,0,"Nuova pista ciclabile a Campiglia dei Berici, 3 km (+1,8)"],[2040,94.2,112,18.4,512,102,7,14,18,118,1,0,"Completato un quartiere a Thiene: 12 case e una strada (-0,3)"]]}};
+    const TM_COLORI = { "passo-indietro": "#e11d48", "inerzia": "#d97706", "piano-clima": "#059669", "tutti-a-bordo": "#2563eb" };
+    const TM_ORDINE = ["passo-indietro", "inerzia", "piano-clima", "tutti-a-bordo"];
+    const tmState = { piano: "inerzia", anno: 2025, timer: 0 };
+    const fmt = (n, d = 0) => n.toLocaleString("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const tmChart = document.getElementById("tm-chart");
+    const TW = 560, TH = 190, PL = 30, PR = 112, PT = 10, PB = 24;
+    const tx = (anno) => PL + ((anno - 2025) / 15) * (TW - PL - PR);
+    const ty = (v) => PT + ((100 - v) / 60) * (TH - PT - PB);
+    const NS = "http://www.w3.org/2000/svg";
+    const el = (tag, attrs, text) => {
+      const n = document.createElementNS(NS, tag);
+      Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v));
+      if (text !== undefined) n.textContent = text;
+      tmChart.appendChild(n);
+      return n;
+    };
+
+    function tmDisegna() {
+      tmChart.replaceChildren();
+      [40, 60, 80, 100].forEach((v) => {
+        el("line", { x1: PL, x2: TW - PR, y1: ty(v), y2: ty(v), stroke: "rgba(188,227,207,0.12)", "stroke-width": 1 });
+        el("text", { x: PL - 6, y: ty(v) + 4, "text-anchor": "end", fill: "#8fb3a2", "font-size": 10, "font-family": "Azeret Mono, monospace" }, v);
+      });
+      [2025, 2030, 2035, 2040].forEach((a) =>
+        el("text", { x: tx(a), y: TH - 6, "text-anchor": "middle", fill: "#8fb3a2", "font-size": 10, "font-family": "Azeret Mono, monospace" }, a));
+      TM_ORDINE.forEach((id) => {
+        const attivo = id === tmState.piano;
+        const d = TM[id].s.map((r, i) => `${i ? "L" : "M"}${tx(r[0]).toFixed(1)},${ty(r[1]).toFixed(1)}`).join("");
+        el("path", { d, fill: "none", stroke: TM_COLORI[id], "stroke-width": attivo ? 3 : 2, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: attivo ? 1 : 0.35 });
+        // Etichetta diretta a fine linea: il nome resta in inchiostro di testo, il colore lo porta il pallino.
+        const fine = TM[id].s.at(-1);
+        el("circle", { cx: TW - PR + 8, cy: ty(fine[1]), r: 4, fill: TM_COLORI[id] });
+        el("text", { x: TW - PR + 16, y: ty(fine[1]) + 4, fill: attivo ? "#f2f9f5" : "#8fb3a2", "font-size": 11, "font-weight": attivo ? 700 : 500, "font-family": "Public Sans, sans-serif" },
+          `${TM[id].nome} ${fmt(fine[1])}`);
+      });
+      const r = TM[tmState.piano].s[tmState.anno - 2025];
+      el("line", { x1: tx(tmState.anno), x2: tx(tmState.anno), y1: PT, y2: TH - PB, stroke: "#f2f9f5", "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0.6 });
+      el("circle", { cx: tx(tmState.anno), cy: ty(r[1]), r: 6, fill: TM_COLORI[tmState.piano], stroke: "#0d1d17", "stroke-width": 2 });
+    }
+
+    function tmAggiorna() {
+      const s = TM[tmState.piano].s;
+      const r = s[tmState.anno - 2025];
+      const [anno, indice, ottima, pm10, auto, case_, industrie, stradeKm, parchi, ciclabiliKm, nucleari] = r;
+      document.getElementById("tm-year").textContent = anno;
+      document.getElementById("tm-slider").value = anno;
+      document.getElementById("tm-indice").textContent = fmt(indice);
+      document.getElementById("tm-ottima").textContent = `${ottima}/114`;
+      document.getElementById("tm-pm10").textContent = fmt(pm10, 1);
+      document.getElementById("tm-auto").textContent = fmt(auto);
+      document.getElementById("tm-growth").innerHTML =
+        `<span>🏠 <b>+${case_}</b> case</span><span>🏭 <b>+${industrie}</b> capannoni</span><span>🛣 <b>+${stradeKm}</b> km strade</span>` +
+        `<span>🌳 <b>+${parchi}</b> parchi</span><span>🚲 <b>+${ciclabiliKm}</b> km ciclabili</span>${nucleari ? "<span>⚛️ <b>1</b> reattore SMR</span>" : ""}`;
+      const ultima = s.slice(0, anno - 2025 + 1).filter((x) => x[12]).at(-1);
+      document.getElementById("tm-news").innerHTML = ultima ? `<b>${ultima[0]}</b>${ultima[12]}` : "Premi ▶: anno dopo anno nascono case, capannoni, strade e parchi.";
+      document.querySelectorAll(".tm-plan").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.plan === tmState.piano)));
+      tmDisegna();
+    }
+
+    function tmPausa() {
+      clearInterval(tmState.timer);
+      tmState.timer = 0;
+      document.getElementById("tm-play").textContent = "▶";
+    }
+    function tmPlay() {
+      if (tmState.anno >= 2040) tmState.anno = 2025;
+      document.getElementById("tm-play").textContent = "❚❚";
+      tmState.timer = setInterval(() => {
+        if (tmState.anno >= 2040) return tmPausa();
+        tmState.anno++;
+        tmAggiorna();
+      }, 650);
+      tmAggiorna();
+    }
+    document.getElementById("tm-play").addEventListener("click", () => (tmState.timer ? tmPausa() : tmPlay()));
+    document.getElementById("tm-slider").addEventListener("input", (e) => { tmPausa(); tmState.anno = Number(e.target.value); tmAggiorna(); });
+    document.querySelectorAll(".tm-plan").forEach((b) => b.addEventListener("click", () => { tmPausa(); tmState.piano = b.dataset.plan; tmPlay(); }));
+    tmChart.addEventListener("pointermove", (e) => {
+      const box = tmChart.getBoundingClientRect();
+      const x = ((e.clientX - box.left) / box.width) * TW;
+      const anno = Math.round(2025 + ((x - PL) / (TW - PL - PR)) * 15);
+      if (anno >= 2025 && anno <= 2040 && anno !== tmState.anno) { tmPausa(); tmState.anno = anno; tmAggiorna(); }
+    });
+    tmAggiorna();
+
+    // 8. Confronto prima/dopo dei due futuri del 2040.
+    document.getElementById("tm-compare-range").addEventListener("input", (e) => {
+      document.getElementById("tm-frame").style.setProperty("--pos", `${e.target.value}%`);
+    });
+
+    // 9. Il tuo 2040: le due schede scelgono quale schermata dell'app mostrare.
+    const TU_IMG = {
+      "come-te": ["public/pitch/tuo2040_come_te.png", "L'app: Se tutti vivessero come te, nel 2040 Schio sarebbe in fascia media (59/100)"],
+      "due-passi": ["public/pitch/tuo2040_due_passi.png", "L'app: Con il fotovoltaico e la pompa di calore, Schio arriverebbe in fascia ottima (85/100)"],
+    };
+    document.querySelectorAll("[data-tu]").forEach((b) => b.addEventListener("click", () => {
+      document.querySelectorAll("[data-tu]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      const img = document.getElementById("tu-img");
+      [img.src, img.alt] = TU_IMG[b.dataset.tu];
+    }));
   </script>
 </body>
 </html>
