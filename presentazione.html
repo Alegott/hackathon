@@ -1239,6 +1239,8 @@
     .fine-stats span { color: var(--ink-secondary); font-size: 0.95rem; }
     .fine-road { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 980px; }
     .fine-road span { padding: 7px 14px; border-radius: 999px; background: var(--bg-bay); color: var(--ink-secondary); font-size: 0.9rem; }
+    .fine-road button { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--border-hairline); background: var(--bg-bay); color: var(--ink-primary); font: inherit; font-size: 0.95rem; cursor: pointer; }
+    .fine-road button:hover { border-color: var(--border-active); background: var(--bg-keycap-hover); }
     .fine-cta .key-action { font-size: 1.05rem; padding: 14px 26px; }
 
     @media (max-width: 1024px) {
@@ -1246,6 +1248,31 @@
       .tm-stats, .fine-stats { grid-template-columns: repeat(2, 1fr); }
       .tm-frame { min-height: 320px; }
     }
+
+
+    /* =================================================================
+       COSA FA · PERCHÉ USARLA
+       ================================================================= */
+    .cf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .cf-card { display: flex; flex-direction: column; }
+    .cf-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; border-bottom: 1px solid var(--border-hairline); }
+    .cf-body { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 8px; }
+    .cf-num { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--signal-bright); color: #052e22; font-weight: 700; }
+    .cf-body h3 { font-size: 1.55rem; }
+    .cf-body p { font-size: 1.02rem; }
+    .pq-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .pq-card { padding: 26px; border-radius: var(--radius-panel); background: var(--limestone-surface); border: 1px solid var(--limestone-border); display: flex; flex-direction: column; gap: 10px; }
+    .pq-card-dark { background: var(--limestone-ink); color: var(--ink-primary); }
+    .pq-card-dark p { color: var(--ink-secondary); }
+    .pq-icon { font-size: 2.6rem; line-height: 1; }
+    .pq-card h3 { font-size: 1.6rem; }
+    .pq-card p { font-size: 1.08rem; }
+    .pq-banner { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 26px; padding: 16px; border-radius: var(--radius-panel); background: var(--limestone-ink); color: var(--ink-primary); font-weight: 600; }
+    @media (max-width: 1024px) { .cf-grid, .pq-grid { grid-template-columns: 1fr; } }
+
+    .s1-pillars .pillar-box strong { font-size: 1.2rem; white-space: nowrap; }
+    .dot-btn.dot-tecnica { width: 14px; }
+    .dot-btn.dot-tecnica[aria-current="true"] { width: 34px; }
 
     @media (max-width: 1560px) {
       .slide-tab-btn { padding: 5px 7px; font-size: 0.78rem; }
@@ -1284,29 +1311,29 @@
         <!-- =============================================================
              SLIDE 1: VISIONE & HOOK (Schio 2026)
              ============================================================= -->
-        <section class="slide" aria-label="Visione" data-tab="Visione">
+        <section class="slide" aria-label="Che cos'è" data-tab="L'app">
           <div class="slide-inner">
             <div class="s1-grid">
               <div class="s1-left">
                 <h1 id="slide-heading-0" tabindex="-1">
-                  Il territorio non è una tabella. <span style="color:var(--signal-bright)">Respira.</span>
+                  Guarda il tuo comune respirare. <span style="color:var(--signal-bright)">Scopri quanto conta la tua casa.</span>
                 </h1>
                 <p>
-                  Hackathon di Schio 2026 · <strong>"La mia sostenibilità"</strong>: abbiamo trasformato i dati aperti di aria, territorio ed energia in un <strong>gemello digitale 3D vivo</strong> dei 114 comuni vicentini, che viaggia fino al 2040 e mostra a ogni famiglia <strong>il futuro che le sue scelte costruiscono</strong>.
+                  <strong>Vicenza Sostenibile</strong> è un'app che trasforma i dati sull'aria in qualcosa che si vede: una <strong>mappa 3D dei 114 comuni vicentini</strong>, una <strong>casa 3D</strong> dove scopri quanto pesa la tua abitazione, e un viaggio nel <strong>2040</strong> per vedere dove portano le tue scelte.
                 </p>
 
                 <div class="s1-pillars">
                   <div class="pillar-box">
-                    <strong class="mono">114 Comuni</strong>
-                    <span>Mappa 3D su dati reali ARPAV e confini ISTAT</span>
+                    <strong>🗺️ Il tuo comune</strong>
+                    <span>Vedi com'è l'aria dove vivi</span>
                   </div>
                   <div class="pillar-box">
-                    <strong class="mono">2025 → 2040</strong>
-                    <span>Macchina del tempo: case, industrie, auto e meteo in 3D</span>
+                    <strong>🏠 La tua casa</strong>
+                    <span>Scopri la sua classe e cosa migliorare</span>
                   </div>
                   <div class="pillar-box">
-                    <strong class="mono">Il tuo 2040</strong>
-                    <span>Le tue scelte moltiplicate per tutta la provincia</span>
+                    <strong>🕰 Il tuo 2040</strong>
+                    <span>Guarda il futuro che stai costruendo</span>
                   </div>
                 </div>
               </div>
@@ -1317,8 +1344,8 @@
                 </div>
                 <div class="s1-dock mono">
                   <div>
-                    <strong style="color:var(--ink-primary);display:block">Comune di Schio · Stazione ARPAV IT0663A</strong>
-                    <span style="font-size:0.875rem;color:var(--ink-secondary)">PM10 stimato: 21,1 µg/m³ · aria 82 · infrastrutture −5</span>
+                    <strong style="color:var(--ink-primary);display:block">Schio, oggi</strong>
+                    <span style="font-size:0.875rem;color:var(--ink-secondary)">Aria buona · indice ambientale del comune</span>
                   </div>
                   <span style="font-size:1.5rem;font-weight:700;color:var(--signal-lime);white-space:nowrap">77 / 100</span>
                 </div>
@@ -1328,12 +1355,215 @@
         </section>
 
         <!-- =============================================================
-             SLIDE 2: PROBLEMA & SOLUZIONE (Tavola Limestone)
+             SLIDE: COSA FA, IN 3 GESTI
              ============================================================= -->
-        <section class="slide slide-limestone" aria-label="Problema" data-tab="Problema">
+        <section class="slide" aria-label="Cosa fa" data-tab="Cosa fa">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-1" tabindex="-1">Dati complessi. Scelte semplici.</h2>
+              <h2 id="slide-heading-1" tabindex="-1">Cosa fa? Tre gesti, un minuto.</h2>
+              <p>Niente grafici da interpretare, niente tabelle: si guarda, si tocca, si capisce.</p>
+            </div>
+            <div class="cf-grid">
+              <article class="console-chassis cf-card">
+                <img src="public/pitch/tempo_vicino.png" alt="Mappa 3D della provincia con comuni colorati, quartieri, fabbriche e nuvole" />
+                <div class="cf-body">
+                  <span class="cf-num mono">1</span>
+                  <h3>Guarda il tuo comune</h3>
+                  <p>Una mappa 3D dei 114 comuni vicentini. Aria pulita? Cielo azzurro, alberi e animali. Aria inquinata? Nebbia e nuvole scure.</p>
+                </div>
+              </article>
+              <article class="console-chassis cf-card">
+                <img src="public/pitch/casa_3d.jpg" alt="Casa 3D con fotovoltaico, giardino e dotazioni" />
+                <div class="cf-body">
+                  <span class="cf-num mono">2</span>
+                  <h3>Metti la tua casa</h3>
+                  <p>Trascini caldaia, pannelli, isolamento, auto. Ottieni la classe da A a G e scopri l'intervento che conta di più.</p>
+                </div>
+              </article>
+              <article class="console-chassis cf-card">
+                <img src="public/pitch/tuo2040_due_passi.png" alt="La macchina del tempo nel 2040 con il risultato della famiglia" />
+                <div class="cf-body">
+                  <span class="cf-num mono">3</span>
+                  <h3>Guarda il tuo 2040</h3>
+                  <p>Un tasto, e vedi la provincia fra 15 anni se tutti vivessero come te. Poi i due passi che cambiano il finale.</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE: PERCHÉ USARLA
+             ============================================================= -->
+        <section class="slide slide-limestone" aria-label="Perché usarla" data-tab="Perché">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-2" tabindex="-1">Perché usarla? Perché il clima si cambia anche da casa.</h2>
+              <p>Tutti sanno che l'aria è un problema. Nessuno sa quanto pesa la propria casa. Noi lo facciamo vedere.</p>
+            </div>
+            <div class="pq-grid">
+              <div class="pq-card">
+                <span class="pq-icon" aria-hidden="true">👨‍👩‍👧</span>
+                <h3>Per le famiglie</h3>
+                <p>In un minuto capisci quanto inquina la tua casa e quale intervento conviene davvero. Senza indirizzo, senza dati personali.</p>
+              </div>
+              <div class="pq-card pq-card-dark">
+                <span class="pq-icon" aria-hidden="true">🏛️</span>
+                <h3>Per i Comuni</h3>
+                <p>Provi un parco, una ciclabile o una fabbrica sulla mappa prima di costruirli, e vedi l'effetto anche sui comuni vicini.</p>
+              </div>
+              <div class="pq-card">
+                <span class="pq-icon" aria-hidden="true">🏫</span>
+                <h3>Per le scuole</h3>
+                <p>L'ambiente diventa visibile: alberi che crescono, animali che tornano, nuvole che si schiariscono quando l'aria migliora.</p>
+              </div>
+            </div>
+            <div class="pq-banner">
+              <span>✅ Dati ufficiali ARPAV</span>
+              <span>✅ Tutti i 114 comuni vicentini</span>
+              <span>✅ Si usa dal browser, senza installare nulla</span>
+              <span>✅ La tua casa resta sul tuo dispositivo</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE: IL TUO 2040
+             ============================================================= -->
+        <section class="slide" aria-label="Il tuo 2040" data-tab="Il tuo 2040">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-3" tabindex="-1">E se tutti vivessero <span style="color:#facc15">come te</span>?</h2>
+              <p>Inserisci la tua casa. L'app ti mostra la provincia nel 2040 se tutti facessero le tue stesse scelte.</p>
+            </div>
+
+            <div class="tu-grid">
+              <div class="tu-left">
+                <div class="console-chassis tu-profile">
+                  <div>
+                    <span class="tu-eyebrow mono">Esempio: la casa inserita nell'app</span>
+                    <h3>Famiglia Rossi · Schio</h3>
+                    <div class="tu-chips">
+                      <span>🔥 Caldaia tradizionale</span><span>🚗 Diesel Euro 4</span><span>🧱 Isolamento medio</span><span>☀️ Niente fotovoltaico</span>
+                    </div>
+                  </div>
+                  <div class="tu-class mono"><strong>F</strong><span>18/100</span></div>
+                </div>
+
+                <div class="tu-outcomes">
+                  <button type="button" class="console-chassis tu-out tu-out-bad" data-tu="come-te" aria-pressed="true">
+                    <span class="tu-eyebrow mono">👤 Tutti come te</span>
+                    <strong class="tu-big mono">77 → 59</strong>
+                    <span class="tu-sub">Schio scende in <b>fascia media</b></span>
+                    <ul class="mono">
+                      <li>Aria più inquinata in tutta la provincia</li><li>34 comuni finiscono in fascia scarsa</li>
+                    </ul>
+                  </button>
+                  <button type="button" class="console-chassis tu-out tu-out-good" data-tu="due-passi" aria-pressed="false">
+                    <span class="tu-eyebrow mono">👣 + 2 passi: fotovoltaico e pompa di calore</span>
+                    <strong class="tu-big mono">77 → 85</strong>
+                    <span class="tu-sub">Schio sale in <b>fascia ottima</b></span>
+                    <ul class="mono">
+                      <li>Aria più pulita in tutta la provincia</li><li>Nessun comune in fascia scarsa</li>
+                    </ul>
+                  </button>
+                </div>
+
+                <div class="tu-delta">
+                  <strong class="mono">+26 punti</strong>
+                  <span>per Schio nel 2040. La differenza tra i due futuri sono <b>due scelte di una famiglia</b>, moltiplicate per tutti.</span>
+                </div>
+              </div>
+
+              <div class="console-chassis tu-shot">
+                <img id="tu-img" src="public/pitch/tuo2040_come_te.png" alt="L'app: Se tutti vivessero come te, nel 2040 Schio sarebbe in fascia media (59/100)" />
+                <p class="tu-quote">«Non ti chiediamo di salvare il mondo. Ti mostriamo quello che stai già costruendo.»</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE: MACCHINA DEL TEMPO 2025 → 2040
+             ============================================================= -->
+        <section class="slide" aria-label="Il futuro della provincia" data-tab="Il futuro">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-4" tabindex="-1">E tutta la provincia? Guarda il 2040, anno per anno.</h2>
+              <p>Scegli un futuro e premi ▶: nascono case, fabbriche, strade e parchi, e la mappa cambia colore.</p>
+            </div>
+
+            <div class="tm-grid">
+              <div class="console-chassis tm-compare">
+                <div class="tm-frame" id="tm-frame" style="--pos: 50%">
+                  <img class="tm-img" src="public/pitch/tempo_tutti_a_bordo.png" alt="La provincia nel 2040 con il piano Tutti a bordo: comuni azzurri, parchi, ciclabili e un piccolo reattore" />
+                  <div class="tm-top">
+                    <img class="tm-img" src="public/pitch/tempo_passo_indietro.png" alt="La provincia nel 2040 con il piano Passo indietro: comuni arancioni, capannoni e quartieri" />
+                  </div>
+                  <div class="tm-handle" aria-hidden="true"><span>⟷</span></div>
+                  <span class="tm-tag tm-tag-l mono">Passo indietro · 52/100</span>
+                  <span class="tm-tag tm-tag-r mono">Tutti a bordo · 94/100</span>
+                  <input type="range" class="tm-range" id="tm-compare-range" min="0" max="100" value="50" aria-label="Confronta i due futuri del 2040" />
+                </div>
+                <p class="tm-caption mono">Stessa provincia, stesso 2040. Trascina per confrontare due futuri.</p>
+              </div>
+
+              <div class="console-chassis tm-panel">
+                <div class="tm-plans" role="radiogroup" aria-label="Piano">
+                  <button type="button" role="radio" class="tm-plan" data-plan="passo-indietro" aria-checked="false"><i style="background:#e11d48"></i>Passo indietro</button>
+                  <button type="button" role="radio" class="tm-plan" data-plan="inerzia" aria-checked="true"><i style="background:#d97706"></i>Inerzia</button>
+                  <button type="button" role="radio" class="tm-plan" data-plan="piano-clima" aria-checked="false"><i style="background:#059669"></i>Piano clima</button>
+                  <button type="button" role="radio" class="tm-plan" data-plan="tutti-a-bordo" aria-checked="false"><i style="background:#2563eb"></i>Tutti a bordo</button>
+                </div>
+
+                <div class="tm-year-row">
+                  <button type="button" class="tm-play" id="tm-play" aria-label="Avvia">▶</button>
+                  <span class="tm-year mono" id="tm-year">2025</span>
+                  <input type="range" id="tm-slider" min="2025" max="2040" step="1" value="2025" aria-label="Anno" />
+                </div>
+
+                <svg class="tm-chart" id="tm-chart" viewBox="0 0 560 190" role="img" aria-label="Indice ambientale medio della provincia dal 2025 al 2040 per i quattro piani"></svg>
+
+                <div class="tm-stats mono">
+                  <div><span>Indice medio</span><strong id="tm-indice">68</strong></div>
+                  <div><span>Comuni ottimi</span><strong id="tm-ottima">1</strong></div>
+                  <div><span>PM10 medio</span><strong id="tm-pm10">24,5</strong></div>
+                  <div><span>Auto (mila)</span><strong id="tm-auto">580</strong></div>
+                </div>
+                <div class="tm-growth mono" id="tm-growth"></div>
+                <div class="tm-news" id="tm-news" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE: COME FUNZIONA (inizio della parte tecnica)
+             ============================================================= -->
+        <section class="slide slide-fine" aria-label="Come funziona" data-tab="Come funziona">
+          <div class="slide-inner fine-inner">
+            <span class="fine-eyebrow mono">Parte 2 · per chi vuole approfondire</span>
+            <h2 id="slide-heading-5" tabindex="-1" class="fine-title">Come funziona.</h2>
+            <p class="fine-sub">Dati ufficiali, un motore di calcolo trasparente e tutto il 3D direttamente nel browser.</p>
+            <div class="fine-road">
+              <button type="button" data-goto="6">📊 Dai dati alle scelte</button>
+              <button type="button" data-goto="7">🧪 Simulatore su Schio</button>
+              <button type="button" data-goto="8">🌬️ L'aria non ha confini</button>
+              <button type="button" data-goto="9">🏠 Il motore della casa</button>
+              <button type="button" data-goto="10">🛰️ Dati ARPAV e ISTAT</button>
+              <button type="button" data-goto="11">🤖 AI × clima</button>
+              <button type="button" data-goto="12">👥 Il team</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 2: PROBLEMA & SOLUZIONE (Tavola Limestone)
+             ============================================================= -->
+        <section class="slide slide-limestone" aria-label="Problema" data-nome="Dai dati alle scelte">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-6" tabindex="-1">Dati complessi. Scelte semplici.</h2>
               <p>I dati ambientali esistono già, ma sono chiusi in PDF tecnici. Li traduciamo in decisioni immediate per 3 attori:</p>
             </div>
 
@@ -1379,10 +1609,10 @@
         <!-- =============================================================
              SLIDE 3: SANDBOX TERRITORIALE LIVE SU SCHIO
              ============================================================= -->
-        <section class="slide" aria-label="Sandbox" data-tab="Sandbox">
+        <section class="slide" aria-label="Sandbox" data-nome="Simulatore Schio">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-2" tabindex="-1">Simulatore Territoriale su Schio.</h2>
+              <h2 id="slide-heading-7" tabindex="-1">Simulatore Territoriale su Schio.</h2>
               <p>Partiamo dal dato reale (77/100): attiva gli interventi sulla mappa o sulla tastiera per simulare il futuro.</p>
             </div>
 
@@ -1472,10 +1702,10 @@
         <!-- =============================================================
              SLIDE 4: RETE SPILLOVER 50% SUI COMUNI CONFINANTI
              ============================================================= -->
-        <section class="slide" aria-label="Spillover" data-tab="Spillover">
+        <section class="slide" aria-label="Spillover" data-nome="Spillover">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-3" tabindex="-1">L'aria non si ferma al confine comunale.</h2>
+              <h2 id="slide-heading-8" tabindex="-1">L'aria non si ferma al confine comunale.</h2>
               <p>Ogni azione su <strong>Schio</strong> propaga il <strong>50% del beneficio</strong> ai 6 Comuni confinanti dell'Alto Vicentino.</p>
             </div>
 
@@ -1572,122 +1802,12 @@
         </section>
 
         <!-- =============================================================
-             SLIDE: MACCHINA DEL TEMPO 2025 → 2040
-             ============================================================= -->
-        <section class="slide" aria-label="Macchina del tempo" data-tab="2040">
-          <div class="slide-inner">
-            <div class="slide-head">
-              <h2 id="slide-heading-4" tabindex="-1">2025 → 2040: il futuro si costruisce anno per anno.</h2>
-              <p>Case, capannoni, strade, auto e meteo: la provincia cresce e ogni scelta appare in 3D. Numeri calcolati dal motore dell'app.</p>
-            </div>
-
-            <div class="tm-grid">
-              <div class="console-chassis tm-compare">
-                <div class="tm-frame" id="tm-frame" style="--pos: 50%">
-                  <img class="tm-img" src="public/pitch/tempo_tutti_a_bordo.png" alt="La provincia nel 2040 con il piano Tutti a bordo: comuni azzurri, parchi, ciclabili e un piccolo reattore" />
-                  <div class="tm-top">
-                    <img class="tm-img" src="public/pitch/tempo_passo_indietro.png" alt="La provincia nel 2040 con il piano Passo indietro: comuni arancioni, capannoni e quartieri" />
-                  </div>
-                  <div class="tm-handle" aria-hidden="true"><span>⟷</span></div>
-                  <span class="tm-tag tm-tag-l mono">Passo indietro · 52/100</span>
-                  <span class="tm-tag tm-tag-r mono">Tutti a bordo · 94/100</span>
-                  <input type="range" class="tm-range" id="tm-compare-range" min="0" max="100" value="50" aria-label="Confronta i due futuri del 2040" />
-                </div>
-                <p class="tm-caption mono">Stessa provincia, stesso 2040. Trascina per confrontare due futuri.</p>
-              </div>
-
-              <div class="console-chassis tm-panel">
-                <div class="tm-plans" role="radiogroup" aria-label="Piano">
-                  <button type="button" role="radio" class="tm-plan" data-plan="passo-indietro" aria-checked="false"><i style="background:#e11d48"></i>Passo indietro</button>
-                  <button type="button" role="radio" class="tm-plan" data-plan="inerzia" aria-checked="true"><i style="background:#d97706"></i>Inerzia</button>
-                  <button type="button" role="radio" class="tm-plan" data-plan="piano-clima" aria-checked="false"><i style="background:#059669"></i>Piano clima</button>
-                  <button type="button" role="radio" class="tm-plan" data-plan="tutti-a-bordo" aria-checked="false"><i style="background:#2563eb"></i>Tutti a bordo</button>
-                </div>
-
-                <div class="tm-year-row">
-                  <button type="button" class="tm-play" id="tm-play" aria-label="Avvia">▶</button>
-                  <span class="tm-year mono" id="tm-year">2025</span>
-                  <input type="range" id="tm-slider" min="2025" max="2040" step="1" value="2025" aria-label="Anno" />
-                </div>
-
-                <svg class="tm-chart" id="tm-chart" viewBox="0 0 560 190" role="img" aria-label="Indice ambientale medio della provincia dal 2025 al 2040 per i quattro piani"></svg>
-
-                <div class="tm-stats mono">
-                  <div><span>Indice medio</span><strong id="tm-indice">68</strong></div>
-                  <div><span>Comuni ottimi</span><strong id="tm-ottima">1</strong></div>
-                  <div><span>PM10 medio</span><strong id="tm-pm10">24,5</strong></div>
-                  <div><span>Auto (mila)</span><strong id="tm-auto">580</strong></div>
-                </div>
-                <div class="tm-growth mono" id="tm-growth"></div>
-                <div class="tm-news" id="tm-news" aria-live="polite"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- =============================================================
-             SLIDE: IL TUO 2040
-             ============================================================= -->
-        <section class="slide" aria-label="Il tuo 2040" data-tab="Il tuo 2040">
-          <div class="slide-inner">
-            <div class="slide-head">
-              <h2 id="slide-heading-5" tabindex="-1">E se tutti vivessero <span style="color:#facc15">come te</span>?</h2>
-              <p>La sezione Casa diventa un futuro: le tue dotazioni, moltiplicate per 114 comuni e 15 anni. Poi i due passi che lo ribaltano.</p>
-            </div>
-
-            <div class="tu-grid">
-              <div class="tu-left">
-                <div class="console-chassis tu-profile">
-                  <div>
-                    <span class="tu-eyebrow mono">La casa inserita nell'app</span>
-                    <h3>Famiglia Rossi · Schio</h3>
-                    <div class="tu-chips">
-                      <span>🔥 Caldaia tradizionale</span><span>🚗 Diesel Euro 4</span><span>🧱 Isolamento medio</span><span>☀️ Niente fotovoltaico</span>
-                    </div>
-                  </div>
-                  <div class="tu-class mono"><strong>F</strong><span>18/100</span></div>
-                </div>
-
-                <div class="tu-outcomes">
-                  <button type="button" class="console-chassis tu-out tu-out-bad" data-tu="come-te" aria-pressed="true">
-                    <span class="tu-eyebrow mono">👤 Tutti come te</span>
-                    <strong class="tu-big mono">77 → 59</strong>
-                    <span class="tu-sub">Schio scende in <b>fascia media</b></span>
-                    <ul class="mono">
-                      <li>Provincia 68 → 47</li><li>34 comuni in fascia scarsa</li><li>PM10 24,5 → 31,2 µg/m³</li><li>Auto 580 → 712 mila</li>
-                    </ul>
-                  </button>
-                  <button type="button" class="console-chassis tu-out tu-out-good" data-tu="due-passi" aria-pressed="false">
-                    <span class="tu-eyebrow mono">👣 + 2 passi: fotovoltaico e pompa di calore</span>
-                    <strong class="tu-big mono">77 → 85</strong>
-                    <span class="tu-sub">Schio sale in <b>fascia ottima</b></span>
-                    <ul class="mono">
-                      <li>Provincia 68 → 75</li><li>0 comuni in fascia scarsa</li><li>PM10 24,5 → 22,4 µg/m³</li><li>Case con fotovoltaico 25% → 84%</li>
-                    </ul>
-                  </button>
-                </div>
-
-                <div class="tu-delta">
-                  <strong class="mono">+26 punti</strong>
-                  <span>per Schio nel 2040. La differenza tra i due futuri sono <b>due scelte di una famiglia</b>, moltiplicate per tutti.</span>
-                </div>
-              </div>
-
-              <div class="console-chassis tu-shot">
-                <img id="tu-img" src="public/pitch/tuo2040_come_te.png" alt="L'app: Se tutti vivessero come te, nel 2040 Schio sarebbe in fascia media (59/100)" />
-                <p class="tu-quote">«Non ti chiediamo di salvare il mondo. Ti mostriamo quello che stai già costruendo.»</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- =============================================================
              SLIDE 5: PALCO CASA 3D & PRIVACY-FIRST ADVISOR
              ============================================================= -->
-        <section class="slide" aria-label="Casa 3D" data-tab="Casa 3D">
+        <section class="slide" aria-label="Casa 3D" data-nome="Motore casa">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-6" tabindex="-1">Palco Casa 3D: dalla Classe E alla Classe A.</h2>
+              <h2 id="slide-heading-9" tabindex="-1">Palco Casa 3D: dalla Classe E alla Classe A.</h2>
               <p>Configura le dotazioni domestiche in totale anonimato e scopri quale intervento rende di più.</p>
             </div>
 
@@ -1756,52 +1876,12 @@
         </section>
 
         <!-- =============================================================
-             SLIDE: AI × CLIMA
-             ============================================================= -->
-        <section class="slide slide-limestone" aria-label="AI e clima" data-tab="AI × Clima">
-          <div class="slide-inner">
-            <div class="slide-head">
-              <h2 id="slide-heading-7" tabindex="-1">L'AI non salva il clima. Aiuta le persone a farlo.</h2>
-              <p>Il problema del clima non è la mancanza di dati: è che nessuno li sente propri. L'AI trasforma dati pubblici in una scelta personale.</p>
-            </div>
-
-            <div class="ai-grid">
-              <div class="ai-card">
-                <span class="ai-num mono">01</span>
-                <h3>AI che costruisce</h3>
-                <p>6 sviluppatori e i loro agenti AI in parallelo su contratti condivisi: motore, mappa 3D, casa 3D, macchina del tempo. In un hackathon, un gemello digitale che di solito richiede mesi.</p>
-                <div class="ai-pill mono">37 suite · 312 test automatici</div>
-              </div>
-              <div class="ai-card ai-card-dark">
-                <span class="ai-num mono">02</span>
-                <h3>AI che traduce</h3>
-                <p>Da PM10 ARPAV, confini ISTAT e infrastrutture OpenStreetMap a una frase che parla a te: <em>«Se tutti vivessero come te, Schio scenderebbe in fascia media.»</em> Su misura per ogni famiglia, a costo quasi zero.</p>
-                <div class="ai-pill mono">1 famiglia → 114 comuni → 15 anni</div>
-              </div>
-              <div class="ai-card">
-                <span class="ai-num mono">03</span>
-                <h3>AI responsabile</h3>
-                <p>I numeri li calcola un motore deterministico e testato, mai un modello linguistico: niente dati inventati. Ipotesi dichiarate a schermo. La casa resta sul tuo dispositivo.</p>
-                <div class="ai-pill mono">Zero allucinazioni sui numeri</div>
-              </div>
-            </div>
-
-            <div class="ai-roadmap">
-              <strong>Prossimi passi AI</strong>
-              <span>🎙️ <b>Chiedi alla mappa</b>: «e se Schio chiudesse un capannone?» e la mappa risponde</span>
-              <span>✉️ <b>Lettera dal 2040</b>: il tuo futuro ti scrive, con i tuoi numeri</span>
-              <span>👣 <b>Coach dei 2 passi</b>: incentivi, installatori, comunità energetiche</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- =============================================================
              SLIDE 6: OPEN DATA ARPAV & SCALABILITÀ WHITE-LABEL
              ============================================================= -->
-        <section class="slide" aria-label="Dati" data-tab="Dati">
+        <section class="slide" aria-label="Dati" data-nome="Dati ARPAV">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-8" tabindex="-1">Dati reali ARPAV. Pronto per tutta Italia.</h2>
+              <h2 id="slide-heading-10" tabindex="-1">Dati reali ARPAV. Pronto per tutta Italia.</h2>
               <p>Interpolazione spaziale IDW sui 114 Comuni e architettura White-Label replicabile a costo licenza zero.</p>
             </div>
 
@@ -1873,12 +1953,52 @@
         </section>
 
         <!-- =============================================================
-             SLIDE 7: IL TEAM (6 SVILUPPATORI) & WORKFLOW DEV 1-6
+             SLIDE: AI × CLIMA
              ============================================================= -->
-        <section class="slide" aria-label="Team" data-tab="Team">
+        <section class="slide slide-limestone" aria-label="AI e clima" data-nome="AI × Clima">
           <div class="slide-inner">
             <div class="slide-head">
-              <h2 id="slide-heading-9" tabindex="-1">6 Sviluppatori. 6 Stream. Agenti AI in Parallelo.</h2>
+              <h2 id="slide-heading-11" tabindex="-1">L'AI non salva il clima. Aiuta le persone a farlo.</h2>
+              <p>Il problema del clima non è la mancanza di dati: è che nessuno li sente propri. L'AI trasforma dati pubblici in una scelta personale.</p>
+            </div>
+
+            <div class="ai-grid">
+              <div class="ai-card">
+                <span class="ai-num mono">01</span>
+                <h3>AI che costruisce</h3>
+                <p>6 sviluppatori e i loro agenti AI in parallelo su contratti condivisi: motore, mappa 3D, casa 3D, macchina del tempo. In un hackathon, un gemello digitale che di solito richiede mesi.</p>
+                <div class="ai-pill mono">37 suite · 312 test automatici</div>
+              </div>
+              <div class="ai-card ai-card-dark">
+                <span class="ai-num mono">02</span>
+                <h3>AI che traduce</h3>
+                <p>Da PM10 ARPAV, confini ISTAT e infrastrutture OpenStreetMap a una frase che parla a te: <em>«Se tutti vivessero come te, Schio scenderebbe in fascia media.»</em> Su misura per ogni famiglia, a costo quasi zero.</p>
+                <div class="ai-pill mono">1 famiglia → 114 comuni → 15 anni</div>
+              </div>
+              <div class="ai-card">
+                <span class="ai-num mono">03</span>
+                <h3>AI responsabile</h3>
+                <p>I numeri li calcola un motore deterministico e testato, mai un modello linguistico: niente dati inventati. Ipotesi dichiarate a schermo. La casa resta sul tuo dispositivo.</p>
+                <div class="ai-pill mono">Zero allucinazioni sui numeri</div>
+              </div>
+            </div>
+
+            <div class="ai-roadmap">
+              <strong>Prossimi passi AI</strong>
+              <span>🎙️ <b>Chiedi alla mappa</b>: «e se Schio chiudesse un capannone?» e la mappa risponde</span>
+              <span>✉️ <b>Lettera dal 2040</b>: il tuo futuro ti scrive, con i tuoi numeri</span>
+              <span>👣 <b>Coach dei 2 passi</b>: incentivi, installatori, comunità energetiche</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================
+             SLIDE 7: IL TEAM (6 SVILUPPATORI) & WORKFLOW DEV 1-6
+             ============================================================= -->
+        <section class="slide" aria-label="Team" data-nome="Team">
+          <div class="slide-inner">
+            <div class="slide-head">
+              <h2 id="slide-heading-12" tabindex="-1">6 Sviluppatori. 6 Stream. Agenti AI in Parallelo.</h2>
               <p>Dal brainstorming al repository GitHub condiviso: sviluppo parallelo <code>Dev 1 → Dev 6</code> con agenti AI e merge finale.</p>
             </div>
 
@@ -1966,10 +2086,10 @@
         <!-- =============================================================
              SLIDE: CHIUSURA
              ============================================================= -->
-        <section class="slide slide-fine" aria-label="Chiusura" data-tab="Futuro">
+        <section class="slide slide-fine" aria-label="Chiusura" data-tab="Fine">
           <div class="slide-inner fine-inner">
             <span class="fine-eyebrow mono">Vicenza Sostenibile · Hackathon Schio 2026</span>
-            <h2 id="slide-heading-10" tabindex="-1" class="fine-title">Il futuro di Vicenza non si prevede.<br /><span>Si sceglie.</span></h2>
+            <h2 id="slide-heading-13" tabindex="-1" class="fine-title">Il futuro di Vicenza non si prevede.<br /><span>Si sceglie.</span></h2>
             <p class="fine-sub">Due scelte di una famiglia valgono +26 punti per il suo comune. Moltiplicate per 114 comuni, cambiano il 2040.</p>
 
             <div class="fine-stats">
@@ -2030,21 +2150,25 @@
     track.style.width = `${totalSlides * 100}vw`;
     counter.textContent = `1 / ${totalSlides}`;
     slides.forEach((slide, i) => {
-      const li = document.createElement("li");
-      const tab = document.createElement("button");
-      tab.type = "button";
-      tab.className = "slide-tab-btn";
-      tab.dataset.goto = String(i);
-      tab.textContent = slide.dataset.tab;
-      if (i === 0) tab.setAttribute("aria-current", "step");
-      li.append(tab);
-      document.getElementById("slide-tabs").append(li);
+      // Le schede in alto sono solo per le slide principali; la parte tecnica sta sotto "Come funziona".
+      if (slide.dataset.tab) {
+        const li = document.createElement("li");
+        const tab = document.createElement("button");
+        tab.type = "button";
+        tab.className = "slide-tab-btn";
+        tab.dataset.goto = String(i);
+        tab.textContent = slide.dataset.tab;
+        if (i === 0) tab.setAttribute("aria-current", "step");
+        li.append(tab);
+        document.getElementById("slide-tabs").append(li);
+      }
       const dot = document.createElement("button");
       dot.type = "button";
       dot.className = "dot-btn";
       dot.dataset.goto = String(i);
       dot.setAttribute("aria-current", String(i === 0));
-      dot.setAttribute("aria-label", `Slide ${i + 1}: ${slide.dataset.tab}`);
+      dot.setAttribute("aria-label", `Slide ${i + 1}: ${slide.dataset.tab ?? slide.dataset.nome}`);
+      if (!slide.dataset.tab) dot.classList.add("dot-tecnica");
       document.getElementById("progress-dots").append(dot);
     });
     const tabBtns = document.querySelectorAll(".slide-tab-btn");
@@ -2058,8 +2182,10 @@
       const updateDOM = () => {
         track.style.transform = `translate3d(-${currentSlide * 100}vw, 0, 0)`;
         counter.textContent = `${currentSlide + 1} / ${totalSlides}`;
-        tabBtns.forEach((b, i) => {
-          if (i === currentSlide) b.setAttribute("aria-current", "step");
+        // Scheda attiva = l'ultima sezione principale iniziata prima della slide corrente.
+        const attiva = [...tabBtns].filter((b) => Number(b.dataset.goto) <= currentSlide).at(-1);
+        tabBtns.forEach((b) => {
+          if (b === attiva) b.setAttribute("aria-current", "step");
           else b.removeAttribute("aria-current");
         });
         dotBtns.forEach((d, i) => {
