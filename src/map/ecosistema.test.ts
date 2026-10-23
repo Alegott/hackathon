@@ -91,4 +91,25 @@ describe("provincia ed ecosistema della mappa reale", () => {
     for (let i = 0; i < punti.length; i++) for (let j = i + 1; j < punti.length; j++)
       expect(Math.hypot(punti[i]![0] - punti[j]![0], punti[i]![1] - punti[j]![1])).toBeGreaterThanOrEqual(44.99)
   })
+  it("non crea alberi né ancore di fauna quando il terreno è tutto occupato", () => {
+    const h = preparaHabitat([comune], { "024116": stato("ottima") }, "024116", undefined, [], 800, [], () => false)[0]!
+    expect(h.alberi).toEqual([])
+    expect(h.ancoreFauna).toEqual([])
+  })
+  it("la sostenibilità del singolo comune regola davvero il numero di alberi creati", () => {
+    const h = (f: StatoComune["fascia"]) => preparaHabitat([comune], { "024116": stato(f) }, "024116")[0]!
+    expect(h("ottima").alberi.length).toBeGreaterThan(h("media").alberi.length)
+    expect(h("media").alberi.length).toBeGreaterThan(h("pessima").alberi.length)
+    const alti = new Set(h("ottima").alberi.map(String))
+    expect(h("media").alberi.every((p) => alti.has(String(p)))).toBe(true)
+  })
+  it("usa gli indici locali dei comuni, senza applicare una media provinciale", () => {
+    const vicino: Comune = { ...comune, istat: "024117", centroide: [centro[0] + 1600, centro[1]],
+      geometria: comune.geometria.map((r) => r.map(([x, y]) => [x + 1600, y])),
+    }
+    const [alto, basso] = preparaHabitat([comune, vicino], { "024116": stato("ottima"), "024117": stato("pessima") }, null)
+    expect(alto!.alberi.length).toBeGreaterThan(basso!.alberi.length)
+    expect(alto!.fauna.terra.length).toBeGreaterThan(basso!.fauna.terra.length)
+    expect(basso!.fauna.terra).toEqual([])
+  })
 })

@@ -8,6 +8,7 @@ import { sostenibilitaStato } from "./sostenibilita"
 import { composizioneFauna, type Fauna } from "./vitaTerritorio"
 import { aCoordinateGeografiche, aCoordinateMetriche } from "./territorio"
 import provincia from "../data/provincia.geojson.json"
+import { semePosizione, type TerrenoLibero } from "./vincoliHabitat"
 
 export const confineProvincia = provincia as Feature<Polygon | MultiPolygon>
 const poligoniProvincia = (confineProvincia.geometry.type === "Polygon"
@@ -69,6 +70,7 @@ export type Habitat = {
   centro: [number, number]
   raggio: number
   alberi: [number, number][]
+  ancoreFauna: [number, number][]
   preset: ReturnType<typeof presetFascia>
   fauna: Fauna
   raggioComune: number // raggio del cerchio di pari area, in metri
@@ -86,7 +88,7 @@ const raggioEquivalente = (anello: [number, number][]) => {
 // Elementi illustrativi dell'indice, vincolati ai poligoni reali. Non sono censimenti faunistici.
 export function preparaHabitat(comuni: Comune[], indici: Record<string, StatoComune>,
   selezionato: string | null, centroVista?: [number, number], verdi: [number, number][] = [],
-  raggioVista = 1500, libero: [number, number][] = []): Habitat[] {
+  raggioVista = 1500, libero: [number, number][] = [], terrenoLibero: TerrenoLibero = () => true): Habitat[] {
   return comuni.filter((c) => !selezionato || c.istat === selezionato).flatMap((c) => {
     const stato = indici[c.istat]
     if (!stato) return []
@@ -124,13 +126,18 @@ export function preparaHabitat(comuni: Comune[], indici: Record<string, StatoCom
     const limite = selezionato ? Math.min(56, Math.max(1, Math.floor(Math.PI * R * R / 5000))) : 7
     for (const p of selezionato ? [...verdiLocali, ...liberoLocale, ...vicini] : punti) {
       if (selezionato && Math.hypot(p[0] - centroMetrico[0], p[1] - centroMetrico[1]) > R) continue
+      if (!terrenoLibero(aCoordinateGeografiche(p), 8)) continue
       if (alberi.every((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) >= 45)) alberi.push(p)
       if (alberi.length >= limite) break
     }
+    const ancoreFauna = alberi.map(([x, y]): [number, number] => [x + 28, y - 28])
+      .filter((p) => puntoInPoligono(p, anello) && dentroProvincia(aCoordinateGeografiche(p))
+        && terrenoLibero(aCoordinateGeografiche(p), 12))
+    const presenti = alberi.filter((p) => semePosizione(p) / 4294967296 < preset.densitaAlberi)
     return [{ istat: c.istat, centro: aCoordinateGeografiche(c.centroide), raggio: selezionato ? 350 : 1000,
       fauna: composizioneFauna(stato), raggioComune: raggioEquivalente(anello),
       // In vista comune: prima il verde reale caricato, poi alberi decorativi fino a riempire la vista.
-      alberi: alberi.map(aCoordinateGeografiche),
+      alberi: presenti.map(aCoordinateGeografiche), ancoreFauna: ancoreFauna.map(aCoordinateGeografiche),
       preset }]
   })
 }

@@ -44,3 +44,12 @@ La maschera esterna della provincia ? un poligono cartografico nativo, al posto 
 Gli alberi della mappa usano CommonTree_1, Pine_1 e DeadTree_1 dello Stylized Nature MegaKit di Quaternius (2024, CC0), scaricati dalla pubblicazione dell'autore su OpenGameArt. Sorgenti e licenza sono in `public/models/nature/SOURCES.md` e `LICENSE.txt`; `scripts/download_nature.py` riproduce la conversione glTF ? GLB con texture incorporate. La sostenibilit? seleziona anche gli alberi spogli. Non vengono applicati vento o animazioni.
 
 La fauna terrestre mantiene esclusivamente i modelli glTF Quaternius gi? presenti (capriolo, volpe, cervo e lupo), con pose del rig congelate, scala illustrativa ridotta e senza camminate o orbite. Il test sul trascorrere del tempo verifica che le posizioni non cambino. Eliminato il campionamento casuale di alberi a ogni aggiornamento della vista: le nuove posizioni derivano dalla griglia metrica stabile e dal verde OSM.
+
+
+## Identita, terreno e sostenibilita locale
+
+Modello, orientamento e variazione di altezza di ogni albero dipendono dalle coordinate, non dall'indice nella lista visibile. Altezza di riferimento: 14 metri anche nella vista provinciale. Lo zoom non sostituisce il modello o la scala geografica. Gli alberi spogli restano legati al fogliame previsto dalla sostenibilita locale.
+
+I candidati vengono filtrati usando le impronte OSM degli edifici, i poligoni dell'acqua (con eventuali isole) e le linee di fiumi e canali presenti nelle tile caricate. Margine dal bordo: 8 metri per gli alberi e 12 per la fauna, oltre alla semilarghezza dei corsi d'acqua lineari; in assenza di larghezza esplicita si applica una fascia prudenziale in base al tipo. I controlli dipendono dalla completezza della cartografia OSM disponibile.
+
+La densita degli alberi viene applicata nella generazione, con una soglia deterministica per posizione confrontata con il preset del singolo comune: migliorando il totale cresce l'insieme dei punti, senza rimescolare gli esistenti. La fauna mantiene il conteggio derivato dal totale locale, limitato alle ancore libere disponibili; niente duplicazioni o ripiego sul centroide. Le ancore gia occupate dalla fauna vengono rivalidate quando arrivano nuovi vincoli cartografici.

@@ -7,6 +7,7 @@ import { metriPerPixel } from "./vitaTerritorio"
 import { coloreNuvola } from "./sostenibilita"
 import { creaGeometriaNuvola, creaMaterialeNuvole } from "./nuvole"
 import { renderCondiviso } from "./renderCondiviso"
+import type { TerrenoLibero } from "./vincoliHabitat"
 
 type Pool = { mesh: THREE.InstancedMesh; count: number }
 const CAPACITA = 1800
@@ -32,6 +33,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
   private riduciMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches
   private fauna = new FaunaGltf()
   private alberi = new AlberiGltf()
+  private terrenoLibero: TerrenoLibero = () => true
   private ultimo = performance.now()
 
   onAdd(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext) {
@@ -68,8 +70,9 @@ export class EcosistemaLayer implements CustomLayerInterface {
     this.alberi.avvia(() => this.map?.triggerRepaint())
   }
 
-  aggiorna(habitat: Habitat[], selezionato: boolean) {
+  aggiorna(habitat: Habitat[], selezionato: boolean, terrenoLibero: TerrenoLibero = () => true) {
     this.habitat = habitat
+    this.terrenoLibero = terrenoLibero
     this.selezionato = selezionato
     if (selezionato) {
       this.fauna.avvia(() => { this.configuraFauna(); this.map?.triggerRepaint() })
@@ -83,7 +86,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
     if (!this.selezionato || !h) return
     // Le ancore vengono scelte nella vista arrivata a destinazione, non all'inizio del volo sul comune.
     if (!this.map || this.map.isMoving() || this.map.getZoom() < 13) return
-    this.fauna.configura(h.fauna, h.alberi.map((p) => this.posizione(...p)), this.posizione(...h.centro), h.istat)
+    this.fauna.configura(h.fauna, h.ancoreFauna.map((p) => this.posizione(...p)), this.posizione(...h.centro), h.istat)
   }
 
   setAttivo(attivo: boolean) {
@@ -123,8 +126,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
       const [cx, cy] = this.posizione(...h.centro)
       const p = h.preset
       h.alberi.forEach((point, i) => {
-        if (i >= Math.ceil(h.alberi.length * p.densitaAlberi)) return
-        const altezza = this.selezionato ? 14 : 90
+        const altezza = 14
         this.alberi.inserisci(this.posizione(...point), altezza, i, p.fogliame)
       })
       // Nuvole: gruppi di sbuffi, grigi e più numerosi dove l'aria è peggiore. Dimensionate sulla scala
@@ -168,7 +170,7 @@ export class EcosistemaLayer implements CustomLayerInterface {
           vistaCentro: this.posizione(vista.lng, vista.lat), vistaRaggio: 0.5 * Math.hypot(w, hh) * mpp * 0.55,
           dentro: (px, py) => {
             const g = new MercatorCoordinate(this.origin.x + px * this.unit, this.origin.y - py * this.unit).toLngLat()
-            return dentroProvincia([g.lng, g.lat])
+            return dentroProvincia([g.lng, g.lat]) && this.terrenoLibero([g.lng, g.lat], 12)
           },
         })
       }

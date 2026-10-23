@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import { caricaGLTF } from "../diorama/modelli3d"
+import { semePosizione } from "./vincoliHabitat"
 
 type Variante = "CommonTree_1" | "Pine_1" | "DeadTree_1"
 type Pool = { mesh: THREE.InstancedMesh; count: number }
@@ -49,11 +50,12 @@ export class AlberiGltf {
   }
 
   iniziaFrame() { this.pools.forEach((pools) => pools.forEach((p) => { p.count = 0 })) }
-  inserisci(punto: [number, number], altezza: number, i: number, fogliame: number) {
-    const variante: Variante = fogliame < .4 ? "DeadTree_1" : i % 3 === 0 ? "Pine_1" : "CommonTree_1"
+  inserisci(punto: [number, number], altezza: number, _i: number, fogliame: number) {
+    const seme = semePosizione(punto)
+    const variante: Variante = fogliame < .4 ? "DeadTree_1" : seme % 3 === 0 ? "Pine_1" : "CommonTree_1"
     this.dummy.position.set(...punto, 0)
-    this.dummy.rotation.set(0, 0, i * 2.39996)
-    this.dummy.scale.setScalar(altezza * (.85 + (i % 7) * .05))
+    this.dummy.rotation.set(0, 0, (seme % 6283) / 1000)
+    this.dummy.scale.setScalar(altezza * (.85 + (seme % 7) * .05))
     this.dummy.updateMatrix()
     for (const p of this.pools.get(variante) ?? []) {
       if (p.count < 1000) p.mesh.setMatrixAt(p.count++, this.dummy.matrix)
