@@ -4,7 +4,8 @@ type Punto = [number, number]
 type Segmento = { a: Punto; b: Punto; lunghezza: number }
 type Auto = { gruppo: THREE.Group; strada?: Segmento; distanza: number; verso: number }
 
-// Otto auto al massimo, geometrie condivise e nessun modello o motore fisico da caricare.
+// Otto auto di base (fino a 24 quando la macchina del tempo fa crescere il parco auto),
+// geometrie condivise e nessun modello o motore fisico da caricare.
 export class Traffico {
   readonly gruppo = new THREE.Group()
   private geometria = new THREE.BoxGeometry(1, 1, 1)
@@ -13,7 +14,8 @@ export class Traffico {
   private strade: Segmento[] = []
   private comune: string | null = null
   private riprova = 0
-  private auto: Auto[] = Array.from({ length: 8 }, (_, i) => {
+  private attive = 8
+  private auto: Auto[] = Array.from({ length: 24 }, (_, i) => {
     const gruppo = new THREE.Group()
     const corpo = new THREE.Mesh(this.geometria, this.materiali[i % 4])
     corpo.scale.set(4.2, 1.8, 1.1)
@@ -40,6 +42,14 @@ export class Traffico {
     // I segmenti già percorsi restano validi durante il ricambio delle tile.
   }
 
+  // densita = auto rispetto a oggi; le differenze sono amplificate perché si notino a occhio.
+  setDensita(densita: number) {
+    const n = Math.max(3, Math.min(this.auto.length, Math.round(8 + (densita - 1) * 50)))
+    if (n === this.attive) return
+    this.attive = n
+    this.auto.slice(n).forEach((a) => { a.strada = undefined; a.gruppo.visible = false })
+  }
+
   setComune(comune: string | null) {
     if (comune === this.comune) return
     this.comune = comune
@@ -50,7 +60,8 @@ export class Traffico {
     this.gruppo.visible = attivo
     if (!attivo) return
     this.riprova -= dt
-    for (const auto of this.auto) {
+    const attive = this.auto.slice(0, this.attive)
+    for (const auto of attive) {
       if (auto.strada && Math.hypot(auto.gruppo.position.x - centro[0], auto.gruppo.position.y - centro[1]) > raggio * 1.4) {
         auto.strada = undefined
         auto.gruppo.visible = false
@@ -58,7 +69,7 @@ export class Traffico {
       }
     }
     // Selezione vicina al centro della vista, una sola volta per il gruppo di auto.
-    const candidati = this.auto.some((a) => !a.strada) && this.riprova <= 0
+    const candidati = attive.some((a) => !a.strada) && this.riprova <= 0
       ? this.strade.map((s) => {
         const dx = s.b[0] - s.a[0], dy = s.b[1] - s.a[1]
         const t = Math.max(.05, Math.min(.95, ((centro[0] - s.a[0]) * dx + (centro[1] - s.a[1]) * dy) / s.lunghezza ** 2))
@@ -68,7 +79,7 @@ export class Traffico {
         .slice(0, 64).filter((p) => libero(p.x, p.y))
       : []
     if (this.riprova <= 0) this.riprova = 1
-    for (const [i, auto] of this.auto.entries()) {
+    for (const [i, auto] of attive.entries()) {
       if (!auto.strada) {
         const p = candidati[i]
         if (!p) continue

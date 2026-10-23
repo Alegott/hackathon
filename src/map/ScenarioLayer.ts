@@ -18,6 +18,8 @@ export type OggettoScenario = {
   industria?: TipoIndustria
   // Opere comparse nella macchina del tempo: ingrandite a vista provincia, con animazione d'ingresso.
   evidenza?: boolean
+  // Quartieri ("case"): quante villette sono già state costruite.
+  numero?: number
 }
 export type StileLinea = TipoStrada | "ciclabile"
 export type BozzaTracciato = { stile: StileLinea | "parco"; punti: [number, number][] }
@@ -103,7 +105,12 @@ function villetta(rand: () => number, x: number, z: number) {
   return g
 }
 
-function modello(tipo: TipoInfra | "case", id: string, fumi: Fumo[], industria: TipoIndustria = "meccanica"): { y: THREE.Group; piano: THREE.Object3D[] } {
+// Lotti di un quartiere, dal centro verso l'esterno: ogni villetta nuova occupa il successivo.
+const LOTTI: [number, number][] = [[0, 0], [19, 2], [-2, 19], [18, 21], [-20, -1], [-21, 18], [1, -20], [20, -18],
+  [-19, -21], [38, 4], [37, 23], [-39, 2]]
+
+function modello(tipo: TipoInfra | "case", id: string, fumi: Fumo[], industria: TipoIndustria = "meccanica", numero = 4,
+  villette: THREE.Group[] = []): { y: THREE.Group; piano: THREE.Object3D[] } {
   const y = new THREE.Group()
   const piano: THREE.Object3D[] = []
   const rand = casuale(id)
@@ -137,12 +144,20 @@ function modello(tipo: TipoInfra | "case", id: string, fumi: Fumo[], industria: 
       y.add(scatola(4, 1.6, 3.2, i % 2 ? "#3b6ea8" : "#d6d9dc", x, 3.2, 5))
     }
   } else if (tipo === "case") {
-    const prato = new THREE.Mesh(new THREE.CircleGeometry(34, 18).rotateX(-Math.PI / 2), materiale("#a6d48f"))
+    // Il prato del quartiere si allarga con le case; gli alberi restano ai bordi.
+    const n = Math.max(1, Math.min(LOTTI.length, numero))
+    const prato = new THREE.Mesh(new THREE.CircleGeometry(16 + Math.sqrt(n) * 12, 22).rotateX(-Math.PI / 2), materiale("#a6d48f"))
     prato.position.y = 0.3
     y.add(prato)
-    const posti: [number, number][] = [[-14, -8], [10, -12], [-6, 12], [16, 8]]
-    for (const [x, z] of posti) y.add(villetta(rand, x + (rand() - 0.5) * 4, z + (rand() - 0.5) * 4))
-    for (let i = 0; i < 3; i++) y.add(alberoParco(rand, (rand() - 0.5) * 50, (rand() - 0.5) * 50))
+    for (let i = 0; i < 3; i++) {
+      const a = rand() * Math.PI * 2
+      y.add(alberoParco(rand, Math.cos(a) * (14 + Math.sqrt(n) * 11), Math.sin(a) * (14 + Math.sqrt(n) * 11)))
+    }
+    for (const [x, z] of LOTTI.slice(0, n)) {
+      const v = villetta(rand, x, z)
+      y.add(v)
+      villette.push(v)
+    }
   } else if (tipo === "industria") {
     const fumo = (x: number, z: number, colore: string, alt = 34) =>
       fumi.push({ mesh: new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), materiale(colore, { transparent: true })),
@@ -219,6 +234,16 @@ export class ScenarioLayer implements CustomLayerInterface {
   private comparse = new globalThis.Map<string, number>()
   private fumi: Fumo[] = []
   private kStrade = 0
+  // Villette comparse di recente, per l'animazione d'ingresso, e quante ne aveva ogni quartiere.
+  private villetteNuove: { g: THREE.Group; inizio: number }[] = []
+  private caseNote = new globalThis.Map<string, number>()
+  // Auto che percorrono le strade nuove della macchina del tempo; densita = auto rispetto a oggi.
+  private auto = new THREE.Group()
+  private percorsi: { punti: [number, number][]; cum: number[]; tot: number; auto: { g: THREE.Group; fase: number; v: number }[] }[] = []
+  private densitaAuto = 1
+  private geoAuto = new THREE.BoxGeometry(1, 1, 1)
+  private matAuto = ["#e5c35c", "#e8ede9", "#5e9bb5", "#c97464", "#3b3f45"].map((c) => materiale(c))
+  private matVetro = materiale("#aecbd4")
 
   onAdd(map: Map, gl: WebGLRenderingContext | WebGL2RenderingContext) {
     this.map = map
@@ -227,7 +252,7 @@ export class ScenarioLayer implements CustomLayerInterface {
     this.scene.add(new THREE.AmbientLight(0xffffff, 2.2))
     const luce = new THREE.DirectionalLight(0xfff4dd, 2)
     luce.position.set(500, -600, 1500)
-    this.scene.add(luce, this.oggetti, this.strade, this.bozzaGruppo)
+    this.scene.add(luce, this.oggetti, this.strade, this.bozzaGruppo, this.auto)
     this.ricostruisci()
   }
 
@@ -263,12 +288,22 @@ export class ScenarioLayer implements CustomLayerInterface {
     const ora = performance.now()
     const presenti = new Set(this.elenco.filter((o) => o.evidenza).map((o) => o.id))
     for (const id of [...this.comparse.keys()]) if (!presenti.has(id)) this.comparse.delete(id)
+    for (const id of [...this.caseNote.keys()]) if (!presenti.has(id)) this.caseNote.delete(id)
+    this.villetteNuove = this.villetteNuove.filter((v) => ora - v.inizio < 700)
+    this.preparaAuto()
     for (const o of this.elenco) {
       if (o.linea || o.area) continue
       const radice = new THREE.Group()
       const [x, y] = this.locale(...o.lonlat)
       radice.position.set(x, y, 0)
-      const { y: modelloY, piano } = modello(o.tipo, o.id, this.fumi, o.industria)
+      const villette: THREE.Group[] = []
+      const { y: modelloY, piano } = modello(o.tipo, o.id, this.fumi, o.industria, o.numero, villette)
+      if (o.tipo === "case") {
+        // Le villette in più rispetto all'ultima volta entrano con un rimbalzo.
+        const prima = this.caseNote.get(o.id) ?? 0
+        villette.slice(prima).forEach((g) => this.villetteNuove.push({ g, inizio: ora }))
+        this.caseNote.set(o.id, villette.length)
+      }
       modelloY.rotation.x = Math.PI / 2
       radice.add(modelloY, ...piano)
       for (const f of this.fumi.filter((f) => !f.mesh.parent)) modelloY.add(f.mesh)
@@ -289,6 +324,41 @@ export class ScenarioLayer implements CustomLayerInterface {
         radice.add(onda)
         this.evidenziate.push({ radice, inizio: this.comparse.get(o.id)!, onda })
       } else this.radici.push(radice)
+    }
+  }
+
+  setDensitaAuto(densita: number) {
+    if (Math.abs(densita - this.densitaAuto) < 0.02) return
+    this.densitaAuto = densita
+    this.preparaAuto()
+  }
+
+  // Auto sulle strade nuove: più strade e più auto per famiglia significano più traffico visibile.
+  private preparaAuto() {
+    for (const p of this.percorsi) for (const a of p.auto) this.auto.remove(a.g)
+    this.percorsi = []
+    let k = 0
+    for (const o of this.elenco) {
+      if (!o.evidenza || !o.linea || o.linea.stile === "ciclabile" || o.linea.punti.length < 2) continue
+      const punti = o.linea.punti.map((p) => this.locale(...p))
+      const cum = [0]
+      for (let i = 1; i < punti.length; i++) cum.push(cum[i - 1]! + Math.hypot(punti[i]![0] - punti[i - 1]![0], punti[i]![1] - punti[i - 1]![1]))
+      const tot = cum.at(-1)!
+      const quante = Math.max(1, Math.min(9, Math.round(this.densitaAuto ** 3 * (tot / 1000) * 1.3)))
+      const auto = Array.from({ length: quante }, (_, i) => {
+        const g = new THREE.Group()
+        const corpo = new THREE.Mesh(this.geoAuto, this.matAuto[(k + i) % this.matAuto.length]!)
+        corpo.scale.set(4.2, 1.8, 1.1)
+        corpo.position.z = 0.85
+        const cabina = new THREE.Mesh(this.geoAuto, this.matVetro)
+        cabina.scale.set(2.1, 1.55, 0.8)
+        cabina.position.z = 1.7
+        g.add(corpo, cabina)
+        this.auto.add(g)
+        return { g, fase: i / quante + (k % 7) * 0.13, v: (i % 2 ? -1 : 1) * (0.045 + ((k + i) % 3) * 0.01) }
+      })
+      k++
+      this.percorsi.push({ punti, cum, tot, auto })
     }
   }
 
@@ -379,6 +449,26 @@ export class ScenarioLayer implements CustomLayerInterface {
       }
       if (q < 1) inCorso = true
     }
+    for (const v of this.villetteNuove) {
+      const p = this.riduciMovimento ? 1 : Math.min(1, (ora - v.inizio) / 600)
+      v.g.scale.setScalar(Math.max(0.001, 1 + 2.70158 * (p - 1) ** 3 + 1.70158 * (p - 1) ** 2))
+      if (p < 1) inCorso = true
+    }
+    // Le auto girano avanti e indietro sulle strade nuove, ingrandite come le altre pedine.
+    const scalaAuto = 2 * Math.max(1, kPedine * 2.2)
+    for (const p of this.percorsi) for (const a of p.auto) {
+      let u = ((a.fase + t * a.v) % 1 + 1) % 1
+      u = u < 0.5 ? u * 2 : (1 - u) * 2
+      const d = u * p.tot
+      let i = 1
+      while (i < p.cum.length - 1 && p.cum[i]! < d) i++
+      const [x0, y0] = p.punti[i - 1]!, [x1, y1] = p.punti[i]!
+      const f = (d - p.cum[i - 1]!) / Math.max(1e-6, p.cum[i]! - p.cum[i - 1]!)
+      a.g.position.set(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, 1)
+      a.g.rotation.z = Math.atan2(y1 - y0, x1 - x0)
+      a.g.scale.setScalar(scalaAuto)
+    }
+    if (this.percorsi.length) inCorso = true
     if (Math.abs(kr - this.kStrade) > 0.05 * this.kStrade || !this.kStrade) {
       this.kStrade = kr
       this.ricostruisciStrade(kr)
@@ -401,6 +491,10 @@ export class ScenarioLayer implements CustomLayerInterface {
     this.svuota(this.oggetti)
     this.svuota(this.strade)
     this.svuota(this.bozzaGruppo)
+    this.auto.clear()
+    this.geoAuto.dispose()
+    this.matAuto.forEach((m) => m.dispose())
+    this.matVetro.dispose()
     this.renderer?.dispose()
     this.scene.clear()
     this.map = undefined

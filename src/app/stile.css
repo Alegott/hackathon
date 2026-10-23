@@ -648,7 +648,7 @@ input[type="checkbox"][switch]:focus-visible {
 .tempo-piani button:hover { background: #ffffff14; }
 .tempo-piani button[aria-checked="true"] { background: #eef7f2; color: #0c1d18; border-color: #eef7f2; }
 .tempo-piani .tempo-piano--rischio[aria-checked="true"] { background: #fdba74; border-color: #fdba74; }
-.tempo-contatori { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tempo-contatori { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .tempo-contatore { padding: 8px 10px; border-radius: 12px; background: #ffffff0f; transition: background-color .4s; }
 .tempo-contatore--su { background: #34d39922; }
 .tempo-contatore--giu { background: #f9731626; }

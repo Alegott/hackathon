@@ -135,6 +135,10 @@ export class EcosistemaLayer implements CustomLayerInterface {
     this.fauna.setPercorsi(strade.map((linea) => linea.map((p) => this.posizione(...p))))
   }
 
+  setDensitaTraffico(densita: number) {
+    this.traffico.setDensita(densita)
+  }
+
   setPercorsiTraffico(strade: [number, number][][]) {
     this.traffico.setPercorsi(strade.map((linea) => linea.map((p) => this.posizione(...p))))
   }

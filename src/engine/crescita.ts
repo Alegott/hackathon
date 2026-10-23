@@ -3,8 +3,9 @@ import type { Aggiunta, Casa, Comune, Dataset, TipoIndustria, TipoStrada } from 
 import { DELTA_INFRA, impattoCiclabile, impattoStrada, INDUSTRIE } from "./costanti"
 
 // Crescita del territorio nella macchina del tempo: nel frattempo si costruiscono case,
-// capannoni e strade (e, nei piani virtuosi, parchi e ciclabili). Gli eventi sono deterministici
-// (generatore con seme) e diventano normali aggiunte dello scenario o case in più.
+// capannoni e strade (e, nei piani virtuosi, parchi, ciclabili e un piccolo reattore nucleare).
+// Gli eventi sono deterministici (generatore con seme) e diventano normali aggiunte dello scenario
+// o case in più.
 
 export type RitmiCrescita = {
   casePctAnno: number // nuove case all'anno, in % delle case attuali
@@ -12,6 +13,8 @@ export type RitmiCrescita = {
   stradeAnno: number
   parchiAnno: number
   ciclabiliAnno: number
+  // Anno di entrata in servizio di un piccolo reattore modulare (SMR), se il piano lo prevede.
+  nucleareAnno: number | null
 }
 
 export type Evento = {
@@ -19,17 +22,15 @@ export type Evento = {
   descrizione?: string // solo per gli eventi da mostrare nella cronaca
   aggiunta?: Aggiunta
   casa?: Casa
-  // Solo per la mappa: un gruppetto di case nuove (non pesa sul motore, le case contano già da sé).
-  edificato?: Edificato
+  // Solo per la mappa: il quartiere a cui si aggiunge la casa (le case pesano già da sé nel motore).
+  quartiere?: Quartiere
 }
 
-export type Edificato = { id: string; comune: string; posizione: [number, number] }
+export type Quartiere = { id: string; comune: string; posizione: [number, number] }
 
-// Ogni CASE_PER_GRUPPO case nuove compare un gruppetto di villette sulla mappa, nel comune dell'ultima.
-export const CASE_PER_GRUPPO = 4
-
-// Ogni CASE_PER_QUARTIERE case nuove nasce un quartiere con la sua strada (consumo di suolo).
-export const CASE_PER_QUARTIERE = 25
+// Un quartiere cresce casa dopo casa fino a CASE_PER_QUARTIERE; completato, riceve la sua strada
+// (consumo di suolo) e nel comune se ne apre un altro.
+export const CASE_PER_QUARTIERE = 12
 
 function generatore(seme: number) {
   let a = seme >>> 0
@@ -138,13 +139,23 @@ export function generaCrescita(ds: Dataset, ritmi: RitmiCrescita, annoInizio: nu
     })
   }
 
-  // Case nuove: per legge (dal 2021) a energia quasi zero. Ogni quartiere porta una strada urbana
-  // nel comune in cui si completa.
-  let nuove = 0
+  // Case nuove: per legge (dal 2021) a energia quasi zero. Tre volte su quattro si aggiungono a un
+  // quartiere già aperto (i centri crescono attorno alle espansioni recenti), altrimenti ne aprono uno.
+  const aperti = new Map<string, { q: Quartiere; n: number }>()
+  const perIstat = new Map(comuni.map((c) => [c.istat, c]))
   for (const anno of anniEventi((ritmi.casePctAnno / 100) * ds.caseSeed.length, annoInizio, annoFine)) {
-    const c = scegliPesato(comuni, abitato, rnd())
+    const cantieri = [...aperti.values()]
+    const c = cantieri.length && rnd() < 0.75
+      ? perIstat.get(scegliPesato(cantieri, (x) => 1 + x.n, rnd()).q.comune)!
+      : scegliPesato(comuni, (x) => abitato(x) ** 1.5, rnd())
+    let aperto = aperti.get(c.istat)
+    if (!aperto) {
+      aperto = { q: { id: id("quartiere"), comune: c.istat, posizione: puntoNelComune(c, rnd) }, n: 0 }
+      aperti.set(c.istat, aperto)
+    }
     eventi.push({
       anno,
+      quartiere: aperto.q,
       casa: {
         id: id("casa"), comune: c.istat, pubblico: false,
         dotazioni: {
@@ -153,15 +164,24 @@ export function generaCrescita(ds: Dataset, ritmi: RitmiCrescita, annoInizio: nu
         },
       },
     })
-    if ((nuove + 1) % CASE_PER_GRUPPO === 0)
-      eventi.push({ anno, edificato: { id: id("edificato"), comune: c.istat, posizione: puntoNelComune(c, rnd) } })
-    if (++nuove % CASE_PER_QUARTIERE === 0) {
-      const tracciato = segmento(puntoNelComune(c, rnd), 0.8, rnd)
+    if (++aperto.n === CASE_PER_QUARTIERE) {
+      const tracciato = segmento(aperto.q.posizione, 0.9, rnd)
       eventi.push({
-        anno, descrizione: `Nuovo quartiere a ${c.nome}: ${CASE_PER_QUARTIERE} case e una strada (${km(impattoStrada("urbana", tracciato))})`,
-        aggiunta: { id: id("quartiere"), comune: c.istat, tipo: "strada", posizione: tracciato[0]!, strada: { tipo: "urbana", tracciato } },
+        anno, descrizione: `Completato un quartiere a ${c.nome}: ${CASE_PER_QUARTIERE} case e una strada (${km(impattoStrada("urbana", tracciato))})`,
+        aggiunta: { id: id("strada-quartiere"), comune: c.istat, tipo: "strada", posizione: tracciato[0]!, strada: { tipo: "urbana", tracciato } },
       })
+      aperti.delete(c.istat)
     }
+  }
+
+  // Piccolo reattore modulare: nel comune con più industria, dove la domanda di energia è più alta.
+  if (ritmi.nucleareAnno !== null && ritmi.nucleareAnno <= annoFine) {
+    const c = [...comuni].sort((a, b) => conta(b.istat, "industria") - conta(a.istat, "industria") || abitato(b) - abitato(a))[0]!
+    eventi.push({
+      anno: ritmi.nucleareAnno,
+      descrizione: `Entra in servizio un piccolo reattore modulare a ${c.nome} (+${DELTA_INFRA.nucleare}, energia pulita per la provincia)`,
+      aggiunta: { id: id("nucleare"), comune: c.istat, tipo: "nucleare", posizione: puntoNelComune(c, rnd) },
+    })
   }
 
   return eventi.sort((a, b) => a.anno - b.anno)

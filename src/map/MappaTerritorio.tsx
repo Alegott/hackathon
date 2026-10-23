@@ -576,8 +576,12 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
           ...(x.industria ? { industria: x.industria } : {}),
           ...(idsTempo.has(i.id) ? { evidenza: true } : {}) }
       })
-      const caseNuove: OggettoScenario[] = (fotogramma?.edificati ?? []).map((e) => ({
-        id: e.id, tipo: "case", lonlat: aCoordinateGeografiche(e.posizione), evidenza: true }))
+      const caseNuove: OggettoScenario[] = (fotogramma?.quartieri ?? []).map((q) => ({
+        id: q.id, tipo: "case", lonlat: aCoordinateGeografiche(q.posizione), evidenza: true, numero: q.case }))
+      // Densità del traffico rispetto a oggi: guida le auto sulle strade nuove e quelle in città.
+      const densita = fotogramma ? fotogramma.riepilogo.auto / (t.fotogrammi[0]?.riepilogo.auto ?? fotogramma.riepilogo.auto) : 1
+      scenarioLayer.current?.setDensitaAuto(densita)
+      ecosistema.current?.setDensitaTraffico(densita)
       const features: FeatureCollection["features"] = oggetti.map((o) => ({
         type: "Feature", properties: { id: o.id, tipo: o.tipo },
         geometry: o.linea ? { type: "LineString", coordinates: o.linea.punti }

@@ -9,7 +9,8 @@ it("le auto proseguono agli incroci con al massimo otto modelli", () => {
   expect(auto.visible).toBe(true)
   expect(auto.position.x).toBeCloseTo(20)
   expect(auto.position.y).toBeGreaterThan(10)
-  expect(traffico.gruppo.children).toHaveLength(8)
+  // Di base al massimo otto auto in movimento; le altre restano di scorta per la macchina del tempo.
+  expect(traffico.gruppo.children.filter((a) => a.visible).length).toBeLessThanOrEqual(8)
   traffico.frame(.1, false, [0, 0], .2, () => true)
   expect(traffico.gruppo.visible).toBe(false)
   traffico.libera()
@@ -45,5 +46,22 @@ it("riporta il traffico nella vista dopo uno spostamento della mappa", () => {
   const visibili = traffico.gruppo.children.filter((a) => a.visible)
   expect(visibili.length).toBeGreaterThan(0)
   expect(visibili.every((a) => a.position.x >= 5000)).toBe(true)
+  traffico.libera()
+})
+
+it("con più auto in circolazione ne mostra di più, con meno ne mostra meno", () => {
+  const traffico = new Traffico()
+  // Trenta tratti di strada attorno al centro: posto per tutte le auto.
+  traffico.setPercorsi(Array.from({ length: 30 }, (_, i) => [[0, i * 10], [300, i * 10]] as [number, number][]))
+  const visibili = () => traffico.gruppo.children.filter((a) => a.visible).length
+  // Il traffico assegna le strade una volta al secondo: passi da 1,1 s.
+  traffico.frame(1.1, true, [150, 150], 2, () => true)
+  const base = visibili()
+  traffico.setDensita(1.25)
+  traffico.frame(1.1, true, [150, 150], 2, () => true)
+  expect(visibili()).toBeGreaterThan(base)
+  traffico.setDensita(0.8)
+  traffico.frame(1.1, true, [150, 150], 2, () => true)
+  expect(visibili()).toBeLessThan(base)
   traffico.libera()
 })
