@@ -55,3 +55,19 @@ it("animali e uccelli restano statici con il trascorrere del tempo", async () =>
   f.frame(.1, 120, contesto)
   expect(f.gruppo.children.filter((s) => s.visible).map((s) => s.position)).toEqual(posizioni)
 })
+
+it("non usa il centroide come ripiego quando non esistono punti sicuri", async () => {
+  const f = await prepara()
+  f.configura({ terra: ["capriolo"], uccelli: 0, aquila: false, lince: false, spawnRate: 0 }, [], [0, 0], "024116")
+  f.frame(0, 0, contesto)
+  expect(f.gruppo.children.filter((s) => s.visible)).toHaveLength(0)
+})
+
+it("non sovrappone più animali sullo stesso punto e nasconde le ancore divenute occupate", async () => {
+  const f = await prepara()
+  f.configura({ terra: ["capriolo", "volpe", "cervo"], uccelli: 0, aquila: false, lince: false, spawnRate: 0 }, [[100, 200], [300, 400]], [0, 0], "024116")
+  f.frame(0, 0, contesto)
+  expect(f.gruppo.children.filter((s) => s.visible)).toHaveLength(2)
+  f.frame(0, 0, { ...contesto, dentro: () => false })
+  expect(f.gruppo.children.filter((s) => s.visible)).toHaveLength(0)
+})

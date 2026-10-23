@@ -62,15 +62,16 @@ export class FaunaGltf {
     return { pivot, lunghezza, attivo: false, ancora: [0, 0] }
   }
 
-  configura(fauna: Fauna | null, ancore: [number, number][], centro: [number, number], chiave: string | null = null) {
+  configura(fauna: Fauna | null, ancore: [number, number][], _centro: [number, number], chiave: string | null = null) {
     if (!this.pronto) return
     if (chiave !== this.chiave) {
       this.chiave = chiave
       this.slots.forEach((s) => { s.attivo = false })
     }
-    const punti = ancore.length ? ancore : [centro]
+    // Nessun ripiego sul centroide: potrebbe trovarsi dentro un edificio o nell'acqua.
+    const punti = ancore
     this.slots.forEach((s, i) => {
-      if (!fauna || i >= fauna.terra.length) { s.attivo = false; s.pivot.visible = false; return }
+      if (!fauna || i >= fauna.terra.length || i >= punti.length) { s.attivo = false; s.pivot.visible = false; return }
       if (!s.attivo) {
         s.ancora = punti[i % punti.length]!
         s.attivo = true

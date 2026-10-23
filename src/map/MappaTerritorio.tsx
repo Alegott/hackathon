@@ -8,6 +8,7 @@ import { dataset } from "../data/dataset"
 import { aCoordinateGeografiche, aCoordinateMetriche, CENTRI_PRINCIPALI, coloreIndice, confiniGeografici, estensioneGeografica } from "./territorio"
 import { confineProvincia, esternoProvincia, preparaHabitat, ritagliaEdifici } from "./ecosistema"
 import { EcosistemaLayer } from "./EcosistemaLayer"
+import { creaVincoliHabitat } from "./vincoliHabitat"
 import { assegnaComuni, atmosferaDaStato, coloriEdifici, creaTrovaComune, metriPerPixel, statoMedio } from "./vitaTerritorio"
 import { azioneDaClic } from "../diorama/build"
 
@@ -81,6 +82,11 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       }
       const primaEtichetta = map.getStyle().layers.find((l) => l.type === "symbol")?.id
       map.addSource("territorio-osm", { type: "vector", url: "https://tiles.openfreemap.org/planet" })
+      // Manteniamo attivi anche acqua e corsi d'acqua nella sorgente interrogata per gli spawn.
+      map.addLayer({ id: "habitat-acqua", type: "fill", source: "territorio-osm", "source-layer": "water",
+        paint: { "fill-opacity": 0 } }, primaEtichetta)
+      map.addLayer({ id: "habitat-corsi-acqua", type: "line", source: "territorio-osm", "source-layer": "waterway",
+        paint: { "line-opacity": 0 } }, primaEtichetta)
       map.addSource("comuni-vicenza", { type: "geojson", data: confini })
       map.addSource("provincia-vicenza", { type: "geojson", data: confineProvincia })
       map.addSource("esterno-provincia", { type: "geojson", data: esternoProvincia })
@@ -140,8 +146,13 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         const { indici, selezionato, vista } = statoCorrente.current
         const bounds = map.getBounds()
         const center = map.getCenter()
+        const edifici = map.querySourceFeatures("territorio-osm", { sourceLayer: "building" })
+        // Includiamo anche le tile della cartografia visibile: possono essere più dettagliate
+        // o già caricate mentre la sorgente del livello 3D sta ancora completando lo zoom.
+        const sorgenti = Object.entries(map.getStyle().sources).filter(([, s]) => s.type === "vector").map(([id]) => id)
+        const vincoli = (sourceLayer: string) => sorgenti.flatMap((id) => map.querySourceFeatures(id, { sourceLayer }))
+        const terrenoLibero = creaVincoliHabitat(vincoli("building"), vincoli("water"), vincoli("waterway"))
         if (map.getZoom() >= 13) {
-          const edifici = map.querySourceFeatures("territorio-osm", { sourceLayer: "building" })
           ;(map.getSource("edifici-vicenza") as GeoJSONSource).setData(assegnaComuni(ritagliaEdifici(edifici), trovaComune))
         }
         const verdi: [number, number][] = []
@@ -167,7 +178,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         const { clientWidth: w, clientHeight: h } = map.getContainer()
         const raggioVista = 0.5 * Math.hypot(w, h) * metriPerPixel(map.getZoom(), center.lat) * 0.6
         vita.aggiorna(preparaHabitat(dataset.comuni, indici, vista === "comune" ? selezionato : null,
-          [center.lng, center.lat], verdi, raggioVista), vista === "comune")
+          [center.lng, center.lat], verdi, raggioVista, [], terrenoLibero), vista === "comune", terrenoLibero)
       }
       map.on("moveend", () => {
         window.clearTimeout(timerHabitat)
