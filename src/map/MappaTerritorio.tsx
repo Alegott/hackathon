@@ -1,6 +1,7 @@
+import type { DragEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Map, NavigationControl, ScaleControl, Popup, setWorkerUrl, type GeoJSONSource } from "maplibre-gl"
-import type { FeatureCollection, Point } from "geojson"
+import type { FeatureCollection } from "geojson"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 import "maplibre-gl/dist/maplibre-gl.css"
 import { store, useApp, useIndici } from "../app/useApp"
@@ -10,6 +11,11 @@ import { confineProvincia, percorsoProvincia, preparaHabitat, ritagliaEdifici } 
 import { EcosistemaLayer } from "./EcosistemaLayer"
 import { assegnaComuni, atmosferaDaStato, coloriEdifici, creaTrovaComune, metriPerPixel, statoMedio } from "./vitaTerritorio"
 import { azioneDaClic } from "../diorama/build"
+import { ScenarioLayer, type OggettoScenario } from "./ScenarioLayer"
+import { aPiano, edificiDaGeometrie, percorsoLibero, type Edificio } from "./ostacoli"
+import { STRADE } from "../engine/costanti"
+import { semplifica, pulisciTracciato, terminaStrada, TIPI_TRASCINABILI } from "./tracciato"
+import type { TipoInfra, TipoStrada } from "../types"
 
 setWorkerUrl(workerUrl)
 
@@ -20,6 +26,21 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   const atmosfera = useRef<HTMLDivElement>(null)
   const ecosistema = useRef<EcosistemaLayer | null>(null)
   const aggiornaHabitat = useRef<() => void>(() => {})
+  const scenarioLayer = useRef<ScenarioLayer | null>(null)
+  const appenaDisegnato = useRef(false)
+  const [avviso, setAvviso] = useState<string | null>(null)
+  const timerAvviso = useRef(0)
+  const mostraAvviso = (testo: string) => {
+    setAvviso(testo)
+    window.clearTimeout(timerAvviso.current)
+    timerAvviso.current = window.setTimeout(() => setAvviso(null), 2600)
+  }
+  const cacheEdifici = useRef<{ chiave: string; edifici: Edificio[]; origine: { lon: number; lat: number } } | null>(null)
+  const aggiornaScenario = useRef<() => void>(() => {})
+  // Oggetto dello scenario che l'utente sta spostando: posizione provvisoria fino al rilascio.
+  // Gesto a mano libera per tracciare una strada tenendo premuto il tasto sinistro.
+  const disegnando = useRef<{ base: [number, number][]; campioni: [number, number][]; ultimoPx: [number, number] } | null>(null)
+  const trascinando = useRef<{ id: string; lonlat: [number, number]; mosso: boolean } | null>(null)
   const [pronta, setPronta] = useState(false)
   const [errore, setErrore] = useState(false)
   const [tridimensionale, setTridimensionale] = useState(true)
@@ -31,6 +52,9 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   const sezione = useApp((s) => s.sezione)
   const modalita = useApp((s) => s.modalita)
   const scenario = useApp((s) => s.scenario)
+  const strumento = useApp((s) => s.strumento)
+  const bozzaStrada = useApp((s) => s.bozzaStrada)
+  const tipoStrada = useApp((s) => s.tipoStrada)
   const confini = useMemo(() => confiniGeografici(dataset.comuni), [])
   const estensione = useMemo(() => estensioneGeografica(confini), [confini])
   const statoCorrente = useRef({ indici, selezionato, vista, mostraVita })
@@ -192,10 +216,20 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         window.clearTimeout(timerHabitat)
         timerHabitat = window.setTimeout(() => aggiornaHabitat.current(), 400)
       })
+      const scenarioVivo = new ScenarioLayer()
+      scenarioLayer.current = scenarioVivo
+      map.addLayer(scenarioVivo, primaEtichetta)
+      // Maniglie e zone sensibili sopra i modelli 3D: servono a rimuovere e trascinare gli oggetti.
       map.addLayer({
-        id: "infrastrutture-vive", type: "circle", source: "infrastrutture-vive", minzoom: 12,
-        paint: { "circle-radius": 7, "circle-color": ["match", ["get", "tipo"], "industria", "#c46455", "strada", "#8d8176", "#2a9674"],
-          "circle-stroke-width": 2, "circle-stroke-color": "#ffffff" },
+        id: "infrastrutture-linee", type: "line", source: "infrastrutture-vive", minzoom: 10,
+        filter: ["==", ["geometry-type"], "LineString"],
+        paint: { "line-width": 18, "line-color": "#ffffff", "line-opacity": 0 },
+      })
+      map.addLayer({
+        id: "infrastrutture-vive", type: "circle", source: "infrastrutture-vive", minzoom: 10,
+        filter: ["==", ["geometry-type"], "Point"],
+        paint: { "circle-radius": 11, "circle-color": ["match", ["get", "tipo"], "industria", "#c46455", "nucleare", "#3fbf7f", "strada", "#8d8176", "#2a9674"],
+          "circle-opacity": 0, "circle-stroke-width": 2, "circle-stroke-color": "#ffffff", "circle-stroke-opacity": 0 },
       })
       map.addLayer({
         id: "centri-principali", type: "symbol", source: "territorio-osm", "source-layer": "place", maxzoom: 11.5,
@@ -208,24 +242,134 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         },
         paint: { "text-color": "#244b42", "text-halo-color": "#ffffff", "text-halo-width": 2.5 },
       })
+      // Edifici visibili (vettoriali OSM) nel piano locale; si ricalcolano quando la vista cambia.
+      const edificiVisibili = () => {
+        const c = map.getCenter()
+        const chiave = `${map.getZoom().toFixed(1)}|${c.lng.toFixed(3)}|${c.lat.toFixed(3)}`
+        if (cacheEdifici.current?.chiave === chiave) return cacheEdifici.current
+        const origine = { lon: c.lng, lat: c.lat }
+        const geometrie = map.querySourceFeatures("territorio-osm", { sourceLayer: "building" }).map((f) => f.geometry)
+        cacheEdifici.current = { chiave, origine, edifici: edificiDaGeometrie(geometrie, origine) }
+        return cacheEdifici.current
+      }
+      // Una strada non può passare sopra un edificio: controlla il tratto da `da` (se c'è) a `a` (metri UTM).
+      const tratteggioLibero = (punti: [number, number][]) => {
+        const { edifici, origine } = edificiVisibili()
+        const piano = punti.map((p) => aPiano(aCoordinateGeografiche(p), origine))
+        return percorsoLibero(piano, edifici, STRADE[store.getState().tipoStrada].larghezza / 2)
+      }
       map.on("click", "indice-comuni", (e) => {
         const istat = e.features?.[0]?.properties?.istat
         const st = store.getState()
-        if (st.modalita === "scenario" && st.strumento && st.comuneSelezionato) {
-          const infra = map.queryRenderedFeatures(e.point, { layers: ["infrastrutture-vive"] })[0]
-          const comune = dataset.comuni.find((c) => c.istat === st.comuneSelezionato) ?? null
+        if (trascinando.current?.mosso || disegnando.current === null && appenaDisegnato.current) return
+        if (st.modalita === "scenario" && st.strumento) {
+          const lonlat: [number, number] = [e.lngLat.lng, e.lngLat.lat]
+          const punto = aCoordinateMetriche(lonlat)
+          if (st.strumento === "strada") {
+            if (map.getZoom() < 13) { mostraAvviso("Avvicinati ancora: per tracciare una strada servono gli edifici visibili."); return }
+            const ultimo = st.bozzaStrada.at(-1)
+            if (!tratteggioLibero(ultimo ? [ultimo, punto] : [punto])) { mostraAvviso("Non puoi costruire una strada sopra gli edifici."); return }
+            st.aggiungiPuntoStrada(punto)
+            return
+          }
+          const infra = map.queryRenderedFeatures(e.point, { layers: ["infrastrutture-vive", "infrastrutture-linee"] })[0]
+          const comune = dataset.comuni.find((c) => c.istat === trovaComune(lonlat)) ?? null
           const azione = azioneDaClic({ modalita: st.modalita, strumento: st.strumento, comune,
-            punto: aCoordinateMetriche([e.lngLat.lng, e.lngLat.lat]), infraColpitaId: infra?.properties.id })
+            punto, infraColpitaId: infra?.properties.id })
           if (azione?.tipo === "aggiungi") st.aggiungiInfrastruttura(azione.comune, azione.tipologia, azione.posizione)
           if (azione?.tipo === "rimuovi") st.rimuoviInfrastruttura(azione.id)
           return
         }
         if (istat) { popup.remove(); store.getState().selezionaComune(istat) }
       })
+      // Doppio clic: conclude la strada che si sta tracciando.
+      map.on("dblclick", (e) => {
+        const st = store.getState()
+        if (st.modalita !== "scenario" || st.strumento !== "strada") return
+        e.preventDefault()
+        st.annullaUltimoPuntoStrada()
+        terminaStrada(store.getState(), trovaComune)
+      })
+      // Strada a mano libera: tasto sinistro premuto e movimento; al rilascio il gesto diventa una curva pulita.
+      map.on("mousedown", (e) => {
+        const st = store.getState()
+        if (st.modalita !== "scenario" || st.strumento !== "strada" || e.originalEvent.button !== 0) return
+        if (!trovaComune([e.lngLat.lng, e.lngLat.lat])) return
+        if (map.getZoom() < 13) { mostraAvviso("Avvicinati ancora: per tracciare una strada servono gli edifici visibili."); return }
+        const inizio0 = aCoordinateMetriche([e.lngLat.lng, e.lngLat.lat])
+        if (!tratteggioLibero([inizio0])) { mostraAvviso("Non puoi costruire una strada sopra gli edifici."); return }
+        e.preventDefault()
+        map.dragPan.disable()
+        const inizio = aCoordinateMetriche([e.lngLat.lng, e.lngLat.lat])
+        disegnando.current = { base: st.bozzaStrada, campioni: [inizio], ultimoPx: [e.point.x, e.point.y] }
+        const finisci = () => {
+          const d = disegnando.current
+          document.removeEventListener("mouseup", finisci)
+          map.dragPan.enable()
+          if (!d) return
+          disegnando.current = null
+          if (d.campioni.length > 2) {
+            appenaDisegnato.current = true
+            window.setTimeout(() => { appenaDisegnato.current = false }, 100)
+            const s = store.getState()
+            // La curva addolcita può tagliare un angolo: se tocca un edificio si ripiega sul gesto originale.
+            const curva = pulisciTracciato(d.campioni)
+            const scelta = [curva, semplifica(d.campioni, 8), d.campioni].find((c) => tratteggioLibero(c)) ?? d.campioni
+            s.setBozzaStrada([...d.base, ...scelta])
+            terminaStrada(store.getState(), trovaComune)
+          }
+        }
+        document.addEventListener("mouseup", finisci)
+      })
+      map.on("mousemove", (e) => {
+        const d = disegnando.current
+        if (!d || Math.hypot(e.point.x - d.ultimoPx[0], e.point.y - d.ultimoPx[1]) < 6) return
+        const nuovo = aCoordinateMetriche([e.lngLat.lng, e.lngLat.lat])
+        const prec = d.campioni.at(-1)!
+        if (!tratteggioLibero([prec, nuovo])) { mostraAvviso("Non puoi costruire una strada sopra gli edifici."); return }
+        d.ultimoPx = [e.point.x, e.point.y]
+        d.campioni.push(nuovo)
+        store.getState().setBozzaStrada([...d.base, ...d.campioni])
+      })
+      // Trascinamento di un oggetto già piazzato per cambiarne la posizione.
+      map.on("mousedown", "infrastrutture-vive", (e) => {
+        const st = store.getState()
+        const id = e.features?.[0]?.properties?.id as string | undefined
+        if (st.modalita !== "scenario" || st.strumento === "rimuovi" || st.strumento === "strada") return
+        if (!id || !st.scenario.aggiunte.some((a) => a.id === id && !a.strada)) return
+        e.preventDefault()
+        map.dragPan.disable()
+        trascinando.current = { id, lonlat: [e.lngLat.lng, e.lngLat.lat], mosso: false }
+        const rilascia = () => {
+          const t = trascinando.current
+          map.dragPan.enable()
+          document.removeEventListener("mouseup", rilascia)
+          if (t?.mosso) {
+            const comune = trovaComune(t.lonlat)
+            if (comune) store.getState().spostaInfrastruttura(t.id, comune, aCoordinateMetriche(t.lonlat))
+            window.setTimeout(() => { trascinando.current = null; aggiornaScenario.current() }, 50)
+          } else trascinando.current = null
+          aggiornaScenario.current()
+        }
+        document.addEventListener("mouseup", rilascia)
+      })
+      map.on("mousemove", (e) => {
+        const t = trascinando.current
+        if (!t) return
+        t.lonlat = [e.lngLat.lng, e.lngLat.lat]
+        t.mosso = true
+        map.getCanvas().style.cursor = "grabbing"
+        aggiornaScenario.current()
+      })
+      map.on("mouseenter", "infrastrutture-vive", () => {
+        if (store.getState().modalita === "scenario" && !trascinando.current) map.getCanvas().style.cursor = "grab"
+      })
+      map.on("mouseleave", "infrastrutture-vive", () => { if (!trascinando.current) map.getCanvas().style.cursor = "" })
       map.on("mousemove", "indice-comuni", (e) => {
-        map.getCanvas().style.cursor = "pointer"
+        const costruisce = store.getState().modalita === "scenario" && store.getState().strumento
+        if (!trascinando.current) map.getCanvas().style.cursor = costruisce ? "crosshair" : "pointer"
         const c = e.features?.[0]?.properties
-        if (!c) return
+        if (!c || costruisce) { popup.remove(); return }
         const indice = statoCorrente.current.indici[c.istat]
         const elemento = document.createElement("div")
         const nome = document.createElement("strong")
@@ -249,6 +393,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
       map.remove()
       mappa.current = null
       ecosistema.current = null
+      scenarioLayer.current = null
       if (import.meta.env.DEV) Object.assign(window, { __mappaTerritorio: undefined })
     }
   }, [confini, estensione])
@@ -296,15 +441,60 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   useEffect(() => {
     const map = mappa.current
     if (!pronta || !map) return
-    const rimosse = new Set(modalita === "scenario" ? scenario.rimozioni : [])
-    const infra = [...dataset.infrastrutture.filter((i) => !rimosse.has(i.id)),
-      ...(modalita === "scenario" ? scenario.aggiunte : [])]
-    const data: FeatureCollection<Point> = { type: "FeatureCollection", features: infra
-      .filter((i) => i.comune === selezionato)
-      .map((i) => ({ type: "Feature", properties: { id: i.id, tipo: i.tipo },
-        geometry: { type: "Point", coordinates: aCoordinateGeografiche(i.posizione) } })) }
-    ;(map.getSource("infrastrutture-vive") as GeoJSONSource).setData(data)
-  }, [pronta, modalita, scenario, selezionato])
+    aggiornaScenario.current = () => {
+      const st = store.getState()
+      const inScenario = st.modalita === "scenario"
+      const rimosse = new Set(inScenario ? st.scenario.rimozioni : [])
+      const spostato = trascinando.current
+      // Le infrastrutture reali si vedono nel comune aperto; quelle aggiunte ovunque.
+      const infra = [...dataset.infrastrutture.filter((i) => !rimosse.has(i.id) && i.comune === st.comuneSelezionato),
+        ...(inScenario ? st.scenario.aggiunte : [])]
+      const oggetti: OggettoScenario[] = infra.map((i) => {
+        const a = (i as { strada?: { tipo: TipoStrada; tracciato: [number, number][] } }).strada
+        return { id: i.id, tipo: i.tipo as TipoInfra,
+          lonlat: spostato?.id === i.id ? spostato.lonlat : aCoordinateGeografiche(i.posizione),
+          ...(a ? { strada: { tipo: a.tipo, punti: a.tracciato.map(aCoordinateGeografiche) } } : {}) }
+      })
+      const features: FeatureCollection["features"] = oggetti.map((o) => o.strada
+        ? { type: "Feature", properties: { id: o.id, tipo: o.tipo }, geometry: { type: "LineString", coordinates: o.strada.punti } }
+        : { type: "Feature", properties: { id: o.id, tipo: o.tipo }, geometry: { type: "Point", coordinates: o.lonlat } })
+      ;(map.getSource("infrastrutture-vive") as GeoJSONSource).setData({ type: "FeatureCollection", features })
+      ecosistema.current?.setStrade(oggetti.filter((o) => o.strada && inScenario).map((o) => ({
+        punti: o.strada!.punti, semi: STRADE[o.strada!.tipo].larghezza / 2 })))
+      scenarioLayer.current?.imposta(oggetti, inScenario && st.bozzaStrada.length
+        ? { tipo: st.tipoStrada, punti: st.bozzaStrada.map(aCoordinateGeografiche) } : null)
+    }
+    aggiornaScenario.current()
+    // Le maniglie compaiono solo costruendo uno scenario.
+    const attive = modalita === "scenario"
+    map.setPaintProperty("infrastrutture-vive", "circle-stroke-opacity", attive ? 0.9 : 0)
+    map.setPaintProperty("infrastrutture-vive", "circle-opacity", attive ? 0.25 : 0)
+    map.setPaintProperty("infrastrutture-linee", "line-opacity", attive ? 0.04 : 0)
+  }, [pronta, modalita, scenario, selezionato, bozzaStrada, tipoStrada])
+
+  useEffect(() => {
+    const map = mappa.current
+    if (!pronta || !map) return
+    if (modalita === "scenario" && strumento === "strada") map.doubleClickZoom.disable()
+    else map.doubleClickZoom.enable()
+    map.getCanvas().style.cursor = modalita === "scenario" && strumento ? "crosshair" : ""
+  }, [pronta, modalita, strumento])
+
+  const rilascia = (e: DragEvent) => {
+    const map = mappa.current
+    const tipo = e.dataTransfer.getData("application/x-infra") as TipoInfra
+    const st = store.getState()
+    if (!map || st.modalita !== "scenario" || !(TIPI_TRASCINABILI as readonly string[]).includes(tipo)) return
+    e.preventDefault()
+    const r = map.getContainer().getBoundingClientRect()
+    const g = map.unproject([e.clientX - r.left, e.clientY - r.top])
+    const lonlat: [number, number] = [g.lng, g.lat]
+    const comune = trovaComune(lonlat)
+    if (!comune) return
+    const punto = aCoordinateMetriche(lonlat)
+    if (tipo === "strada") { st.setStrumento("strada"); st.aggiungiPuntoStrada(punto) }
+    else st.aggiungiInfrastruttura(comune, tipo, punto)
+  }
 
   useEffect(() => { if (sezione === "mappa") mappa.current?.resize() }, [sezione])
 
@@ -315,7 +505,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
   }
 
   return (
-    <div className="territorio">
+    <div className="territorio" onDragOver={(e) => { if (modalita === "scenario") e.preventDefault() }} onDrop={rilascia}>
       <div ref={contenitore} className="territorio-canvas" aria-label="Mappa geografica 3D della provincia di Vicenza" />
       <div ref={esterno} className="territorio-esterno" aria-hidden="true" />
       <div ref={atmosfera} className="territorio-atmosfera" aria-hidden="true" style={{ opacity: mostraVita ? foschia * .45 : 0 }} />
@@ -329,6 +519,7 @@ export function MappaTerritorio({ apriDiorama }: { apriDiorama(): void }) {
         <button disabled={!pronta} aria-pressed={mostraVita} onClick={() => setMostraVita(!mostraVita)}>❧ Alberi e fauna</button>
         <button aria-pressed={modalita === "scenario"} onClick={() => store.getState().setModalita(modalita === "scenario" ? "realta" : "scenario")}>✧ {modalita === "scenario" ? "Scenario attivo" : "Crea uno scenario"}</button>
       </div>
+      {avviso && <div className="territorio-nota" role="status">{avviso}</div>}
       {!pronta && !errore && <div className="territorio-avviso" role="status">Caricamento del territorio…</div>}
       {errore && <div className="territorio-avviso" role="alert">La cartografia online non è disponibile. <button onClick={apriDiorama}>Apri la mappa offline</button></div>}
       <div className="territorio-aiuto">Trascina per esplorare · Rotella per zoomare · Tasto destro per ruotare</div>

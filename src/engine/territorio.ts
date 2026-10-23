@@ -1,6 +1,6 @@
 import type { Casa, Dataset, Fascia, Infrastruttura, Scenario, StatoComune } from "../types"
 import { punteggioCasa } from "./casa"
-import { DELTA_INFRA } from "./costanti"
+import { deltaAggiunta, DELTA_INFRA, ENERGIA_PULITA_PROVINCIA, TETTO_ENERGIA_PULITA } from "./costanti"
 import { applicaMacro, ARIA_PER_PUNTO_CASE, inAmbito, TETTO_DELTA_ARIA_MACRO } from "./macro"
 
 const clamp = (x: number, min = 0, max = 100) => Math.min(max, Math.max(min, x))
@@ -41,7 +41,7 @@ function deltaScenario(ds: Dataset, s: Scenario, contateIds: Map<string, Infrast
     for (const vicino of confinanti.get(comune) ?? []) delta.set(vicino, (delta.get(vicino) ?? 0) + d / 2)
   }
   const rimosse = new Set(s.rimozioni)
-  for (const a of s.aggiunte) if (!rimosse.has(a.id)) applica(a.comune, DELTA_INFRA[a.tipo])
+  for (const a of s.aggiunte) if (!rimosse.has(a.id)) applica(a.comune, deltaAggiunta(a))
   for (const id of rimosse) {
     const i = contateIds.get(id)
     if (i) applica(i.comune, -DELTA_INFRA[i.tipo])
@@ -63,6 +63,9 @@ export function statoTerritorio(
   const esistentiContate = contate(ds)
   const deltaBuild = deltaScenario(ds, s, new Map(esistentiContate.map((i) => [i.id, i])))
   for (const i of esistentiContate) esistenti.set(i.comune, (esistenti.get(i.comune) ?? 0) + DELTA_INFRA[i.tipo])
+  // Le centrali nucleari danno energia pulita a tutta la provincia, oltre all'effetto locale.
+  const centrali = s.aggiunte.filter((a) => a.tipo === "nucleare" && !s.rimozioni.includes(a.id)).length
+  const energiaPulita = Math.min(TETTO_ENERGIA_PULITA, centrali * ENERGIA_PULITA_PROVINCIA)
   const seedPerComune = new Map<string, Casa[]>()
   for (const casa of ds.caseSeed) seedPerComune.set(casa.comune, [...(seedPerComune.get(casa.comune) ?? []), casa])
   const media = (case_: Casa[]) => indiceCaseMedio(case_.map((c) => punteggioCasa(c.dotazioni).punteggio))
@@ -75,7 +78,7 @@ export function statoTerritorio(
       TETTO_DELTA_ARIA_MACRO,
       Math.max(0, (media(seedModificate) - media(seed)) * ARIA_PER_PUNTO_CASE),
     )
-    const scenario = (deltaBuild.get(c.istat) ?? 0) + deltaMacro
+    const scenario = (deltaBuild.get(c.istat) ?? 0) + deltaMacro + energiaPulita
     const casePerIndice = casaUtente?.comune === c.istat ? [...seedModificate, casaUtente] : seedModificate
     const totale = clamp(c.ariaNorm + infrastrutture + scenario)
     out[c.istat] = {

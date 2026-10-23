@@ -167,7 +167,7 @@ export function App() {
               ← Torna alla provincia
             </button>
           )}
-          {vista === "comune" && <BarraStrumenti />}
+          {(vista === "comune" || modalita === "scenario") && <BarraStrumenti />}
           <PannelloComune />
         </div>
         {sezione === "casa" && <SezioneCasa />}

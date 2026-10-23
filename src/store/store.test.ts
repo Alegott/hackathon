@@ -178,3 +178,45 @@ describe("store - casa utente e persistenza", () => {
     expect(s.getState().casaUtente).toEqual(casa)
   })
 })
+
+describe("store - strade e spostamenti", () => {
+  const inScenario = () => {
+    const s = nuovo()
+    s.getState().setModalita("scenario")
+    return s
+  }
+  it("traccia una strada punto per punto e la conferma nel comune", () => {
+    const s = inScenario()
+    s.getState().setStrumento("strada")
+    s.getState().setTipoStrada("tangenziale")
+    s.getState().aggiungiPuntoStrada([0, 0])
+    s.getState().aggiungiPuntoStrada([1500, 0])
+    s.getState().confermaStrada("024001")
+    expect(s.getState().bozzaStrada).toEqual([])
+    expect(s.getState().scenario.aggiunte[0]).toMatchObject({
+      comune: "024001", tipo: "strada", strada: { tipo: "tangenziale", tracciato: [[0, 0], [1500, 0]] },
+    })
+  })
+  it("con un solo punto la strada non viene creata", () => {
+    const s = inScenario()
+    s.getState().aggiungiPuntoStrada([0, 0])
+    s.getState().confermaStrada("024001")
+    expect(s.getState().scenario.aggiunte).toEqual([])
+  })
+  it("cambiare strumento scarta la bozza", () => {
+    const s = inScenario()
+    s.getState().aggiungiPuntoStrada([0, 0])
+    s.getState().setStrumento("parco")
+    expect(s.getState().bozzaStrada).toEqual([])
+  })
+  it("sposta un oggetto piazzato ma non una strada", () => {
+    const s = inScenario()
+    s.getState().aggiungiInfrastruttura("024001", "nucleare", [1, 1])
+    s.getState().aggiungiInfrastruttura("024001", "strada", [0, 0], { tipo: "urbana", tracciato: [[0, 0], [10, 0]] })
+    const [n, r] = s.getState().scenario.aggiunte
+    s.getState().spostaInfrastruttura(n!.id, "024002", [5, 5])
+    s.getState().spostaInfrastruttura(r!.id, "024002", [5, 5])
+    expect(s.getState().scenario.aggiunte[0]).toMatchObject({ comune: "024002", posizione: [5, 5] })
+    expect(s.getState().scenario.aggiunte[1]).toMatchObject({ comune: "024001", posizione: [0, 0] })
+  })
+})

@@ -348,6 +348,7 @@ function Corpo({ tipo, s }: { tipo: TipoInfra; s: number }) {
           ))}
         </>
       )
+    case "nucleare":
     case "industria":
       return (
         <>

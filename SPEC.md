@@ -126,7 +126,7 @@ Funzioni pure, deterministiche:
   | Pista ciclabile | +3 | −3 |
   | Colonnine | +2 | −2 |
   | Industria | −12 | +12 |
-  | Strada principale | −8 | +8 |
+  | Strada principale | −3 | +3 |
 
   Rimuovere un elemento annulla il suo delta.
 - **Infrastrutture esistenti (OSM)**: al massimo 3 oggetti per tipo per comune (i più grandi o importanti). La somma dei loro delta ha un **tetto di ±20** per comune.

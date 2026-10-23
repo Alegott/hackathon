@@ -177,6 +177,14 @@ input[type="checkbox"][switch]:focus-visible {
 .barra-strumenti .gruppo { display: flex; gap: 4px; background: var(--overlay); padding: 4px; border-radius: 8px; box-shadow: var(--ombra); }
 .barra-strumenti button { border: 0; background: transparent; color: inherit; padding: 6px 10px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; }
 .barra-strumenti button.attivo { background: var(--inverso); color: var(--inverso-testo); }
+.barra-strumenti { flex-direction: column; align-items: flex-start; }
+.barra-strumenti .palette-scenario { flex-wrap: wrap; max-width: 100%; }
+.barra-strumenti .palette-scenario button[draggable="true"] { cursor: grab; display: inline-flex; align-items: center; gap: 4px; }
+.barra-strumenti .palette-scenario button[draggable="true"]:active { cursor: grabbing; }
+.barra-strumenti small { font-size: 10px; opacity: .7; margin-left: 4px; }
+.barra-strumenti .palette-aiuto { margin: 0; font-size: 12px; background: var(--overlay); padding: 6px 10px; border-radius: 8px; box-shadow: var(--ombra); max-width: 520px; }
+.barra-strumenti .palette-strada { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.barra-strumenti button:disabled { opacity: .45; cursor: not-allowed; }
 
 /* Sezioni Casa & Simulazione (Dev 6) */
 .pagina-sezione { max-width: 1220px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
@@ -522,3 +530,5 @@ input[type="checkbox"][switch]:focus-visible {
 .modale-card__top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .modale-card__top h2 { margin: 4px 0 0; }
 .griglia-roadmap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.territorio-nota { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); z-index: 5; background: #7a2f26; color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 18px #0004; pointer-events: none; }

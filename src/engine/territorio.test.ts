@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { statoTerritorio } from "./index"
 import { casaSeed, comune, dataset, infra, scenarioVuoto } from "./fixtures"
+import type { Scenario } from "../types"
 
 describe("statoTerritorio - aria e fasce", () => {
   it("senza infrastrutture né scenario il totale coincide con l'aria", () => {
@@ -30,10 +31,10 @@ describe("statoTerritorio - infrastrutture esistenti", () => {
     const s = statoTerritorio(conInfra(infra("1", "A", "parco"), infra("2", "A", "industria")), scenarioVuoto)
     expect(s.A).toMatchObject({ infrastrutture: -7, totale: 43 })
   })
-  it("valgono per tipo: parco +5, ciclabile +3, colonnine +2, industria −12, strada −8", () => {
+  it("valgono per tipo: parco +5, ciclabile +3, colonnine +2, industria −12, strada −3", () => {
     const v = (tipo: Parameters<typeof infra>[2]) =>
       statoTerritorio(conInfra(infra("1", "A", tipo)), scenarioVuoto).A?.infrastrutture
-    expect([v("parco"), v("ciclabile"), v("colonnine"), v("industria"), v("strada")]).toEqual([5, 3, 2, -12, -8])
+    expect([v("parco"), v("ciclabile"), v("colonnine"), v("industria"), v("strada")]).toEqual([5, 3, 2, -12, -3])
   })
   it("contano al massimo 3 oggetti per tipo (i primi del dataset)", () => {
     const s = statoTerritorio(conInfra(...[1, 2, 3, 4, 5].map((n) => infra(`p${n}`, "A", "parco"))), scenarioVuoto)
@@ -213,5 +214,36 @@ describe("statoTerritorio - macro-scenari", () => {
   it("si somma al delta delle aggiunte in build mode", () => {
     const sc = { ...macro({ pctFV: 50 }), aggiunte: [{ id: "n", comune: "A", tipo: "industria" as const, posizione: [0, 0] as [number, number] }] }
     expect(statoTerritorio(ds, sc).A?.scenario).toBeCloseTo(-12 + 2.2, 5)
+  })
+})
+
+describe("strade tracciate e centrale nucleare", () => {
+  const ds = dataset()
+  const strada = (tipo: "urbana" | "autostrada", km: number): Scenario => ({
+    aggiunte: [{ id: "s1", comune: "A", tipo: "strada", posizione: [0, 0], strada: { tipo, tracciato: [[0, 0], [km * 1000, 0]] } }],
+    rimozioni: [],
+    macro: null,
+  })
+  it("una strada più lunga pesa di più", () => {
+    const corta = statoTerritorio(ds, strada("urbana", 1)).A!.totale
+    const lunga = statoTerritorio(ds, strada("urbana", 4)).A!.totale
+    expect(lunga).toBeLessThan(corta)
+  })
+  it("a pari lunghezza l'autostrada pesa più di una strada urbana", () => {
+    const urbana = statoTerritorio(ds, strada("urbana", 3)).A!.totale
+    const autostrada = statoTerritorio(ds, strada("autostrada", 3)).A!.totale
+    expect(autostrada).toBeLessThan(urbana)
+  })
+  it("l'impatto di una strada ha un tetto e un minimo", () => {
+    expect(statoTerritorio(ds, strada("autostrada", 100)).A!.scenario).toBe(-10)
+    expect(statoTerritorio(ds, strada("urbana", 0.01)).A!.scenario).toBe(-0.1)
+  })
+  it("la centrale nucleare alza il comune, metà ai confinanti, e dà un po' di energia pulita a tutti", () => {
+    const s: Scenario = { aggiunte: [{ id: "n1", comune: "A", tipo: "nucleare", posizione: [0, 0] }], rimozioni: [], macro: null }
+    const r = statoTerritorio(ds, s)
+    expect(r.A!.scenario).toBe(11)
+    expect(r.B!.scenario).toBe(6)
+    expect(r.C!.scenario).toBe(1)
+    expect(r.D!.scenario).toBe(1)
   })
 })

@@ -3,7 +3,7 @@ import { store, useApp, useIndici } from "../app/useApp"
 import { dataset } from "../data/dataset"
 import { COMUNI_VICENZA_114 } from "../data/comuni114"
 import { punteggioCasa, statoTerritorio, scenarioVuoto } from "../engine"
-import { DELTA_INFRA } from "../engine/costanti"
+import { deltaAggiunta, DELTA_INFRA, impattoStrada, lunghezzaKm, STRADE } from "../engine/costanti"
 import { META_CLASSI } from "./DashboardCasa"
 import { CASA_DEMO_DEFAULT } from "./SezioneCasa"
 import { formatSegno } from "./PannelloComune"
@@ -15,7 +15,14 @@ const INFRA: { id: TipoInfra; etichetta: string; icona: string }[] = [
   { id: "ciclabile", etichetta: "Pista ciclabile", icona: "🚲" },
   { id: "colonnine", etichetta: "Colonnine", icona: "🔌" },
   { id: "industria", etichetta: "Industria", icona: "🏭" },
-  { id: "strada", etichetta: "Strada principale", icona: "🛣️" },
+  { id: "strada", etichetta: "Strada provinciale (2 km)", icona: "🛣️" },
+  { id: "nucleare", etichetta: "Centrale nucleare", icona: "⚛️" },
+]
+
+// Dal pannello la strada si piazza già tracciata (provinciale da 2 km); sulla mappa si disegna a mano.
+const stradaPredefinita = (centro: [number, number]): [number, number][] => [
+  [centro[0] - 1000, centro[1]],
+  [centro[0] + 1000, centro[1]],
 ]
 const META_INFRA = Object.fromEntries(INFRA.map((i) => [i.id, i])) as Record<
   TipoInfra,
@@ -335,7 +342,7 @@ export const SezioneSimulazione: React.FC = () => {
                 <h4 className="sim-sottotitolo">Aggiungi a {comuneTarget.nome}</h4>
                 <div className="sim-tessere">
                   {INFRA.map((item) => {
-                    const d = DELTA_INFRA[item.id]
+                    const d = item.id === "strada" ? impattoStrada("provinciale", stradaPredefinita([0, 0])) : DELTA_INFRA[item.id]
                     return (
                       <button
                         key={item.id}
@@ -344,7 +351,10 @@ export const SezioneSimulazione: React.FC = () => {
                         aria-label={`Aggiungi ${item.etichetta}, ${formatSegno(d)} punti`}
                         onClick={() => {
                           inScenario()
-                          st.aggiungiInfrastruttura(comuneTarget.istat, item.id, comuneTarget.centroide)
+                          if (item.id === "strada")
+                            st.aggiungiInfrastruttura(comuneTarget.istat, "strada", comuneTarget.centroide,
+                              { tipo: "provinciale", tracciato: stradaPredefinita(comuneTarget.centroide) })
+                          else st.aggiungiInfrastruttura(comuneTarget.istat, item.id, comuneTarget.centroide)
                         }}
                       >
                         <span className="sim-tessera__icona" aria-hidden="true">
@@ -369,13 +379,16 @@ export const SezioneSimulazione: React.FC = () => {
                         type="button"
                         className="sim-chip sim-chip--nuova"
                         aria-label={`Togli ${META_INFRA[agg.tipo].etichetta} aggiunta`}
+                        title={`${formatSegno(deltaAggiunta(agg))} punti`}
                         onClick={() => {
                           inScenario()
                           st.rimuoviInfrastruttura(agg.id)
                         }}
                       >
                         <span aria-hidden="true">{META_INFRA[agg.tipo].icona}</span>
-                        {META_INFRA[agg.tipo].etichetta}
+                        {agg.strada
+                          ? `${STRADE[agg.strada.tipo].etichetta} ${lunghezzaKm(agg.strada.tracciato).toFixed(1)} km`
+                          : META_INFRA[agg.tipo].etichetta}
                         <small>nuova</small>
                         <span aria-hidden="true" className="sim-chip__x">✕</span>
                       </button>
@@ -415,7 +428,7 @@ export const SezioneSimulazione: React.FC = () => {
             <details className="sim-dettagli">
               <summary>Preferisci posizionarle a mano sulla mappa 3D?</summary>
               <p>
-                Scegli uno strumento, poi apri la sezione Mappa e clicca sul diorama del comune.
+                Scegli uno strumento, poi apri la sezione Mappa: trascina gli oggetti dove vuoi e traccia le strade punto per punto.
               </p>
               <div className="sim-chips" role="group" aria-label="Strumento per la mappa">
                 {STRUMENTI_MAPPA.map((item) => {

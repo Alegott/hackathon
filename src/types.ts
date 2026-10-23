@@ -1,6 +1,9 @@
 // Contratto A (dataset) e contratto B (motore indici). Vedi TASKS.md.
 
-export type TipoInfra = "parco" | "ciclabile" | "colonnine" | "industria" | "strada"
+export type TipoInfra = "parco" | "ciclabile" | "colonnine" | "industria" | "strada" | "nucleare"
+
+// Tipologie di strada tracciabili nello scenario: cambiano impatto, larghezza e aspetto.
+export type TipoStrada = "urbana" | "provinciale" | "tangenziale" | "autostrada"
 
 export type Dotazioni = {
   fotovoltaico: boolean
@@ -46,7 +49,14 @@ export type Dataset = {
 }
 
 export type Scenario = {
-  aggiunte: { id: string; comune: string; tipo: TipoInfra; posizione: [number, number] }[]
+  aggiunte: {
+    id: string
+    comune: string
+    tipo: TipoInfra
+    posizione: [number, number]
+    // Solo per le strade tracciate a mano: tipologia e percorso in metri (come le posizioni).
+    strada?: { tipo: TipoStrada; tracciato: [number, number][] }
+  }[]
   rimozioni: string[]
   macro: {
     ambito: "provincia" | string

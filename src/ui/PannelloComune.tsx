@@ -2,7 +2,7 @@ import React from "react"
 import { dataset } from "../data/dataset"
 import { store, useApp, useIndici } from "../app/useApp"
 import { coloreFascia, etichettaFascia } from "../map/fasce"
-import { DELTA_INFRA } from "../engine/costanti"
+import { deltaAggiunta, DELTA_INFRA, lunghezzaKm, STRADE } from "../engine/costanti"
 import { calcolaSpawnSpecieRare } from "../diorama/Fauna"
 import type { TipoInfra } from "../types"
 
@@ -12,6 +12,7 @@ const ETICHETTE_INFRA: Record<TipoInfra, { nome: string; icona: string }> = {
   colonnine: { nome: "Colonnine EV", icona: "🔌" },
   industria: { nome: "Industria", icona: "🏭" },
   strada: { nome: "Strada principale", icona: "🛣️" },
+  nucleare: { nome: "Centrale nucleare", icona: "⚛️" },
 }
 
 export function formatSegno(n: number): string {
@@ -139,8 +140,11 @@ export const PannelloComune: React.FC = () => {
           {modalita === "scenario" &&
             infraAggiunte.map((agg) => (
               <span key={agg.id} className="mini-chip mini-chip--aggiunta">
-                ✨ {ETICHETTE_INFRA[agg.tipo].icona} {ETICHETTE_INFRA[agg.tipo].nome} (
-                {formatSegno(DELTA_INFRA[agg.tipo])})
+                ✨ {ETICHETTE_INFRA[agg.tipo].icona}{" "}
+                {agg.strada
+                  ? `${STRADE[agg.strada.tipo].etichetta} ${lunghezzaKm(agg.strada.tracciato).toFixed(1)} km`
+                  : ETICHETTE_INFRA[agg.tipo].nome}{" "}
+                ({formatSegno(deltaAggiunta(agg))})
               </span>
             ))}
         </div>

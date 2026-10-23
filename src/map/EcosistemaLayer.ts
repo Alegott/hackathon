@@ -18,6 +18,10 @@ export class EcosistemaLayer implements CustomLayerInterface {
   private scene = new THREE.Scene()
   private pools: Record<string, Pool> = {}
   private habitat: Habitat[] = []
+  private habitatOriginale: Habitat[] = []
+  // Strade dello scenario (lon/lat e semilarghezza in metri): dove passano gli alberi spariscono.
+  private strade: { punti: [number, number][]; semi: number }[] = []
+  private krApplicato = 1
   private selezionato = false
   private attivo = true
   private origin = MercatorCoordinate.fromLngLat([11.54, 45.55])
@@ -62,9 +66,39 @@ export class EcosistemaLayer implements CustomLayerInterface {
     this.scene.add(this.fauna.gruppo)
   }
 
+  setStrade(strade: { punti: [number, number][]; semi: number }[]) {
+    this.strade = strade
+    this.applicaStrade()
+    this.map?.triggerRepaint()
+  }
+
+  // Toglie dagli habitat gli alberi che cadono sotto una strada (larghezza come disegnata a questo zoom).
+  private applicaStrade() {
+    const kr = this.map ? Math.min(12, Math.max(1, 2 ** (15.5 - this.map.getZoom()))) : 1
+    this.krApplicato = kr
+    if (!this.strade.length) this.habitat = this.habitatOriginale
+    else {
+      const locali = this.strade.map((r) => ({ semi: r.semi * kr * 1.18 + 3, p: r.punti.map((q) => this.posizione(...q)) }))
+      const sotto = (lon: number, lat: number) => {
+        const [x, y] = this.posizione(lon, lat)
+        return locali.some(({ semi, p }) => p.some((a, i) => {
+          const b = p[i + 1]
+          if (!b) return false
+          const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy
+          const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2))
+          return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy) < semi
+        }))
+      }
+      this.habitat = this.habitatOriginale.map((h) => ({ ...h, alberi: h.alberi.filter(([lon, lat]) => !sotto(lon, lat)) }))
+    }
+    if (this.selezionato) this.configuraFauna()
+  }
+
   aggiorna(habitat: Habitat[], selezionato: boolean) {
+    this.habitatOriginale = habitat
     this.habitat = habitat
     this.selezionato = selezionato
+    if (this.strade.length) this.applicaStrade()
     if (selezionato) {
       this.fauna.avvia(() => { this.configuraFauna(); this.map?.triggerRepaint() })
       this.configuraFauna()
@@ -109,6 +143,8 @@ export class EcosistemaLayer implements CustomLayerInterface {
     const dt = this.riduciMovimento ? 0 : Math.min(0.1, (ora - this.ultimo) / 1000)
     this.ultimo = ora
     const mpp = metriPerPixel(zoom, this.map.getCenter().lat)
+    const krOra = Math.min(12, Math.max(1, 2 ** (15.5 - zoom)))
+    if (this.strade.length && Math.abs(krOra - this.krApplicato) > 0.08 * this.krApplicato) this.applicaStrade()
     const gltf = this.fauna.disponibile
     const s = this.selezionato ? Math.max(2, 20 - zoom) : Math.min(28, Math.max(1.5, 3 * 2 ** (12 - zoom)))
     Object.values(this.pools).forEach((p) => { p.count = 0 })
