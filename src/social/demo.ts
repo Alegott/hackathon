@@ -1,16 +1,19 @@
 import type { Messaggio, ProfiloAmico } from "./types"
 import { dataset } from "../data/dataset"
 import { COMUNI_VICENZA_114 } from "../data/comuni114"
+import type { Dotazioni } from "../types"
 
-const dotazioni = {
+const dotazioni: Dotazioni = {
   fotovoltaico: true, solareTermico: false, riscaldamento: "pompa_calore" as const,
   cottura: "induzione" as const, isolamento: "buono" as const, infissi: true, colonninaEV: false,
+  auto: { alimentazione: "ibrido", euro: 6 },
+  giardino: { alberi: { latifoglia: 2, frutto: 1 } },
 }
 
 export const PROFILI_DEMO: ProfiloAmico[] = [
   { id: "VS-LUCA-2048", nome: "luca", nomeCasa: "Casa nel verde", comune: "Vicenza", dotazioni },
-  { id: "VS-SARA-7316", nome: "sara", nomeCasa: "Casa solare", comune: "Schio", dotazioni: { ...dotazioni, solareTermico: true, colonninaEV: true } },
-  { id: "VS-MARCO-9052", nome: "marco", nomeCasa: "Un passo alla volta", comune: "Thiene", dotazioni: { ...dotazioni, fotovoltaico: false, isolamento: "medio", riscaldamento: "condensazione" } },
+  { id: "VS-SARA-7316", nome: "sara", nomeCasa: "Casa solare", comune: "Schio", dotazioni: { ...dotazioni, solareTermico: true, colonninaEV: true, auto: { alimentazione: "elettrico", euro: 6 }, giardino: { alberi: { conifera: 1, ulivo: 2 } } } },
+  { id: "VS-MARCO-9052", nome: "marco", nomeCasa: "Un passo alla volta", comune: "Thiene", dotazioni: { ...dotazioni, fotovoltaico: false, isolamento: "medio", riscaldamento: "condensazione", auto: { alimentazione: "benzina", euro: 5 }, giardino: null } },
 ]
 
 export type StatoSocial = {

@@ -1,6 +1,6 @@
 import { ContactShadows, OrbitControls, RoundedBox } from "@react-three/drei"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react"
 import * as THREE from "three"
 import type { Alimentazione, Classe, Dotazioni, TipoAlbero } from "../types"
 import { meteoDaClasse, type Meteo } from "./meteo"
@@ -60,6 +60,31 @@ const texCelle = () => canvasTexture((x) => {
   x.strokeStyle = "#9fb8e0"; x.lineWidth = 1
   for (let i = 16; i < 256; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 256); x.stroke() }
 }, [1, 1])
+
+const texCiottolato = () => canvasTexture((x) => {
+  x.fillStyle = "#a99b87"; x.fillRect(0, 0, 256, 256)
+  const colori = ["#d4c6af", "#c5b79f", "#e0d4bf", "#bcad96", "#cec2af"]
+  // File sfalsate e ripetibili, con fughe sottili tra le pietre.
+  for (let r = -1; r < 9; r++) for (let k = -1; k < 9; k++) {
+    const px = k * 32 + (r % 2) * 16
+    const py = r * 32
+    x.fillStyle = colori[((r * 3 + k * 7) % colori.length + colori.length) % colori.length]!
+    x.beginPath(); x.roundRect(px + 1.5, py + 1.5, 29, 29, 7); x.fill()
+    x.strokeStyle = "#e8decd"; x.lineWidth = 0.8
+    x.beginPath(); x.moveTo(px + 7, py + 4); x.lineTo(px + 24, py + 4); x.stroke()
+  }
+}, [5, 5])
+
+function CortilePavimentato() {
+  const texture = useMemo(texCiottolato, [])
+  useEffect(() => () => texture.dispose(), [texture])
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, 0]} receiveShadow>
+      <circleGeometry args={[5.2, 56]} />
+      <meshStandardMaterial map={texture} roughness={0.95} />
+    </mesh>
+  )
+}
 
 // ───────────────────────── animazione di comparsa ─────────────────────────
 function Apparizione({ visibile, children }: { visibile: boolean; children: ReactNode }) {
@@ -810,13 +835,18 @@ function Farfalla({ colore, r, h, v, fase }: (typeof FARFALLE)[number]) {
 }
 
 function Giardino({ alberi }: { alberi: TipoAlbero[] | null }) {
-  const sassi = [0, 1, 2, 3, 4, 5].map((i) => ({ z: D / 2 + 0.7 + i * 0.5, x: Math.sin(i * 1.7) * 0.07 }))
+  const lastre = Array.from({ length: 7 }, (_, i) => D / 2 + 0.22 + i * 0.46)
   const fiori = [[-1.4, 2.1, "#f06292"], [-1.15, 2.2, "#ffd54f"], [-0.95, 2.05, "#ffffff"], [-1.55, 2.25, "#ffd54f"], [1.2, 1.95, "#f06292"]] as const
   const staccionata = Array.from({ length: 6 }, (_, i) => ({ x: -4.0 + i * 0.52, z: 2.5 + i * 0.22 }))
   return (
     <>
-      {sassi.map((s, i) => (
-        <mesh key={i} position={[s.x, 0.02, s.z]} rotation={[0, i * 0.3, 0]} receiveShadow><boxGeometry args={[0.7, 0.04, 0.36]} /><meshStandardMaterial color="#c9c2b5" roughness={1} /></mesh>
+      <RoundedBox args={[1.02, 0.06, 3.3]} radius={0.025} smoothness={2} position={[0, 0.035, 3.1]} receiveShadow>
+        <meshStandardMaterial color="#b5a68f" roughness={0.95} />
+      </RoundedBox>
+      {lastre.map((z, i) => (
+        <RoundedBox key={i} args={[0.86, 0.045, 0.44]} radius={0.018} smoothness={2} position={[0, 0.075, z]} receiveShadow>
+          <meshStandardMaterial color="#e2d7c4" roughness={0.9} />
+        </RoundedBox>
       ))}
       {alberi && (
         <>
@@ -927,6 +957,7 @@ function Scena({ vista, meteo }: { vista: VistaCasa; meteo: Meteo }) {
       <Atmosfera meteo={meteo} />
       <group ref={casa}>
         <mesh position={[0, -0.18, 0]} receiveShadow><cylinderGeometry args={[5.2, 5.4, 0.36, 56]} /><meshStandardMaterial color={vista.giardino ? "#6fae5a" : "#b3aca0"} roughness={1} flatShading /></mesh>
+        {vista.giardino === null && <CortilePavimentato />}
         <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[5.4, 4.8, 0.3, 56]} /><meshStandardMaterial color="#8a6a4f" roughness={1} flatShading /></mesh>
         <Giardino alberi={vista.giardino} />
 
